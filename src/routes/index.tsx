@@ -76,19 +76,20 @@ function Hero() {
           height={1080}
           className="size-full object-cover"
         />
-        <div className="absolute inset-0 bg-primary-hover/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-hover/50 via-primary-hover/15 to-transparent" />
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-black/35 to-transparent" />
 
         <div className="absolute inset-x-0 bottom-0 h-20 veil-gradient opacity-60" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-[1240px] px-5 pt-20 pb-32 lg:px-8 lg:pt-28">
+      <div className="relative z-10 mx-auto max-w-[1240px] px-5 pt-20 pb-32 lg:px-8 lg:pt-38">
         <div className="animate-fade-up max-w-3xl">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/15 px-4 py-1.5 font-sans text-[0.75rem] font-bold tracking-wide text-white backdrop-blur">
-            <Sparkles className="size-3.5" /> New series every Friday
+            <Sparkles className="size-3.5" /> New Stories. More Often.
           </span>
           <h1 className="mt-7 text-[clamp(2.6rem,6vw,4.6rem)] leading-[1.02] text-white font-display">
-            Stories worth <em className="italic">slowing down</em> for.
+            {/* Stories worth <em className="italic">slowing down</em> for. */}
+            We are <em className="italic">Storytellers</em>
           </h1>
           <p className="mt-6 max-w-2xl text-[1.125rem] leading-relaxed text-white/85">
             tossatale is a reading house — longform memoir, quiet fiction, serialised journeys and
