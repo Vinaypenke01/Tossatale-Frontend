@@ -51,14 +51,16 @@ export function ButtonLink({
   children,
   to,
   params,
+  onClick,
 }: VariantProps<typeof buttonVariants> & {
   className?: string;
   to: string;
   params?: Record<string, string>;
   children: ReactNode;
+  onClick?: () => void;
 }) {
   return (
-    <LinkAny to={to} params={params} className={cn(buttonVariants({ variant, size }), className)}>
+    <LinkAny to={to} params={params} onClick={onClick} className={cn(buttonVariants({ variant, size }), className)}>
       {children}
     </LinkAny>
   );

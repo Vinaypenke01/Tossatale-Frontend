@@ -1,9 +1,10 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   BookOpen,
   ChevronDown,
   Globe,
+  Layers,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -25,17 +26,26 @@ import { categories, defaultAnnouncementSettings, defaultFooterSettings, type An
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { label: "Stories", to: "/stories" },
-  { label: "Series", to: "/series" },
-  { label: "Videos", to: "/videos" },
-  { label: "Writers", to: "/writers" },
-  { label: "Journal", to: "/blogs" },
+  { label: "Home", to: "/" },
+  { label: "Films", to: "/videos" },
+  // { label: "Writers", to: "/writers" },
+  { label: "Blogs", to: "/blogs" },
 ];
 
-export type UserRole = "reader" | "writer" | "admin";
+const mobileNavLinks = [
+  { label: "Home", to: "/" },
+  { label: "Stories", to: "/stories" },
+  { label: "Series", to: "/series" },
+  { label: "Films", to: "/videos" },
+  { label: "Blogs", to: "/blogs" },
+  { label: "Contact", to: "/contact" },
+  { label: "Categories", to: "/categories" },
+];
+
+export type UserRole = "guest" | "reader" | "writer" | "admin";
 
 export function getInitialRole(): UserRole {
-  if (typeof window === "undefined") return "reader";
+  if (typeof window === "undefined") return "guest";
 
   const pathname = window.location.pathname;
   if (pathname.startsWith("/admin")) return "admin";
@@ -43,10 +53,10 @@ export function getInitialRole(): UserRole {
   if (pathname.startsWith("/reader")) return "reader";
 
   const saved = localStorage.getItem("tossatale_user_role") as UserRole;
-  if (saved && (saved === "reader" || saved === "writer" || saved === "admin")) {
+  if (saved && (saved === "guest" || saved === "reader" || saved === "writer" || saved === "admin")) {
     return saved;
   }
-  return "reader";
+  return "guest";
 }
 
 export function useUserRole(): [UserRole, (r: UserRole) => void] {
@@ -121,7 +131,7 @@ export function ThemeToggle() {
 
   return (
     <Button
-      variant="quiet"
+      variant="ghostOutline"
       size="icon"
       aria-label="Toggle theme"
       onClick={() => {
@@ -129,14 +139,21 @@ export function ThemeToggle() {
         toggleTheme(next);
         toast.info(next === "dark" ? "Switched to Dark Mode 🌙" : "Switched to Light Mode ☀️");
       }}
-      className="rounded-full text-body hover:text-primary transition-transform duration-300 active:scale-95 shrink-0"
+      className="size-9 rounded-full border border-border bg-surface text-body hover:border-primary hover:text-primary transition-all duration-300 active:scale-95 shrink-0 shadow-xs"
     >
-      {theme === "dark" ? <Sun className="size-4 text-warning" /> : <Moon className="size-4 text-body" />}
+      {theme === "dark" ? <Sun className="size-4 text-amber-500" /> : <Moon className="size-4 text-heading" />}
     </Button>
   );
 }
 
 const roleProfiles: Record<UserRole, { name: string; initials: string; role: string; profileUrl: string; dashboardUrl: string }> = {
+  guest: {
+    name: "Guest Visitor",
+    initials: "G",
+    role: "Visitor Mode",
+    profileUrl: "/auth",
+    dashboardUrl: "/",
+  },
   writer: {
     name: "Meera Raghavan",
     initials: "MR",
@@ -161,6 +178,7 @@ const roleProfiles: Record<UserRole, { name: string; initials: string; role: str
 };
 
 const roleNavLinks: Record<UserRole, { label: string; to: string }[]> = {
+  guest: [],
   writer: [
     { label: "Studio", to: "/writer" },
     { label: "New Story", to: "/writer/editor" },
@@ -191,7 +209,23 @@ function UserProfileDropdown({
   onRoleChange: (r: UserRole) => void;
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
   const profile = roleProfiles[role];
+
+  const handleRoleSelect = (r: UserRole) => {
+    onRoleChange(r);
+    setDropdownOpen(false);
+    if (r === "writer") {
+      toast.info("Switched to Writer Mode — Navigating to Studio...");
+      navigate({ to: "/writer" });
+    } else if (r === "admin") {
+      toast.info("Switched to Admin Mode — Navigating to Admin Desk...");
+      navigate({ to: "/admin" });
+    } else {
+      toast.info("Switched to Reader Mode!");
+      navigate({ to: "/reader" });
+    }
+  };
 
   return (
     <div className="relative">
@@ -250,11 +284,7 @@ function UserProfileDropdown({
                 <button
                   key={r}
                   type="button"
-                  onClick={() => {
-                    onRoleChange(r);
-                    setDropdownOpen(false);
-                    toast.info(`Switched active mode to ${r.toUpperCase()}!`);
-                  }}
+                  onClick={() => handleRoleSelect(r)}
                   className={cn(
                     "rounded-lg py-1.5 font-sans text-[0.75rem] font-bold capitalize transition-colors",
                     role === r ? "bg-primary text-primary-foreground shadow-sm" : "text-subtle hover:text-heading",
@@ -267,16 +297,18 @@ function UserProfileDropdown({
           </div>
 
           <div className="border-t border-border pt-2 mt-3">
-            <Link
-              to="/auth"
+            <button
+              type="button"
               onClick={() => {
                 setDropdownOpen(false);
+                onRoleChange("guest");
                 toast.info("Logged out of tossatale.");
+                navigate({ to: "/" });
               }}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-error hover:bg-error/10"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-error hover:bg-error/10 text-left"
             >
               <LogOut className="size-4" /> Sign out
-            </Link>
+            </button>
           </div>
         </div>
       )}
@@ -292,7 +324,7 @@ function Wordmark({ onDark = false }: { onDark?: boolean }) {
         alt="tossatale"
         width={40}
         height={40}
-        className="size-10 rounded-xl object-cover shadow-paper"
+        className="size-10  object-cover shadow-paper"
       />
       <span
         className={cn(
@@ -306,57 +338,57 @@ function Wordmark({ onDark = false }: { onDark?: boolean }) {
   );
 }
 
-function MegaMenu() {
-  return (
-    <div className="invisible pointer-events-none absolute top-full left-0 z-50 w-[min(56rem,calc(100vw-3rem))] pt-3 opacity-0 transition-all duration-300 group-hover/mega:visible group-hover/mega:pointer-events-auto group-hover/mega:opacity-100 focus-within:visible focus-within:pointer-events-auto focus-within:opacity-100">
-      <div className="grid gap-8 rounded-3xl border border-border bg-surface p-8 shadow-lift md:grid-cols-[1.4fr_1fr]">
+function StoriesDropdown() {
+  const [open, setOpen] = useState(false);
 
-        <div>
-          <p className="mb-4 font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-            Browse by category
-          </p>
-          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            {categories.map((c) => (
-              <Link
-                key={c.slug}
-                to="/categories"
-                className="group/item rounded-xl px-3 py-2 transition-colors hover:bg-primary-light"
-              >
-                <span className="block font-sans text-[0.9375rem] font-bold text-heading group-hover/item:text-primary-hover">
-                  {c.name}
-                </span>
-                <span className="block text-[0.8125rem] text-subtle">{c.blurb}</span>
-              </Link>
-            ))}
+  return (
+    <div
+      className="relative shrink-0"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex items-center gap-1 rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold transition-colors",
+          open ? "bg-primary-light text-primary-hover" : "text-body hover:bg-primary-light hover:text-primary-hover",
+        )}
+      >
+        <span>Stories</span>
+        <ChevronDown className={cn("size-3 text-subtle transition-transform duration-200", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 z-50 w-48 pt-2 animate-in fade-in slide-in-from-top-2">
+          <div className="rounded-2xl border border-border bg-surface p-2 shadow-lift">
+            <Link
+              to="/stories"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+            >
+              <BookOpen className="size-4 text-primary" />
+              <span>All Stories</span>
+            </Link>
+            <Link
+              to="/series"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+            >
+              <Layers className="size-4 text-primary" />
+              <span>Story Series</span>
+            </Link>
+            <Link
+              to="/categories"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+            >
+              <Sparkles className="size-4 text-primary" />
+              <span>Categories</span>
+            </Link>
           </div>
         </div>
-        <div className="rounded-2xl paper-gradient p-6">
-          <p className="mb-4 font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-            Start here
-          </p>
-          <ul className="space-y-4">
-            {[
-              { icon: Sparkles, label: "Editor's Picks", blurb: "Hand-chosen every Friday", to: "/stories" },
-              { icon: BookOpen, label: "Read in one sitting", blurb: "Under 10 minutes", to: "/stories" },
-              { icon: PenLine, label: "Write for tossatale", blurb: "Open submissions", to: "/auth" },
-            ].map((item) => (
-              <li key={item.label}>
-                <Link to={item.to} className="flex items-start gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface text-primary shadow-paper">
-                    <item.icon className="size-4" />
-                  </span>
-                  <span>
-                    <span className="block font-sans text-[0.9375rem] font-bold text-heading">
-                      {item.label}
-                    </span>
-                    <span className="block text-[0.8125rem] text-subtle">{item.blurb}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -418,51 +450,70 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
       <div className="mx-auto flex h-18 max-w-[1240px] items-center gap-6 px-5 py-4 lg:px-8">
         <Wordmark />
 
-        <nav className="hidden items-center gap-1 lg:flex overflow-x-auto scrollbar-none">
-          <div className="group/mega relative shrink-0">
-            <button
-              type="button"
-              className="rounded-full px-3 py-1.5 font-sans text-[0.875rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover"
-            >
-              Explore
-            </button>
-            <MegaMenu />
-          </div>
-          {navLinks.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              activeProps={{ className: "bg-primary-light text-primary-hover" }}
-              className="rounded-full px-3 py-1.5 font-sans text-[0.875rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
-            >
-              {l.label}
-            </Link>
-          ))}
+        <nav className="ml-auto hidden items-center gap-1 whitespace-nowrap lg:flex shrink-0">
+          <Link
+            to="/"
+            activeOptions={{ exact: true }}
+            activeProps={{ className: "bg-primary-light text-primary-hover" }}
+            className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+          >
+            Home
+          </Link>
 
-          {/* Integrated Role Links in Navbar */}
-          <div className="ml-2 flex items-center gap-1 border-l border-border pl-2 shrink-0">
-            {roleLinks.map((rl) => (
-              <Link
-                key={rl.to}
-                to={rl.to}
-                activeProps={{ className: "bg-primary-light text-primary-hover" }}
-                className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-primary transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
-              >
-                {rl.label}
-              </Link>
-            ))}
-          </div>
+          <StoriesDropdown />
+
+          <Link
+            to="/videos"
+            activeProps={{ className: "bg-primary-light text-primary-hover" }}
+            className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+          >
+            Films
+          </Link>
+
+          {/* <Link to="/writers">Writers</Link> */}
+
+          <Link
+            to="/blogs"
+            activeProps={{ className: "bg-primary-light text-primary-hover" }}
+            className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+          >
+            Blogs
+          </Link>
+
+          <Link
+            to="/contact"
+            activeProps={{ className: "bg-primary-light text-primary-hover" }}
+            className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+          >
+            Contact
+          </Link>
+
+          {/* Integrated Reader Links in Navbar (Only for Readers) */}
+          {currentRole === "reader" && roleLinks.length > 0 && (
+            <div className="ml-1.5 flex items-center gap-0.5 border-l border-border pl-1.5 shrink-0">
+              {roleLinks.map((rl) => (
+                <Link
+                  key={rl.to}
+                  to={rl.to}
+                  activeProps={{ className: "bg-primary-light text-primary-hover" }}
+                  className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-primary transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+                >
+                  {rl.label}
+                </Link>
+              ))}
+            </div>
+          )}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-3 lg:ml-0">
           <Link
             to="/search"
             aria-label="Search tossatale"
-            className="hidden h-10 items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-[0.8125rem] text-subtle transition-colors hover:border-primary hover:text-primary md:flex"
+            className="hidden h-8.5 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-[0.75rem] text-subtle transition-colors hover:border-primary hover:text-primary md:flex shrink-0"
           >
-            <Search className="size-4" />
+            <Search className="size-3.5 text-subtle" />
             <span>Search</span>
-            <kbd className="ml-2 rounded-md bg-surface-alt px-1.5 py-0.5 font-sans text-[0.6875rem] font-bold text-subtle">
+            <kbd className="rounded-md bg-surface-alt px-1 py-0.5 font-sans text-[0.625rem] font-bold text-subtle">
               ⌘K
             </kbd>
           </Link>
@@ -470,8 +521,19 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           {/* Theme Switcher Toggle */}
           <ThemeToggle />
 
-          {/* User Profile & Role Switcher Dropdown */}
-          <UserProfileDropdown role={currentRole} onRoleChange={setCurrentRole} />
+          {/* User Profile Dropdown OR Guest Sign In Buttons */}
+          {currentRole === "guest" ? (
+            <div className="hidden sm:flex items-center gap-2">
+              <ButtonLink to="/auth" variant="ghostOutline" size="sm">
+                Sign in
+              </ButtonLink>
+              <ButtonLink to="/auth" size="sm">
+                Become Writer
+              </ButtonLink>
+            </div>
+          ) : (
+            <UserProfileDropdown role={currentRole} onRoleChange={setCurrentRole} />
+          )}
 
           <Button
             variant="quiet"
@@ -487,44 +549,59 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
       </div>
 
       {open && (
-        <div className="border-t border-border bg-surface px-5 pb-6 lg:hidden">
-          <div className="flex items-center justify-between py-4">
-            <span className="font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-              Menu
+        <div className="absolute right-4 top-full mt-2 z-50 w-72 rounded-2xl border border-border bg-surface p-3 shadow-lift lg:hidden animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center justify-between px-2 pb-2 border-b border-border">
+            <span className="font-sans text-[0.625rem] font-black tracking-[0.2em] text-primary uppercase">
+              Navigation
             </span>
-            <Button variant="quiet" size="icon" aria-label="Close menu" onClick={() => setOpen(false)}>
-              <X className="size-5" />
+            <Button variant="quiet" size="icon" className="size-6" aria-label="Close menu" onClick={() => setOpen(false)}>
+              <X className="size-3.5" />
             </Button>
           </div>
-          <nav className="grid gap-1">
-            {navLinks.map((l) => (
+
+          <nav className="mt-2 grid grid-cols-2 gap-1">
+            {mobileNavLinks.map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
                 onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-2.5 font-sans text-[1rem] font-bold text-heading hover:bg-primary-light"
+                className="rounded-xl px-2.5 py-2 font-sans text-[0.8125rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
               >
                 {l.label}
               </Link>
             ))}
-            <div className="my-2 border-t border-border pt-2">
-              <span className="px-3 font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-                {currentRole} Options
+          </nav>
+
+          {currentRole === "guest" && (
+            <div className="mt-3 border-t border-border pt-2.5 grid grid-cols-2 gap-1.5">
+              <ButtonLink to="/auth" variant="ghostOutline" size="sm" className="w-full justify-center px-2 text-[0.75rem]" onClick={() => setOpen(false)}>
+                Sign in
+              </ButtonLink>
+              <ButtonLink to="/auth" size="sm" className="w-full justify-center px-2 text-[0.75rem]" onClick={() => setOpen(false)}>
+                Become Writer
+              </ButtonLink>
+            </div>
+          )}
+
+          {currentRole === "reader" && (
+            <div className="mt-3 border-t border-border pt-2">
+              <span className="px-2 font-sans text-[0.625rem] font-black tracking-[0.2em] text-primary uppercase">
+                Reader Options
               </span>
-              <div className="mt-2 grid gap-1">
+              <div className="mt-1 grid grid-cols-2 gap-1">
                 {roleLinks.map((rl) => (
                   <Link
                     key={rl.to}
                     to={rl.to}
                     onClick={() => setOpen(false)}
-                    className="rounded-xl px-3 py-2 font-sans text-[0.9375rem] font-bold text-primary hover:bg-primary-light"
+                    className="rounded-xl px-2.5 py-1.5 font-sans text-[0.75rem] font-bold text-primary hover:bg-primary-light"
                   >
                     {rl.label}
                   </Link>
                 ))}
               </div>
             </div>
-          </nav>
+          )}
         </div>
       )}
     </header>
@@ -560,9 +637,76 @@ const footerColumns = [
   },
 ];
 
+function FooterRoleSwitcher() {
+  const [currentRole, setCurrentRole] = useUserRole();
+  const navigate = useNavigate();
+
+  const handleRoleClick = (r: UserRole) => {
+    setCurrentRole(r);
+    if (r === "writer") {
+      toast.success("Switched to Writer Studio mode — Redirecting to Studio...");
+      navigate({ to: "/writer" });
+    } else if (r === "admin") {
+      toast.success("Switched to Admin Control Desk mode — Redirecting to Desk...");
+      navigate({ to: "/admin" });
+    } else if (r === "reader") {
+      toast.success("Switched to Reader Experience mode!");
+      navigate({ to: "/reader" });
+    } else {
+      toast.info("Switched to Guest Visitor view");
+      navigate({ to: "/" });
+    }
+  };
+
+  return (
+    <div className="mt-12 rounded-3xl border border-border bg-surface-alt p-6 shadow-paper">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block size-2 rounded-full bg-primary animate-pulse" />
+            <p className="font-sans text-[0.75rem] font-black tracking-[0.2em] text-primary uppercase">
+              Platform Mode & Role Switcher
+            </p>
+          </div>
+          <p className="mt-1 text-[0.875rem] text-body">
+            Switch application modes instantly to explore Reader, Writer Studio, or Admin Desk views.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2.5">
+          {(
+            [
+              ["guest", "👁️ Guest View"],
+              ["reader", "📖 Reader View"],
+              ["writer", "✍️ Writer Studio"],
+              ["admin", "🛡️ Admin Desk"],
+            ] as const
+          ).map(([rKey, label]) => {
+            const isActive = currentRole === rKey;
+            return (
+              <button
+                key={rKey}
+                type="button"
+                onClick={() => handleRoleClick(rKey)}
+                className={cn(
+                  "rounded-2xl px-4 py-2.5 font-sans text-[0.875rem] font-bold transition-all shadow-sm",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-lift scale-[1.03]"
+                    : "bg-surface border border-border text-body hover:border-primary hover:text-primary hover:bg-primary-light/50",
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SiteFooter() {
   return (
-    <footer className="mt-28 border-t border-border bg-surface">
+    <footer className="mt-10 border-t border-border bg-surface">
       <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
         <div className="grid gap-12 md:grid-cols-[1.4fr_2fr]">
           <div>
@@ -596,7 +740,11 @@ export function SiteFooter() {
             ))}
           </div>
         </div>
-        <div className="mt-14 flex flex-col gap-3 border-t border-divider pt-6 text-[0.8125rem] text-subtle sm:flex-row sm:items-center sm:justify-between">
+
+        {/* Footer Role Switcher Bar */}
+        <FooterRoleSwitcher />
+
+        <div className="mt-10 flex flex-col gap-3 border-t border-divider pt-6 text-[0.8125rem] text-subtle sm:flex-row sm:items-center sm:justify-between">
           <p>{defaultFooterSettings.copyrightText}</p>
           <p>{defaultFooterSettings.subnoteText}</p>
         </div>

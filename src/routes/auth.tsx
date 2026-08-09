@@ -30,10 +30,14 @@ function AuthPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(mode === "signin" ? "Signed in successfully!" : "Account created successfully!", {
-      description: "Welcome back to tossatale. Your profile and role options are live in the top header navbar.",
+    localStorage.setItem("tossatale_user_role", "writer");
+    window.dispatchEvent(new Event("tossatale_role_change"));
+
+    toast.success(mode === "signin" ? "Signed in as Writer!" : "Writer account created successfully!", {
+      description: "Navigating to your tossatale Writer Studio...",
     });
-    navigate({ to: "/" });
+
+    navigate({ to: "/writer" });
   };
 
   return (
@@ -46,19 +50,19 @@ function AuthPage() {
 
         <div className="mt-14 max-w-sm">
           <h1 className="text-[clamp(1.9rem,3.4vw,2.5rem)] leading-tight">
-            {mode === "signin" ? "Welcome back." : "Make a reading home."}
+            {mode === "signin" ? "Writer Studio Sign In." : "Become a Writer."}
           </h1>
           <p className="mt-3 text-[1rem] text-body">
             {mode === "signin"
-              ? "Your bookmarks, series progress and shelves are exactly where you left them."
-              : "Free to read. Members fund the writers they love."}
+              ? "Access your drafts, story series analytics and publisher tools."
+              : "Publish longform stories, series and essays to our editorial audience."}
           </p>
 
-          <div className="mt-8 flex rounded-full border border-border bg-surface p-1">
+          <div className="mt-6 flex rounded-full border border-border bg-surface p-1">
             {(
               [
                 ["signin", "Sign in"],
-                ["signup", "Create account"],
+                ["signup", "Apply as Writer"],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -75,20 +79,29 @@ function AuthPage() {
             ))}
           </div>
 
-          <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
+          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             {mode === "signup" && (
-              <Field label="Your name">
-                <Input placeholder="Meera Raghavan" />
-              </Field>
+              <>
+                <Field label="Full name">
+                  <Input placeholder="Meera Raghavan" defaultValue="Meera Raghavan" />
+                </Field>
+                <Field label="Portfolio / Writing sample URL">
+                  <Input placeholder="https://medium.com/@meera" />
+                </Field>
+              </>
             )}
-            <Field label="Email">
-              <Input type="email" placeholder="you@example.com" defaultValue="meera.raghavan@tossatale.com" />
+            <Field label="Writer Email">
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                defaultValue="meera.raghavan@tossatale.com"
+              />
             </Field>
             <Field label="Password" hint={mode === "signup" ? "At least 8 characters." : undefined}>
               <Input type="password" placeholder="••••••••" defaultValue="password123" />
             </Field>
             <Button type="submit" size="lg" className="w-full">
-              {mode === "signin" ? "Sign in" : "Create my account"}
+              {mode === "signin" ? "Sign in to Studio" : "Submit Writer Application"}
             </Button>
           </form>
 

@@ -76,21 +76,21 @@ function Hero() {
           height={1080}
           className="size-full object-cover"
         />
-        <div className="absolute inset-0 bg-primary-hover/45" />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-hover/70 via-primary-hover/25 to-transparent" />
+        <div className="absolute inset-0 bg-primary-hover/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-hover/50 via-primary-hover/15 to-transparent" />
 
-        <div className="absolute inset-x-0 bottom-0 h-52 veil-gradient" />
+        <div className="absolute inset-x-0 bottom-0 h-20 veil-gradient opacity-60" />
       </div>
 
-      <div className="relative z-10 mx-auto grid max-w-[1240px] gap-12 px-5 pt-20 pb-40 lg:grid-cols-[1.15fr_0.85fr] lg:px-8 lg:pt-28">
-        <div className="animate-fade-up">
+      <div className="relative z-10 mx-auto max-w-[1240px] px-5 pt-20 pb-32 lg:px-8 lg:pt-28">
+        <div className="animate-fade-up max-w-3xl">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/15 px-4 py-1.5 font-sans text-[0.75rem] font-bold tracking-wide text-white backdrop-blur">
             <Sparkles className="size-3.5" /> New series every Friday
           </span>
-          <h1 className="mt-7 max-w-2xl text-[clamp(2.6rem,6vw,4.6rem)] leading-[1.02] text-white">
+          <h1 className="mt-7 text-[clamp(2.6rem,6vw,4.6rem)] leading-[1.02] text-white font-display">
             Stories worth <em className="italic">slowing down</em> for.
           </h1>
-          <p className="mt-6 max-w-xl text-[1.125rem] leading-relaxed text-white/85">
+          <p className="mt-6 max-w-2xl text-[1.125rem] leading-relaxed text-white/85">
             tossatale is a reading house — longform memoir, quiet fiction, serialised journeys and
             short films, published by writers who refuse to hurry.
           </p>
@@ -98,67 +98,27 @@ function Hero() {
             <ButtonLink to="/stories" size="lg">
               Start reading
             </ButtonLink>
-            <ButtonLink to="/writers" variant="inkOnDark" size="lg">
-              Meet the writers
+            <ButtonLink to="/auth" variant="inkOnDark" size="lg">
+              Become a Writer
             </ButtonLink>
           </div>
 
-          <dl className="mt-14 grid max-w-xl grid-cols-2 gap-x-8 gap-y-6 border-t border-white/25 pt-8 sm:grid-cols-4">
-            {platformStats.map((s) => (
+          <dl className="mt-14 grid max-w-2xl grid-cols-2 gap-x-8 gap-y-6  pt-8 sm:grid-cols-4">
+            {/* {platformStats.map((s) => (
               <div key={s.label}>
                 <dt className="font-display text-[1.75rem] leading-none text-white">{s.value}</dt>
                 <dd className="mt-1.5 text-[0.75rem] tracking-wide text-white/70 uppercase">
                   {s.label}
                 </dd>
               </div>
-            ))}
+            ))} */}
           </dl>
-        </div>
-
-        <div className="relative hidden lg:block">
-          <div className="animate-float-slow">
-            <Panel className="ml-auto max-w-sm overflow-hidden p-7 shadow-lift border-primary/20">
-              <div className="flex items-center gap-2">
-                <CategoryPill>{featuredStory.category}</CategoryPill>
-                <span className="font-sans text-[0.75rem] font-bold text-primary">Spotlight</span>
-              </div>
-              <h3 className="mt-4 font-display text-[1.45rem] font-bold leading-snug text-heading">
-                {featuredStory.title}
-              </h3>
-              <p className="mt-3 line-clamp-3 text-[0.875rem] leading-relaxed text-body">
-                {featuredStory.dek}
-              </p>
-              <p className="mt-4 flex items-center gap-2 text-[0.8125rem] text-subtle border-t border-divider pt-3">
-                <Clock className="size-3.5" /> {featuredStory.readingTime} min read ·{" "}
-                {featuredStory.part}
-              </p>
-            </Panel>
-          </div>
-          <div
-            className="absolute -bottom-8 -left-6 w-64 animate-float-slow"
-            style={{ animationDelay: "1.4s" }}
-          >
-            <Panel className="p-5">
-              <div className="flex items-center gap-3">
-                <Avatar initials="IB" size="sm" />
-                <div>
-                  <p className="flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-heading">
-                    Ila Bhattacharya <VerifiedBadge />
-                  </p>
-                  <p className="text-[0.75rem] text-subtle">just published a new story</p>
-                </div>
-              </div>
-              <p className="mt-3 font-display text-[1.0625rem] leading-snug text-heading">
-                “Letters I Did Not Send”
-              </p>
-            </Panel>
-          </div>
         </div>
       </div>
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
         <span className="flex flex-col items-center gap-2 text-[0.6875rem] font-bold tracking-[0.24em] text-subtle uppercase">
-          Scroll
+
           <ArrowDown className="size-4 animate-bounce text-primary" />
         </span>
       </div>
@@ -167,46 +127,60 @@ function Hero() {
 }
 
 function FeaturedStory() {
-  const writer = writerBySlug(featuredStory.writer);
+  const featuredList = [featuredStory, latestStories[1]];
+
   return (
     <Reveal as="section" className="mx-auto max-w-[1240px] px-5 pt-8 lg:px-8">
-      <Panel className="grain overflow-hidden p-8 lg:p-12 border-primary/20">
-        <div className="max-w-3xl">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3.5 py-1.5 font-sans text-[0.6875rem] font-black tracking-[0.16em] text-primary uppercase border border-primary/20">
-              <Sparkles className="size-3.5" /> Editor's pick
-            </span>
-            <CategoryPill>{featuredStory.category}</CategoryPill>
-            <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle">
-              <Layers className="size-3.5" /> {featuredStory.series} · {featuredStory.part}
-            </span>
-          </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {featuredList.map((story, idx) => {
+          if (!story) return null;
+          const writer = writerBySlug(story.writer);
+          return (
+            <Panel key={story.slug} className="grain overflow-hidden p-7 lg:p-9 border-primary/20 flex flex-col justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 font-sans text-[0.6875rem] font-black tracking-[0.16em] text-primary uppercase border border-primary/20">
+                    <Sparkles className="size-3" /> {idx === 0 ? "Editor's Pick" : "Featured Spotlight"}
+                  </span>
+                  <CategoryPill>{story.category}</CategoryPill>
+                  {story.series && (
+                    <span className="inline-flex items-center gap-1 text-[0.75rem] text-subtle">
+                      <Layers className="size-3" /> {story.series}
+                    </span>
+                  )}
+                </div>
 
-          <h2 className="mt-6 text-[clamp(2rem,3.8vw,3.2rem)] leading-[1.08] text-heading font-display font-bold">
-            {featuredStory.title}
-          </h2>
-          <p className="mt-5 text-[1.0625rem] leading-relaxed text-body">{featuredStory.dek}</p>
-          <div className="mt-8 flex items-center gap-3">
-            <Avatar initials={writer!.initials} />
-            <div>
-              <p className="flex items-center gap-1.5 font-sans text-[0.9375rem] font-bold text-heading">
-                {writer!.name} <VerifiedBadge />
-              </p>
-              <p className="text-[0.8125rem] text-subtle">
-                {featuredStory.date} · {featuredStory.readingTime} min read
-              </p>
-            </div>
-          </div>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink to="/stories/$slug" params={{ slug: featuredStory.slug }} size="lg">
-              Read the story <ArrowRight className="size-4" />
-            </ButtonLink>
-            <Button variant="ghostOutline" size="lg">
-              <BookMarked className="size-4" /> Save for later
-            </Button>
-          </div>
-        </div>
-      </Panel>
+                <h2 className="mt-5 text-[clamp(1.5rem,2.5vw,2.1rem)] leading-[1.12] text-heading font-display font-bold">
+                  {story.title}
+                </h2>
+                <p className="mt-3.5 line-clamp-3 text-[0.9375rem] leading-relaxed text-body">{story.dek}</p>
+              </div>
+
+              <div>
+                <div className="mt-6 flex items-center gap-3 border-t border-divider pt-4">
+                  <Avatar initials={writer?.initials || "TS"} />
+                  <div>
+                    <p className="flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-heading">
+                      {writer?.name} <VerifiedBadge />
+                    </p>
+                    <p className="text-[0.75rem] text-subtle">
+                      {story.date} · {story.readingTime} min read
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-6 flex flex-wrap gap-2.5">
+                  <ButtonLink to="/stories/$slug" params={{ slug: story.slug }} size="md">
+                    Read story <ArrowRight className="size-4" />
+                  </ButtonLink>
+                  <Button variant="ghostOutline" size="md">
+                    <BookMarked className="size-4" /> Save for later
+                  </Button>
+                </div>
+              </div>
+            </Panel>
+          );
+        })}
+      </div>
     </Reveal>
   );
 }
@@ -286,25 +260,20 @@ function SeriesRail() {
           return (
             <Reveal key={s.slug} delay={i * 70}>
               <Link to="/series" className="block h-full">
-                <Panel hover className="flex h-full flex-col overflow-hidden">
-                  <div className="relative">
-                    <img
-                      src={s.cover}
-                      alt={s.title}
-                      loading="lazy"
-                      width={1200}
-                      height={800}
-                      className="aspect-[4/3] w-full object-cover"
-                    />
-                    <span className="absolute top-4 left-4 rounded-full bg-surface/92 px-3 py-1 text-[0.6875rem] font-bold tracking-wide text-primary-hover backdrop-blur">
+                <Panel hover className="flex h-full flex-col p-6">
+                  <div className="flex items-center justify-between gap-2 border-b border-divider pb-4">
+                    <span className="rounded-full bg-primary/10 px-3 py-1 font-sans text-[0.6875rem] font-black tracking-wider text-primary uppercase border border-primary/20">
                       {s.parts} parts
                     </span>
+                    <span className="text-[0.75rem] font-bold text-subtle">
+                      {s.progress === 0 ? "Not started" : `${s.progress}%`}
+                    </span>
                   </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <h3 className="text-[1.2rem] leading-snug">{s.title}</h3>
-                    <p className="mt-2 text-[0.875rem] text-body">{s.blurb}</p>
-                    <p className="mt-4 text-[0.8125rem] text-subtle">{writer?.name}</p>
-                    <div className="mt-5 mt-auto pt-5">
+                  <div className="flex flex-1 flex-col pt-4">
+                    <h3 className="text-[1.25rem] leading-snug font-display font-bold text-heading">{s.title}</h3>
+                    <p className="mt-2 text-[0.875rem] leading-relaxed text-body">{s.blurb}</p>
+                    <p className="mt-4 text-[0.8125rem] font-medium text-subtle">{writer?.name}</p>
+                    <div className="mt-5 mt-auto pt-4 border-t border-divider">
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-alt">
                         <div
                           className="h-full rounded-full bg-primary transition-[width] duration-700"
@@ -664,21 +633,20 @@ function VideoLibrary() {
 
 function Newsletter() {
   return (
-    <section className="mx-auto max-w-[1240px] px-5 pt-28 lg:px-8">
+    <section className="mx-auto max-w-3xl px-5 pt-16 lg:px-8">
       <Reveal>
-        <Panel className="grain relative overflow-hidden ink-gradient p-10 text-center lg:p-16">
-          <span className="pointer-events-none absolute -top-16 -left-10 size-56 animate-drift rounded-full bg-white/10 blur-2xl" />
-          <span className="pointer-events-none absolute -right-10 -bottom-20 size-64 animate-drift rounded-full bg-white/10 blur-2xl" />
-          <Quote className="mx-auto size-8 text-white/50" />
-          <h2 className="mx-auto mt-6 max-w-2xl text-[clamp(1.8rem,3.4vw,2.7rem)] leading-[1.1] text-white">
+        <Panel className="grain relative overflow-hidden ink-gradient p-7 sm:p-9 text-center">
+          <span className="pointer-events-none absolute -top-16 -left-10 size-48 animate-drift rounded-full bg-white/10 blur-2xl" />
+          <span className="pointer-events-none absolute -right-10 -bottom-20 size-48 animate-drift rounded-full bg-white/10 blur-2xl" />
+          <Quote className="mx-auto size-6 text-white/50" />
+          <h2 className="mx-auto mt-4 max-w-xl text-[clamp(1.35rem,2.2vw,1.85rem)] leading-snug font-display font-bold text-white">
             One story, every Friday. Nothing else.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-[1.0625rem] text-white/80">
-            Our editors pick a single story worth your evening and send it with a short note on why.
-            34,000 readers, zero noise.
+          <p className="mx-auto mt-2.5 max-w-md text-[0.9375rem] leading-relaxed text-white/80">
+            Our editors pick a single story worth your evening. 34,000 readers, zero noise.
           </p>
           <form
-            className="mx-auto mt-9 flex max-w-md flex-col gap-3 sm:flex-row"
+            className="mx-auto mt-6 flex max-w-sm flex-col gap-2 sm:flex-row"
             onSubmit={(e) => e.preventDefault()}
           >
             <label className="sr-only" htmlFor="newsletter-email">
@@ -688,13 +656,13 @@ function Newsletter() {
               id="newsletter-email"
               type="email"
               placeholder="you@example.com"
-              className="border-white/25 bg-white/12 text-white placeholder:text-white/60 focus:ring-white/25"
+              className="h-10 border-white/25 bg-white/12 text-white placeholder:text-white/60 focus:ring-white/25 text-[0.875rem]"
             />
-            <Button variant="inkOnDark" size="md" className="shrink-0">
-              <Mail className="size-4" /> Subscribe
+            <Button variant="inkOnDark" size="sm" className="h-10 shrink-0">
+              <Mail className="size-3.5" /> Subscribe
             </Button>
           </form>
-          <p className="mt-4 text-[0.8125rem] text-white/60">
+          <p className="mt-3 text-[0.75rem] text-white/60">
             No spam, no partner offers. Unsubscribe in one click.
           </p>
         </Panel>
@@ -718,9 +686,7 @@ function Home() {
       <LatestBlogs />
       <VideoLibrary />
       <Newsletter />
-      <p className="mx-auto mt-20 max-w-[1240px] px-5 text-center text-[0.8125rem] text-subtle lg:px-8">
-        {stories.length} stories loaded from static demo content.
-      </p>
+
     </SiteLayout>
   );
 }

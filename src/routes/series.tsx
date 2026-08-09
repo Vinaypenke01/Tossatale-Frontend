@@ -46,20 +46,12 @@ function SeriesPage() {
           const chapters = stories.filter((st) => st.series === s.title);
           return (
             <Reveal key={s.slug} delay={i * 60}>
-              <Panel hover className="grid overflow-hidden lg:grid-cols-[0.9fr_1.1fr]">
-                <img
-                  src={s.cover}
-                  alt={s.title}
-                  loading="lazy"
-                  width={1200}
-                  height={800}
-                  className="size-full min-h-64 object-cover"
-                />
-                <div className="p-8 lg:p-10">
+              <Panel hover className="p-8 lg:p-10">
+                <div>
                   <p className="text-[0.6875rem] font-black tracking-[0.18em] text-primary uppercase">
                     {s.parts} parts · {writer?.name}
                   </p>
-                  <h2 className="mt-3 text-[clamp(1.5rem,2.6vw,2.1rem)] leading-tight">{s.title}</h2>
+                  <h2 className="mt-3 text-[clamp(1.5rem,2.6vw,2.1rem)] leading-tight font-display font-bold text-heading">{s.title}</h2>
                   <p className="mt-3 text-[1.0625rem] text-body">{s.blurb}</p>
 
                   <ol className="mt-6 divide-y divide-divider border-t border-divider">
