@@ -52,19 +52,50 @@ function StoriesIndex() {
       <header className="border-b border-border paper-gradient">
         <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
           <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-primary uppercase">
-            The library
+            ALL HERE
           </p>
-          <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
-            Every story, shelved and waiting
+          <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] font-display font-bold leading-[1.05]">
+            Stories we’d love you to read
           </h1>
           <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            {stories.length} published pieces across {categories.length} categories. Filter until
-            something feels like tonight.
+            Browse our original stories by genre, mood, or reading moment.
           </p>
         </div>
       </header>
 
       <div className="mx-auto max-w-[1240px] px-5 py-10 lg:px-8">
+        {/* Got time for a story? Quick time filter */}
+        <div className="mb-6 rounded-2xl border border-border bg-surface p-4 sm:p-5">
+          <p className="font-sans text-[0.75rem] font-black tracking-[0.16em] text-primary uppercase">
+            Got time for a story?
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[
+              ["All times", "all"],
+              ["< 5 mins", "quick"],
+              ["5 - 10 mins", "medium"],
+              ["10 - 15 mins", "deep"],
+              ["15+ mins", "longform"],
+            ].map(([label, val]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => {
+                  if (val === "all") setActive("all");
+                }}
+                className={cn(
+                  "rounded-full px-3.5 py-1.5 font-sans text-[0.8125rem] font-bold transition-colors border",
+                  val === "all"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-surface-alt border-border text-body hover:border-primary hover:text-primary",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Panel className="flex flex-col gap-5 p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Input
@@ -128,7 +159,7 @@ function StoriesIndex() {
           </div>
         </Panel>
 
-        <p className="mt-8 text-[0.875rem] text-subtle">
+        <p className="mt-4 text-[0.875rem] text-subtle font-medium">
           Showing {filtered.length} of {stories.length} stories · sorted by {sort.toLowerCase()}
         </p>
 

@@ -135,10 +135,10 @@ export function VerifiedBadge({ label = false }: { label?: boolean }) {
       className="inline-flex items-center gap-1 text-primary"
       aria-label="Verified writer"
     >
-      <span className="grid size-4 place-items-center rounded-full bg-primary text-primary-foreground">
-        <Check className="size-2.5" strokeWidth={3.5} />
+      <span className="grid size-3.5 place-items-center rounded-full bg-primary text-primary-foreground">
+        <Check className="size-2" strokeWidth={3.5} />
       </span>
-      {label && <span className="text-[0.8125rem] font-bold">Verified</span>}
+      {label && <span className="text-[0.75rem] font-bold">Verified</span>}
     </span>
   );
 }

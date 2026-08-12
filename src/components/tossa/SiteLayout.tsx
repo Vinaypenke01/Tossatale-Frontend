@@ -3,9 +3,12 @@ import {
   ArrowRight,
   BookOpen,
   ChevronDown,
+  Film,
   Globe,
+  Instagram,
   Layers,
   LayoutDashboard,
+  Linkedin,
   LogOut,
   Menu,
   Moon,
@@ -14,8 +17,10 @@ import {
   ShieldCheck,
   Sparkles,
   Sun,
+  Twitter,
   User,
   X,
+  Youtube,
 } from "lucide-react";
 import { useState, useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -53,74 +58,52 @@ export function getInitialRole(): UserRole {
   if (pathname.startsWith("/reader")) return "reader";
 
   const saved = localStorage.getItem("tossatale_user_role") as UserRole;
-  if (saved && (saved === "guest" || saved === "reader" || saved === "writer" || saved === "admin")) {
-    return saved;
-  }
-  return "guest";
+  return saved || "guest";
 }
 
-export function useUserRole(): [UserRole, (r: UserRole) => void] {
-  const [role, setRole] = useState<UserRole>(getInitialRole);
+export function useUserRole(): [UserRole, (role: UserRole) => void] {
+  const [role, setRoleState] = useState<UserRole>(getInitialRole);
 
   useEffect(() => {
-    const handleRoleUpdate = () => {
-      setRole(getInitialRole());
+    const handleStorageChange = () => {
+      setRoleState(getInitialRole());
     };
-
-    window.addEventListener("storage", handleRoleUpdate);
-    window.addEventListener("tossatale_role_change", handleRoleUpdate);
-
-    return () => {
-      window.removeEventListener("storage", handleRoleUpdate);
-      window.removeEventListener("tossatale_role_change", handleRoleUpdate);
-    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  const updateRole = (newRole: UserRole) => {
-    setRole(newRole);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tossatale_user_role", newRole);
-      window.dispatchEvent(new Event("tossatale_role_change"));
-    }
+  const setRole = (newRole: UserRole) => {
+    localStorage.setItem("tossatale_user_role", newRole);
+    setRoleState(newRole);
+    window.dispatchEvent(new Event("storage"));
   };
 
-  return [role, updateRole];
+  return [role, setRole];
 }
 
-export type Theme = "light" | "dark";
-
-export function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
-  const saved = localStorage.getItem("tossatale_theme") as Theme;
-  if (saved && (saved === "light" || saved === "dark")) {
-    return saved;
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-export function useTheme(): [Theme, (t?: Theme) => void] {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+export function useTheme(): [string, (theme: string) => void] {
+  const [theme, setThemeState] = useState<string>(() => {
+    if (typeof window === "undefined") return "light";
+    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  });
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [theme]);
+    const observer = new MutationObserver(() => {
+      setThemeState(document.documentElement.classList.contains("dark") ? "dark" : "light");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
-  const toggleTheme = (newTheme?: Theme) => {
-    const target = newTheme || (theme === "dark" ? "light" : "dark");
-    setTheme(target);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tossatale_theme", target);
-      if (target === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+  const toggleTheme = (next: string) => {
+    if (next === "dark") {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("tossatale_theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("tossatale_theme", "light");
     }
+    setThemeState(next);
   };
 
   return [theme, toggleTheme];
@@ -154,160 +137,110 @@ const roleProfiles: Record<UserRole, { name: string; initials: string; role: str
     profileUrl: "/auth",
     dashboardUrl: "/",
   },
+  reader: {
+    name: "Ananya Sharma",
+    initials: "AS",
+    role: "Avid Reader",
+    profileUrl: "/reader/history",
+    dashboardUrl: "/reader",
+  },
   writer: {
     name: "Meera Raghavan",
     initials: "MR",
-    role: "Verified Writer",
+    role: "Contributing Writer",
     profileUrl: "/writer/profile",
     dashboardUrl: "/writer",
   },
   admin: {
-    name: "Devika Rao",
-    initials: "DR",
-    role: "Senior Managing Editor",
+    name: "Tossatale Desk",
+    initials: "ED",
+    role: "Managing Editor",
     profileUrl: "/admin/profile",
     dashboardUrl: "/admin",
   },
-  reader: {
-    name: "Aniket Bose",
-    initials: "AB",
-    role: "Member Reader",
-    profileUrl: "/reader",
-    dashboardUrl: "/reader",
-  },
 };
 
-const roleNavLinks: Record<UserRole, { label: string; to: string }[]> = {
+const roleNavLinks: Record<UserRole, Array<{ label: string; to: string }>> = {
   guest: [],
-  writer: [
-    { label: "Studio", to: "/writer" },
-    { label: "New Story", to: "/writer/editor" },
-    { label: "My Stories", to: "/writer/stories" },
-    { label: "My Series", to: "/writer/series" },
-    { label: "My Profile", to: "/writer/profile" },
-  ],
-  admin: [
-    { label: "Admin Desk", to: "/admin" },
-    { label: "Review Queue", to: "/admin/review-queue" },
-    { label: "Homepage Builder", to: "/admin/homepage-builder" },
-    { label: "Writers", to: "/admin/writers" },
-    { label: "Admin Profile", to: "/admin/profile" },
-  ],
   reader: [
-    { label: "Dashboard", to: "/reader" },
     { label: "Bookmarks", to: "/reader/bookmarks" },
     { label: "History", to: "/reader/history" },
     { label: "Following", to: "/reader/following" },
   ],
+  writer: [
+    { label: "Studio Overview", to: "/writer" },
+    { label: "My Drafts & Published", to: "/writer/stories" },
+    { label: "Analytics", to: "/writer/analytics" },
+  ],
+  admin: [
+    { label: "Control Desk", to: "/admin" },
+    { label: "Review Queue", to: "/admin/review-queue" },
+    { label: "Homepage Builder", to: "/admin/homepage-builder" },
+  ],
 };
 
-function UserProfileDropdown({
-  role,
-  onRoleChange,
-}: {
-  role: UserRole;
-  onRoleChange: (r: UserRole) => void;
-}) {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const navigate = useNavigate();
+function UserProfileDropdown({ role, onRoleChange }: { role: UserRole; onRoleChange: (r: UserRole) => void }) {
+  const [open, setOpen] = useState(false);
   const profile = roleProfiles[role];
-
-  const handleRoleSelect = (r: UserRole) => {
-    onRoleChange(r);
-    setDropdownOpen(false);
-    if (r === "writer") {
-      toast.info("Switched to Writer Mode — Navigating to Studio...");
-      navigate({ to: "/writer" });
-    } else if (r === "admin") {
-      toast.info("Switched to Admin Mode — Navigating to Admin Desk...");
-      navigate({ to: "/admin" });
-    } else {
-      toast.info("Switched to Reader Mode!");
-      navigate({ to: "/reader" });
-    }
-  };
+  const navigate = useNavigate();
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setDropdownOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-border bg-surface p-1 pr-3 shadow-paper transition-colors hover:border-primary"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-full border border-border bg-surface p-1 pr-3 text-left transition-colors hover:border-primary shrink-0"
       >
         <Avatar initials={profile.initials} size="sm" />
-        <div className="hidden sm:block text-left">
-          <p className="font-sans text-[0.8125rem] font-bold text-heading leading-none truncate max-w-[110px]">
-            {profile.name}
-          </p>
-          <span className="font-sans text-[0.625rem] font-extrabold text-primary uppercase tracking-wider">
-            {role}
-          </span>
+        <div className="hidden text-left md:block">
+          <p className="font-sans text-[0.8125rem] font-bold text-heading leading-tight">{profile.name}</p>
+          <p className="text-[0.6875rem] text-primary font-bold uppercase tracking-wider">{role}</p>
         </div>
         <ChevronDown className="size-3.5 text-subtle" />
       </button>
 
-      {dropdownOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-border bg-surface p-4 shadow-lift z-50 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-3 border-b border-border pb-3">
-            <Avatar initials={profile.initials} size="md" />
-            <div className="min-w-0 flex-1">
-              <p className="font-sans text-[0.9375rem] font-bold text-heading truncate">
-                {profile.name}
-              </p>
-              <p className="text-[0.75rem] text-subtle truncate">{profile.role}</p>
+      {open && (
+        <div className="absolute right-0 top-full mt-2 z-50 w-64 rounded-2xl border border-border bg-surface p-2 shadow-lift animate-in fade-in slide-in-from-top-2">
+          <div className="border-b border-border p-3">
+            <p className="font-sans text-[0.875rem] font-bold text-heading">{profile.name}</p>
+            <p className="text-[0.75rem] text-subtle">{profile.role}</p>
+            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary-light px-2.5 py-0.5 text-[0.6875rem] font-bold text-primary-hover uppercase tracking-wider">
+              <ShieldCheck className="size-3" /> Active: {role}
             </div>
           </div>
 
-          <div className="py-2 space-y-1">
-            <Link
-              to={profile.profileUrl}
-              onClick={() => setDropdownOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-body hover:bg-primary-light hover:text-primary-hover"
-            >
-              <User className="size-4" /> My Profile & Settings
-            </Link>
+          <div className="py-2 border-b border-border">
             <Link
               to={profile.dashboardUrl}
-              onClick={() => setDropdownOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-body hover:bg-primary-light hover:text-primary-hover"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover"
             >
-              <LayoutDashboard className="size-4" /> Role Dashboard
+              <LayoutDashboard className="size-4 text-primary" />
+              <span>{role === "reader" ? "Reader Space" : role === "writer" ? "Writer Studio" : role === "admin" ? "Admin Desk" : "Dashboard"}</span>
+            </Link>
+            <Link
+              to={profile.profileUrl}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover"
+            >
+              <User className="size-4 text-primary" />
+              <span>Profile Settings</span>
             </Link>
           </div>
 
-          <div className="border-t border-border pt-3 mt-1">
-            <p className="font-sans text-[0.6875rem] font-black tracking-widest text-subtle uppercase mb-2">
-              Active Role Switcher
-            </p>
-            <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-alt p-1">
-              {(["reader", "writer", "admin"] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => handleRoleSelect(r)}
-                  className={cn(
-                    "rounded-lg py-1.5 font-sans text-[0.75rem] font-bold capitalize transition-colors",
-                    role === r ? "bg-primary text-primary-foreground shadow-sm" : "text-subtle hover:text-heading",
-                  )}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-2 mt-3">
+          <div className="p-1">
             <button
               type="button"
               onClick={() => {
-                setDropdownOpen(false);
                 onRoleChange("guest");
-                toast.info("Logged out of tossatale.");
+                setOpen(false);
+                toast.success("Switched to Guest Mode");
                 navigate({ to: "/" });
               }}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-error hover:bg-error/10 text-left"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-destructive hover:bg-destructive/10"
             >
-              <LogOut className="size-4" /> Sign out
+              <LogOut className="size-4" />
+              <span>Switch to Guest</span>
             </button>
           </div>
         </div>
@@ -324,11 +257,11 @@ function Wordmark({ onDark = false }: { onDark?: boolean }) {
         alt="tossatale"
         width={40}
         height={40}
-        className="size-10  object-cover shadow-paper"
+        className="size-10 object-cover shadow-paper"
       />
       <span
         className={cn(
-          "font-display text-[1.35rem] leading-none font-bold tracking-tight",
+          "font-sans text-[1.35rem] leading-none font-bold tracking-tight",
           onDark ? "text-white" : "text-heading",
         )}
       >
@@ -371,20 +304,12 @@ function StoriesDropdown() {
               <span>All Stories</span>
             </Link>
             <Link
-              to="/series"
+              to="/videos"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
             >
-              <Layers className="size-4 text-primary" />
-              <span>Story Series</span>
-            </Link>
-            <Link
-              to="/categories"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
-            >
-              <Sparkles className="size-4 text-primary" />
-              <span>Categories</span>
+              <Film className="size-4 text-primary" />
+              <span>Short Films</span>
             </Link>
           </div>
         </div>
@@ -610,29 +535,30 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
 
 const footerColumns = [
   {
-    title: "Read",
+    title: "Explore",
     links: [
       { label: "Stories", to: "/stories" },
-      { label: "Story series", to: "/series" },
-      { label: "Categories", to: "/categories" },
-      { label: "Videos", to: "/videos" },
+      { label: "Blog", to: "/blogs" },
+      { label: "Short Films", to: "/videos" },
+      { label: "Upcoming Projects", to: "/coming-soon" },
     ],
   },
   {
     title: "Community",
     links: [
+      { label: "Newsletter", to: "/#newsletter" },
       { label: "Writers", to: "/writers" },
-      { label: "The Journal", to: "/blogs" },
-      { label: "About us", to: "/about" },
+      { label: "About Us", to: "/about" },
       { label: "Contact", to: "/contact" },
     ],
   },
   {
     title: "Legal",
     links: [
-      { label: "Privacy policy", to: "/privacy" },
-      { label: "Terms & conditions", to: "/terms" },
-      { label: "Coming soon", to: "/coming-soon" },
+      { label: "Privacy Policy", to: "/privacy" },
+      { label: "Terms & Conditions", to: "/terms" },
+      { label: "Submission Guidelines", to: "/contact" },
+      { label: "Stay Tuned", to: "/coming-soon" },
     ],
   },
 ];
@@ -714,6 +640,20 @@ export function SiteFooter() {
             <p className="mt-5 max-w-sm text-[0.9375rem] text-body">
               {defaultFooterSettings.aboutText}
             </p>
+            <div className="mt-4 flex items-center gap-3 text-subtle">
+              <a href="https://twitter.com" target="_blank" rel="noreferrer" aria-label="Twitter" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
+                <Twitter className="size-4" />
+              </a>
+              <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
+                <Instagram className="size-4" />
+              </a>
+              <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
+                <Linkedin className="size-4" />
+              </a>
+              <a href="https://youtube.com" target="_blank" rel="noreferrer" aria-label="YouTube" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
+                <Youtube className="size-4" />
+              </a>
+            </div>
             <p className="mt-6 font-display text-[1.0625rem] italic text-primary">
               {defaultFooterSettings.tagline}
             </p>

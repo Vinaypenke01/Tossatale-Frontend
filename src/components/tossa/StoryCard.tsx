@@ -80,11 +80,6 @@ export function StoryCard({
             <span className="font-sans text-[0.6875rem] font-black tracking-[0.16em] text-primary uppercase">
               {story.category}
             </span>
-            {story.series && (
-              <span className="inline-flex items-center gap-1 font-sans text-[0.625rem] font-bold text-subtle">
-                <Layers className="size-3" /> Series
-              </span>
-            )}
           </div>
           <h3 className="mt-1 line-clamp-2 font-display text-[1.0625rem] font-bold leading-snug text-heading group-hover:text-primary-hover">
             {story.title}
@@ -110,11 +105,6 @@ export function StoryCard({
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
           <div className="flex flex-wrap items-center gap-2">
             <CategoryPill>{story.category}</CategoryPill>
-            {story.series && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-light border border-primary/20 px-2.5 py-0.5 font-sans text-[0.6875rem] font-bold tracking-wide text-primary-hover">
-                <Layers className="size-3" /> Series
-              </span>
-            )}
           </div>
           <span className="font-sans text-[0.75rem] font-medium text-subtle">
             {story.readingTime} min read
