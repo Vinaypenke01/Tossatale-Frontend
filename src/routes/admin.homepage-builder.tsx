@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 import { AppShell } from "@/components/tossa/AppShell";
 import { Avatar, Badge, Button, Field, Input, Panel, Textarea, VerifiedBadge } from "@/components/tossa/kit";
@@ -61,7 +62,7 @@ const slots = [
   { name: "Announcement & Footer", capacity: 2, count: 2 },
 ];
 
-export function HomepageBuilder() {
+function HomepageBuilder() {
   const [activeTab, setActiveTab] = useState<"layout" | "writers" | "announcement" | "footer" | "contact">("layout");
 
   // Featured writers carousel state
@@ -76,10 +77,18 @@ export function HomepageBuilder() {
   // Footer branding state
   const [footer, setFooter] = useState<SiteFooterSettings>(defaultFooterSettings);
 
-  const handleSave = () => {
-    toast.success("Homepage, Featured Writers Carousel, and Announcement settings published!", {
-      description: "All changes are live across the tossatale platform.",
-    });
+  const handleSave = async () => {
+    try {
+      await api.patch("/admin/homepage/sections/", {
+        announcement,
+        featured_writers: featuredWriters,
+        footer,
+        contact,
+      });
+      toast.success("Homepage & Site Builder changes published live!");
+    } catch {
+      toast.error("Failed to publish changes");
+    }
   };
 
   const handleReset = () => {
@@ -240,17 +249,21 @@ export function HomepageBuilder() {
             </Panel>
 
             <Panel className="p-6">
-              <h2 className="text-xl">Series banner</h2>
+              <h2 className="text-xl font-display font-bold text-heading">Series banner</h2>
               <p className="mt-2 text-[0.9375rem] text-body">Currently promoting:</p>
-              <div className="mt-3 flex items-center gap-3 rounded-2xl paper-gradient p-3">
-                <img src={series[0]!.cover} alt="" className="h-14 w-20 rounded-lg object-cover" />
-                <div>
-                  <p className="font-sans text-[0.9375rem] font-bold text-heading">
-                    {series[0]!.title}
-                  </p>
-                  <p className="text-[0.8125rem] text-subtle">{series[0]!.parts} parts</p>
+              {series && series.length > 0 ? (
+                <div className="mt-3 flex items-center gap-3 rounded-2xl paper-gradient p-3">
+                  <img src={series[0]?.cover || "/assets/cover-boat.jpg"} alt="" className="h-14 w-20 rounded-lg object-cover" />
+                  <div>
+                    <p className="font-sans text-[0.9375rem] font-bold text-heading">
+                      {series[0]?.title || "Featured Series"}
+                    </p>
+                    <p className="text-[0.8125rem] text-subtle">{series[0]?.parts || 0} parts</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="mt-3 text-[0.875rem] text-subtle italic">No series currently promoted</p>
+              )}
             </Panel>
           </div>
         </div>
@@ -349,7 +362,7 @@ export function HomepageBuilder() {
                             if (isFeatured) {
                               setFeaturedWriters({
                                 ...featuredWriters,
-                                featuredSlugs: featuredWriters.featuredSlugs.filter((s) => s !== w.slug),
+                                featuredSlugs: featuredWriters.featuredSlugs.filter((s: string) => s !== w.slug),
                               });
                               toast.info(`Removed ${w.name} from featured writers carousel`);
                             } else {
@@ -427,7 +440,7 @@ export function HomepageBuilder() {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {featuredWriters.featuredSlugs.map((slug, idx) => {
+                    {featuredWriters.featuredSlugs.map((slug: string, idx: number) => {
                       const w = writerBySlug(slug);
                       if (!w) return null;
                       return (

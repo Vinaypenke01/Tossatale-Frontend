@@ -123,15 +123,31 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/components/auth/AuthContext";
+import { UnderConstructionScreen } from "@/components/tossa/UnderConstructionScreen";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isUnderConstruction =
+    import.meta.env.VITE_UNDER_CONSTRUCTION === "true" ||
+    import.meta.env.VITE_UNDER_CONSTRUCTION === "TRUE";
+
+  if (isUnderConstruction) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <UnderConstructionScreen />
+        <Toaster />
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <Toaster />
+      <AuthProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

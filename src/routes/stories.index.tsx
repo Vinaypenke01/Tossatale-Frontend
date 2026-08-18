@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LayoutGrid, List, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
 import { StoryCard } from "@/components/tossa/StoryCard";
-import { Button, CategoryPill, Input, Panel } from "@/components/tossa/kit";
-import { categories, stories } from "@/lib/data";
+import { CategoryPill, CustomSelect, Input, Panel } from "@/components/tossa/kit";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/stories/")({
   head: () => ({
@@ -31,21 +32,62 @@ export const Route = createFileRoute("/stories/")({
 const sorts = ["Newest", "Most read", "Most liked", "Shortest read"] as const;
 
 function StoriesIndex() {
-  const [active, setActive] = useState("all");
+  const [activeCategory, setActiveCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sort, setSort] = useState<(typeof sorts)[number]>("Newest");
 
-  const filtered = useMemo(
-    () =>
-      stories.filter(
-        (s) =>
-          (active === "all" || s.categorySlug === active) &&
-          (query.trim() === "" ||
-            `${s.title} ${s.dek} ${s.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase())),
-      ),
-    [active, query],
-  );
+  const { data: categoriesData } = useQuery({
+    queryKey: ["public-categories"],
+    queryFn: async () => {
+      const res = await api.get("/public/categories/");
+      return res.data?.results || res.data || [];
+    },
+  });
+
+  const { data: apiStories, isLoading } = useQuery({
+    queryKey: ["public-stories", activeCategory, query, sort],
+    queryFn: async () => {
+      let ordering = "-published_at";
+      if (sort === "Most read") ordering = "-views_count";
+      if (sort === "Most liked") ordering = "-likes_count";
+      if (sort === "Shortest read") ordering = "estimated_reading_time";
+
+      let endpoint = `/public/stories/?ordering=${ordering}`;
+      if (activeCategory !== "all") endpoint += `&category=${encodeURIComponent(activeCategory)}`;
+      if (query.trim()) endpoint += `&search=${encodeURIComponent(query.trim())}`;
+
+      const res = await api.get(endpoint);
+      return res.data?.results || res.data || [];
+    },
+  });
+
+  const displayStories = useMemo(() => {
+    if (!apiStories || !Array.isArray(apiStories)) return [];
+    return apiStories.map((s: any) => ({
+      slug: s.slug,
+      title: s.title,
+      dek: s.subtitle || s.seo_description || "A longform story worth reading.",
+      writer: s.writer?.slug || "writer",
+      writerName: s.writer?.name || s.writer?.user?.full_name || "Writer",
+      category: s.category?.name || "General",
+      categorySlug: s.category?.slug || "general",
+      date: s.published_at ? new Date(s.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recent",
+      readingTime: s.estimated_reading_time || 5,
+      cover: s.cover_image || s.banner_image || "/assets/cover-lane.jpg",
+      tags: s.tags?.map((t: any) => t.name) || [],
+      views: s.views_count || 0,
+      likes: s.likes_count || 0,
+    }));
+  }, [apiStories]);
+
+  const categoriesList = useMemo(() => {
+    if (!categoriesData || !Array.isArray(categoriesData)) return [];
+    return categoriesData.map((c: any) => ({
+      slug: c.slug || c.id,
+      name: c.name,
+    }));
+  }, [categoriesData]);
 
   return (
     <SiteLayout>
@@ -64,38 +106,6 @@ function StoriesIndex() {
       </header>
 
       <div className="mx-auto max-w-[1240px] px-5 py-10 lg:px-8">
-        {/* Got time for a story? Quick time filter */}
-        <div className="mb-6 rounded-2xl border border-border bg-surface p-4 sm:p-5">
-          <p className="font-sans text-[0.75rem] font-black tracking-[0.16em] text-primary uppercase">
-            Got time for a story?
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {[
-              ["All times", "all"],
-              ["< 5 mins", "quick"],
-              ["5 - 10 mins", "medium"],
-              ["10 - 15 mins", "deep"],
-              ["15+ mins", "longform"],
-            ].map(([label, val]) => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => {
-                  if (val === "all") setActive("all");
-                }}
-                className={cn(
-                  "rounded-full px-3.5 py-1.5 font-sans text-[0.8125rem] font-bold transition-colors border",
-                  val === "all"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-surface-alt border-border text-body hover:border-primary hover:text-primary",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <Panel className="flex flex-col gap-5 p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Input
@@ -109,18 +119,12 @@ function StoriesIndex() {
               <label className="sr-only" htmlFor="sort">
                 Sort stories
               </label>
-              <div className="relative">
-                <select
-                  id="sort"
+              <div className="w-48">
+                <CustomSelect
                   value={sort}
-                  onChange={(e) => setSort(e.target.value as (typeof sorts)[number])}
-                  className="h-11 appearance-none rounded-xl border border-border bg-surface pr-10 pl-4 font-sans text-[0.875rem] font-bold text-heading focus:border-primary focus:ring-4 focus:ring-primary-light focus:outline-none"
-                >
-                  {sorts.map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-                </select>
-                <SlidersHorizontal className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-subtle" />
+                  onChange={(val) => setSort(val as (typeof sorts)[number])}
+                  options={sorts.map((s) => ({ label: s, value: s }))}
+                />
               </div>
               <div className="flex overflow-hidden rounded-xl border border-border">
                 {(
@@ -148,56 +152,46 @@ function StoriesIndex() {
           </div>
 
           <div className="flex flex-wrap gap-2 border-t border-divider pt-4">
-            <button type="button" onClick={() => setActive("all")}>
-              <CategoryPill tone={active === "all" ? "solid" : "light"}>All</CategoryPill>
+            <button type="button" onClick={() => setActiveCategory("all")}>
+              <CategoryPill tone={activeCategory === "all" ? "solid" : "light"}>All</CategoryPill>
             </button>
-            {categories.map((c) => (
-              <button key={c.slug} type="button" onClick={() => setActive(c.slug)}>
-                <CategoryPill tone={active === c.slug ? "solid" : "light"}>{c.name}</CategoryPill>
+            {categoriesList.map((c: any) => (
+              <button key={c.slug} type="button" onClick={() => setActiveCategory(c.slug)}>
+                <CategoryPill tone={activeCategory === c.slug ? "solid" : "light"}>{c.name}</CategoryPill>
               </button>
             ))}
           </div>
         </Panel>
 
         <p className="mt-4 text-[0.875rem] text-subtle font-medium">
-          Showing {filtered.length} of {stories.length} stories · sorted by {sort.toLowerCase()}
+          Showing {displayStories.length} stories · sorted by {sort.toLowerCase()}
         </p>
 
-        <div
-          className={cn(
-            "mt-6 grid gap-6",
-            view === "grid" ? "md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1",
-          )}
-        >
-          {filtered.map((story, i) => (
-            <Reveal key={story.slug} delay={i * 50}>
-              <StoryCard story={story} layout={view === "list" ? "horizontal" : "vertical"} />
-            </Reveal>
-          ))}
-        </div>
-
-        <nav className="mt-14 flex items-center justify-center gap-2" aria-label="Pagination">
-          <Button variant="ghostOutline" size="sm">
-            Previous
-          </Button>
-          {[1, 2, 3, 4].map((p) => (
-            <button
-              key={p}
-              type="button"
-              aria-current={p === 1 ? "page" : undefined}
-              className={cn(
-                "grid size-9 place-items-center rounded-full font-sans text-[0.875rem] font-bold transition-colors",
-                p === 1 ? "bg-primary text-primary-foreground" : "text-body hover:bg-primary-light",
-              )}
-            >
-              {p}
-            </button>
-          ))}
-          <span className="px-1 text-subtle">…</span>
-          <Button variant="ghostOutline" size="sm">
-            Next
-          </Button>
-        </nav>
+        {isLoading ? (
+          <div className="py-16 text-center text-subtle font-medium">
+            Loading stories...
+          </div>
+        ) : displayStories.length === 0 ? (
+          <Panel className="mt-8 p-12 text-center">
+            <h3 className="font-display text-xl font-bold text-heading">No published stories found</h3>
+            <p className="mt-2 text-[0.875rem] text-subtle">
+              {query ? `No stories match your search query "${query}".` : "There are currently no published stories available."}
+            </p>
+          </Panel>
+        ) : (
+          <div
+            className={cn(
+              "mt-6 grid gap-6",
+              view === "grid" ? "md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1",
+            )}
+          >
+            {displayStories.map((story: any, i: number) => (
+              <Reveal key={story.slug} delay={i * 50} className="h-full">
+                <StoryCard story={story} layout={view === "list" ? "horizontal" : "vertical"} />
+              </Reveal>
+            ))}
+          </div>
+        )}
       </div>
     </SiteLayout>
   );

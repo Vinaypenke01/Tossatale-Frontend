@@ -14,6 +14,7 @@ import {
   Users,
   Newspaper,
   Youtube,
+  Clapperboard,
   UserPlus,
   type LucideIcon,
 } from "lucide-react";
@@ -34,6 +35,7 @@ const navs: Record<Role, NavItem[]> = {
     { label: "Write story", to: "/admin/editor", icon: PenLine },
     { label: "Blogs", to: "/admin/blogs", icon: Newspaper },
     { label: "Videos", to: "/admin/videos", icon: Youtube },
+    { label: "Upcoming projects", to: "/admin/upcoming-projects", icon: Clapperboard },
     { label: "Review queue", to: "/admin/review-queue", icon: FileCheck2 },
     { label: "Homepage builder", to: "/admin/homepage-builder", icon: LayoutTemplate },
     { label: "Writers", to: "/admin/writers", icon: Users },
@@ -101,21 +103,34 @@ export function AppShell({
 }) {
   const items = navs[role];
   const person = personas[role];
+  const isAdmin = role === "admin";
 
   return (
-    <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[264px_1fr]">
-      <aside className="border-b border-border bg-surface lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:border-r lg:border-b-0">
-        <div className="flex items-center justify-between gap-3 px-5 py-5">
-          <div className="flex items-center gap-3">
+    <div
+      className={cn(
+        "min-h-dvh bg-background",
+        isAdmin
+          ? "grid grid-cols-[200px_1fr] sm:grid-cols-[240px_1fr] lg:grid-cols-[264px_1fr]"
+          : "lg:grid lg:grid-cols-[264px_1fr]"
+      )}
+    >
+      <aside
+        className={cn(
+          "sticky top-0 flex h-dvh flex-col border-r border-border bg-surface overflow-y-auto shrink-0",
+          !isAdmin && "border-b lg:border-b-0 lg:border-r"
+        )}
+      >
+        <div className="flex items-center justify-between gap-3 px-4 py-5 sm:px-5">
+          <div className="flex items-center gap-3 min-w-0">
             <img
               src={logo}
               alt="tossatale"
               width={36}
               height={36}
-              className="size-9 rounded-xl object-cover shadow-paper"
+              className="size-9 rounded-xl object-cover shadow-paper shrink-0"
             />
-            <div>
-              <Link to="/" className="block font-display text-[1.125rem] leading-none text-heading">
+            <div className="min-w-0">
+              <Link to="/" className="block truncate font-display text-[1.125rem] leading-none text-heading">
                 tossatale
               </Link>
               <span className="font-sans text-[0.6875rem] font-black tracking-[0.18em] text-primary uppercase">
@@ -126,22 +141,22 @@ export function AppShell({
           <ThemeToggle />
         </div>
 
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-4 lg:flex-col lg:overflow-visible">
+        <nav className="flex flex-col gap-1 px-3 py-2 overflow-y-auto flex-1">
           {items.map((item) => (
             <Link
               key={item.to}
               to={item.to}
               activeOptions={{ exact: item.to === `/${role}` }}
               activeProps={{ className: "bg-primary-light text-primary-hover" }}
-              className="inline-flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-sans text-[0.9375rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover"
+              className="inline-flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-sans text-[0.875rem] sm:text-[0.9375rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover"
             >
-              <item.icon className="size-4" />
-              {item.label}
+              <item.icon className="size-4 shrink-0" />
+              <span className="truncate">{item.label}</span>
             </Link>
           ))}
         </nav>
 
-        <div className="mt-auto border-t border-border px-5 py-4">
+        <div className="mt-auto border-t border-border px-4 py-4 sm:px-5 shrink-0">
           <div className="flex items-center gap-3">
             <Avatar initials={person.initials} size="sm" />
             <div className="min-w-0 flex-1">
@@ -154,26 +169,20 @@ export function AppShell({
               to="/auth"
               aria-label="Log out"
               title="Log out"
-              className="grid size-9 shrink-0 place-items-center rounded-xl border border-border text-subtle transition-colors hover:border-primary hover:bg-primary-light hover:text-primary-hover lg:hidden"
+              className="grid size-9 shrink-0 place-items-center rounded-xl border border-border text-subtle transition-colors hover:border-primary hover:bg-primary-light hover:text-primary-hover"
             >
               <LogOut className="size-4" />
             </Link>
           </div>
-          <Link
-            to="/auth"
-            className="mt-3 hidden w-full items-center justify-center gap-2 rounded-xl border border-border px-3.5 py-2.5 font-sans text-[0.875rem] font-bold text-body transition-colors hover:border-primary hover:bg-primary-light hover:text-primary-hover lg:inline-flex"
-          >
-            <LogOut className="size-4" /> Log out
-          </Link>
         </div>
       </aside>
 
       <main className="min-w-0">
-        <div className="mx-auto max-w-[1120px] px-5 py-10 lg:px-10 lg:py-14">
+        <div className="mx-auto max-w-[1120px] px-4 py-8 sm:px-6 lg:px-10 lg:py-14">
           <header className="flex flex-col gap-4 border-b border-border pb-8 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
-              <h1 className="text-[clamp(1.75rem,3.2vw,2.5rem)] leading-[1.1]">{title}</h1>
-              {blurb && <p className="mt-3 text-[1.0625rem] text-body">{blurb}</p>}
+              <h1 className="text-[clamp(1.5rem,3.2vw,2.5rem)] leading-[1.1] font-display font-bold text-heading">{title}</h1>
+              {blurb && <p className="mt-3 text-[0.9375rem] sm:text-[1.0625rem] text-body">{blurb}</p>}
             </div>
             {actions && <div className="flex shrink-0 flex-wrap gap-3">{actions}</div>}
           </header>

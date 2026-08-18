@@ -1,10 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { BookOpen } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
 import { ButtonLink, Panel, SectionHeading } from "@/components/tossa/kit";
-import { series, stories, writerBySlug } from "@/lib/data";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/series")({
   head: () => ({
@@ -23,6 +24,25 @@ export const Route = createFileRoute("/series")({
 });
 
 function SeriesPage() {
+  const { data: apiSeries, isLoading } = useQuery({
+    queryKey: ["public-series"],
+    queryFn: async () => {
+      const res = await api.get("/public/series/");
+      return res.data?.results || res.data || [];
+    },
+  });
+
+  const displaySeries = (apiSeries && Array.isArray(apiSeries))
+    ? apiSeries.map((s: any) => ({
+        slug: s.slug,
+        title: s.title,
+        blurb: s.description || "Longform story series.",
+        writerName: s.writer?.name || s.writer?.user?.full_name || "Writer",
+        parts: s.total_stories || 1,
+        progress: 0,
+      }))
+    : [];
+
   return (
     <SiteLayout>
       <header className="border-b border-border paper-gradient">
@@ -41,47 +61,25 @@ function SeriesPage() {
       </header>
 
       <div className="mx-auto max-w-[1240px] space-y-8 px-5 py-16 lg:px-8">
-        {series.map((s, i) => {
-          const writer = writerBySlug(s.writer);
-          const chapters = stories.filter((st) => st.series === s.title);
-          return (
+        {isLoading ? (
+          <div className="py-16 text-center text-subtle font-medium">Loading story series...</div>
+        ) : displaySeries.length === 0 ? (
+          <Panel className="p-12 text-center">
+            <h3 className="font-display text-xl font-bold text-heading">No story series available</h3>
+            <p className="mt-2 text-[0.875rem] text-subtle">
+              There are currently no multi-part story series published.
+            </p>
+          </Panel>
+        ) : (
+          displaySeries.map((s: any, i: number) => (
             <Reveal key={s.slug} delay={i * 60}>
               <Panel hover className="p-8 lg:p-10">
                 <div>
                   <p className="text-[0.6875rem] font-black tracking-[0.18em] text-primary uppercase">
-                    {s.parts} parts · {writer?.name}
+                    {s.parts} parts · {s.writerName}
                   </p>
                   <h2 className="mt-3 text-[clamp(1.5rem,2.6vw,2.1rem)] leading-tight font-display font-bold text-heading">{s.title}</h2>
                   <p className="mt-3 text-[1.0625rem] text-body">{s.blurb}</p>
-
-                  <ol className="mt-6 divide-y divide-divider border-t border-divider">
-                    {Array.from({ length: Math.min(4, s.parts) }).map((_, idx) => {
-                      const chapter = chapters[idx];
-                      return (
-                        <li key={idx} className="flex items-center gap-3 py-3">
-                          <span className="font-display text-[1.05rem] text-primary/50">
-                            {String(idx + 1).padStart(2, "0")}
-                          </span>
-                          {chapter ? (
-                            <Link
-                              to="/stories/$slug"
-                              params={{ slug: chapter.slug }}
-                              className="text-[0.9375rem] font-bold text-heading hover:text-primary"
-                            >
-                              {chapter.title}
-                            </Link>
-                          ) : (
-                            <span className="text-[0.9375rem] text-subtle">
-                              Chapter {idx + 1} · available to read
-                            </span>
-                          )}
-                          <span className="ml-auto text-[0.8125rem] text-subtle">
-                            {8 + idx * 3} min
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ol>
 
                   <div className="mt-7 flex flex-wrap items-center gap-3">
                     <ButtonLink to="/stories">
@@ -95,11 +93,11 @@ function SeriesPage() {
                 </div>
               </Panel>
             </Reveal>
-          );
-        })}
+          ))
+        )}
       </div>
 
-      <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+      <div className="mx-auto max-w-[1240px] px-5 lg:px-8 pb-16">
         <SectionHeading
           eyebrow="Also worth your evening"
           title="Standalone stories"

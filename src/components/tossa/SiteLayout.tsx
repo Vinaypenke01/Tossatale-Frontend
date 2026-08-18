@@ -26,7 +26,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Avatar, Button, ButtonLink } from "@/components/tossa/kit";
-import logo from "@/assets/tossatale_redefine_logo.jpg";
+import logo from "@/assets/tossatale_offical_logo-removebg-preview.png";
 import { categories, defaultAnnouncementSettings, defaultFooterSettings, type AnnouncementSettings } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
@@ -34,17 +34,17 @@ const navLinks = [
   { label: "Home", to: "/" },
   { label: "Films", to: "/videos" },
   // { label: "Writers", to: "/writers" },
-  { label: "Blogs", to: "/blogs" },
+  { label: "Blog", to: "/blogs" },
 ];
 
 const mobileNavLinks = [
   { label: "Home", to: "/" },
   { label: "Stories", to: "/stories" },
-  { label: "Series", to: "/series" },
   { label: "Films", to: "/videos" },
-  { label: "Blogs", to: "/blogs" },
+  { label: "Upcoming Projects", to: "/upcoming-projects" },
+  { label: "Blog", to: "/blogs" },
   { label: "Contact", to: "/contact" },
-  { label: "Categories", to: "/categories" },
+  { label: "FAQ & Help", to: "/faq" },
 ];
 
 export type UserRole = "guest" | "reader" | "writer" | "admin";
@@ -111,21 +111,40 @@ export function useTheme(): [string, (theme: string) => void] {
 
 export function ThemeToggle() {
   const [theme, toggleTheme] = useTheme();
+  const isDark = theme === "dark";
 
   return (
-    <Button
-      variant="ghostOutline"
-      size="icon"
+    <button
+      type="button"
+      suppressHydrationWarning
       aria-label="Toggle theme"
       onClick={() => {
-        const next = theme === "dark" ? "light" : "dark";
+        const next = isDark ? "light" : "dark";
         toggleTheme(next);
         toast.info(next === "dark" ? "Switched to Dark Mode 🌙" : "Switched to Light Mode ☀️");
       }}
-      className="size-9 rounded-full border border-border bg-surface text-body hover:border-primary hover:text-primary transition-all duration-300 active:scale-95 shrink-0 shadow-xs"
+      className={cn(
+        "relative flex h-8 w-14 shrink-0 cursor-pointer items-center rounded-full p-1 transition-all duration-300 focus:outline-none border shadow-inner",
+        isDark
+          ? "bg-[#161618] border-white/15"
+          : "bg-[#dce6fd] border-[#b9cdfb]",
+      )}
     >
-      {theme === "dark" ? <Sun className="size-4 text-amber-500" /> : <Moon className="size-4 text-heading" />}
-    </Button>
+      <span
+        className={cn(
+          "grid size-6 place-items-center rounded-full transition-all duration-300 ease-out shadow-md",
+          isDark
+            ? "translate-x-[1.45rem] bg-[#d5b064] text-[#161618] shadow-amber-900/40"
+            : "translate-x-0 bg-[#5182ed] text-white shadow-blue-500/40",
+        )}
+      >
+        {isDark ? (
+          <Moon className="size-3.5 fill-current text-[#161618]" />
+        ) : (
+          <Sun className="size-3.5 text-white" />
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -251,22 +270,15 @@ function UserProfileDropdown({ role, onRoleChange }: { role: UserRole; onRoleCha
 
 function Wordmark({ onDark = false }: { onDark?: boolean }) {
   return (
-    <Link to="/" className="flex items-center gap-3">
+    <Link to="/" className="inline-flex items-center py-1">
       <img
         src={logo}
         alt="tossatale"
-        width={40}
-        height={40}
-        className="size-10 object-cover shadow-paper"
-      />
-      <span
         className={cn(
-          "font-sans text-[1.35rem] leading-none font-bold tracking-tight",
-          onDark ? "text-white" : "text-heading",
+          "h-9 w-auto max-w-[160px] object-contain transition-opacity hover:opacity-90",
+          onDark && "brightness-0 invert",
         )}
-      >
-        tossatale
-      </span>
+      />
     </Link>
   );
 }
@@ -281,6 +293,7 @@ function StoriesDropdown() {
       onMouseLeave={() => setOpen(false)}
     >
       <button
+        suppressHydrationWarning
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
@@ -372,15 +385,17 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl">
       <AnnouncementBar announcement={announcement} />
-      <div className="mx-auto flex h-18 max-w-[1240px] items-center gap-6 px-5 py-4 lg:px-8">
-        <Wordmark />
+      <div className="mx-auto grid grid-cols-2 lg:grid-cols-[1fr_auto_1fr] h-18 max-w-[1240px] items-center px-5 py-4 lg:px-8">
+        <div className="justify-self-start">
+          <Wordmark />
+        </div>
 
-        <nav className="ml-auto hidden items-center gap-1 whitespace-nowrap lg:flex shrink-0">
+        <nav className="justify-self-center hidden items-center gap-2 whitespace-nowrap lg:flex shrink-0">
           <Link
             to="/"
             activeOptions={{ exact: true }}
-            activeProps={{ className: "bg-primary-light text-primary-hover" }}
-            className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+            activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
+            className="rounded-full px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
           >
             Home
           </Link>
@@ -389,26 +404,24 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
 
           <Link
             to="/videos"
-            activeProps={{ className: "bg-primary-light text-primary-hover" }}
-            className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+            activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
+            className="rounded-full px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
           >
             Films
           </Link>
 
-          {/* <Link to="/writers">Writers</Link> */}
-
           <Link
             to="/blogs"
-            activeProps={{ className: "bg-primary-light text-primary-hover" }}
-            className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+            activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
+            className="rounded-full px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
           >
-            Blogs
+            Blog
           </Link>
 
           <Link
             to="/contact"
-            activeProps={{ className: "bg-primary-light text-primary-hover" }}
-            className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+            activeProps={{ className: "bg-primary text-primary-foreground font-bold" }}
+            className="rounded-full px-3.5 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
           >
             Contact
           </Link>
@@ -430,17 +443,13 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           )}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3 lg:ml-0">
+        <div className="justify-self-end flex items-center gap-3 shrink-0">
           <Link
             to="/search"
             aria-label="Search tossatale"
-            className="hidden h-8.5 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-[0.75rem] text-subtle transition-colors hover:border-primary hover:text-primary md:flex shrink-0"
+            className="hidden size-8 place-items-center rounded-full border border-border bg-surface text-subtle transition-all hover:border-primary hover:text-primary md:grid shrink-0 shadow-xs"
           >
-            <Search className="size-3.5 text-subtle" />
-            <span>Search</span>
-            <kbd className="rounded-md bg-surface-alt px-1 py-0.5 font-sans text-[0.625rem] font-bold text-subtle">
-              ⌘K
-            </kbd>
+            <Search className="size-4 text-subtle" />
           </Link>
 
           {/* Theme Switcher Toggle */}
@@ -451,9 +460,6 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
             <div className="hidden sm:flex items-center gap-2">
               <ButtonLink to="/auth" variant="ghostOutline" size="sm">
                 Sign in
-              </ButtonLink>
-              <ButtonLink to="/auth" size="sm">
-                Become Writer
               </ButtonLink>
             </div>
           ) : (
@@ -498,12 +504,9 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           </nav>
 
           {currentRole === "guest" && (
-            <div className="mt-3 border-t border-border pt-2.5 grid grid-cols-2 gap-1.5">
+            <div className="mt-3 border-t border-border pt-2.5">
               <ButtonLink to="/auth" variant="ghostOutline" size="sm" className="w-full justify-center px-2 text-[0.75rem]" onClick={() => setOpen(false)}>
                 Sign in
-              </ButtonLink>
-              <ButtonLink to="/auth" size="sm" className="w-full justify-center px-2 text-[0.75rem]" onClick={() => setOpen(false)}>
-                Become Writer
               </ButtonLink>
             </div>
           )}
@@ -540,7 +543,7 @@ const footerColumns = [
       { label: "Stories", to: "/stories" },
       { label: "Blog", to: "/blogs" },
       { label: "Short Films", to: "/videos" },
-      { label: "Upcoming Projects", to: "/coming-soon" },
+      { label: "Upcoming Projects", to: "/upcoming-projects" },
     ],
   },
   {
@@ -550,6 +553,7 @@ const footerColumns = [
       { label: "Writers", to: "/writers" },
       { label: "About Us", to: "/about" },
       { label: "Contact", to: "/contact" },
+      { label: "FAQ & Help", to: "/faq" },
     ],
   },
   {
@@ -558,7 +562,7 @@ const footerColumns = [
       { label: "Privacy Policy", to: "/privacy" },
       { label: "Terms & Conditions", to: "/terms" },
       { label: "Submission Guidelines", to: "/contact" },
-      { label: "Stay Tuned", to: "/coming-soon" },
+      { label: "Stay Tuned", to: "/upcoming-projects" },
     ],
   },
 ];
@@ -612,6 +616,7 @@ function FooterRoleSwitcher() {
               <button
                 key={rKey}
                 type="button"
+                suppressHydrationWarning
                 onClick={() => handleRoleClick(rKey)}
                 className={cn(
                   "rounded-2xl px-4 py-2.5 font-sans text-[0.875rem] font-bold transition-all shadow-sm",

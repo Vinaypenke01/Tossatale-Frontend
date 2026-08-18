@@ -16,10 +16,12 @@ import { Route as BlogsRouteImport } from './routes/blogs'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as ComingSoonRouteImport } from './routes/coming-soon'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeriesRouteImport } from './routes/series'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as UpcomingProjectsRouteImport } from './routes/upcoming-projects'
 import { Route as VideosRouteImport } from './routes/videos'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
@@ -27,14 +29,19 @@ import { Route as AdminBlogsRouteImport } from './routes/admin.blogs'
 import { Route as AdminHomepageBuilderRouteImport } from './routes/admin.homepage-builder'
 import { Route as AdminProfileRouteImport } from './routes/admin.profile'
 import { Route as AdminReviewQueueRouteImport } from './routes/admin.review-queue'
+import { Route as AdminUpcomingProjectsRouteImport } from './routes/admin.upcoming-projects'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminWritersRouteImport } from './routes/admin.writers'
+import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
+import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
 import { Route as ReaderIndexRouteImport } from './routes/reader.index'
 import { Route as ReaderBookmarksRouteImport } from './routes/reader.bookmarks'
 import { Route as ReaderFollowingRouteImport } from './routes/reader.following'
 import { Route as ReaderHistoryRouteImport } from './routes/reader.history'
 import { Route as StoriesIndexRouteImport } from './routes/stories.index'
 import { Route as StoriesSlugRouteImport } from './routes/stories.$slug'
+import { Route as VideosIndexRouteImport } from './routes/videos.index'
+import { Route as VideosSlugRouteImport } from './routes/videos.$slug'
 import { Route as WriterIndexRouteImport } from './routes/writer.index'
 import { Route as WriterAnalyticsRouteImport } from './routes/writer.analytics'
 import { Route as WriterProfileRouteImport } from './routes/writer.profile'
@@ -83,6 +90,11 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -101,6 +113,11 @@ const SeriesRoute = SeriesRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UpcomingProjectsRoute = UpcomingProjectsRouteImport.update({
+  id: '/upcoming-projects',
+  path: '/upcoming-projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VideosRoute = VideosRouteImport.update({
@@ -138,6 +155,11 @@ const AdminReviewQueueRoute = AdminReviewQueueRouteImport.update({
   path: '/admin/review-queue',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUpcomingProjectsRoute = AdminUpcomingProjectsRouteImport.update({
+  id: '/admin/upcoming-projects',
+  path: '/admin/upcoming-projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminVideosRoute = AdminVideosRouteImport.update({
   id: '/admin/videos',
   path: '/admin/videos',
@@ -147,6 +169,16 @@ const AdminWritersRoute = AdminWritersRouteImport.update({
   id: '/admin/writers',
   path: '/admin/writers',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BlogsIndexRoute = BlogsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BlogsRoute,
+} as any)
+const BlogsSlugRoute = BlogsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogsRoute,
 } as any)
 const ReaderIndexRoute = ReaderIndexRouteImport.update({
   id: '/reader/',
@@ -177,6 +209,16 @@ const StoriesSlugRoute = StoriesSlugRouteImport.update({
   id: '/stories/$slug',
   path: '/stories/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const VideosIndexRoute = VideosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => VideosRoute,
+} as any)
+const VideosSlugRoute = VideosSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => VideosRoute,
 } as any)
 const WriterIndexRoute = WriterIndexRouteImport.update({
   id: '/writer/',
@@ -243,34 +285,41 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
-  '/blogs': typeof BlogsRoute
+  '/blogs': typeof BlogsRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/coming-soon': typeof ComingSoonRoute
   '/contact': typeof ContactRoute
+  '/faq': typeof FaqRoute
   '/privacy': typeof PrivacyRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
   '/terms': typeof TermsRoute
-  '/videos': typeof VideosRoute
+  '/upcoming-projects': typeof UpcomingProjectsRoute
+  '/videos': typeof VideosRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/blogs': typeof AdminBlogsRoute
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
+  '/admin/upcoming-projects': typeof AdminUpcomingProjectsRoute
   '/admin/videos': typeof AdminVideosRoute
   '/admin/writers': typeof AdminWritersRouteWithChildren
+  '/blogs/$slug': typeof BlogsSlugRoute
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
   '/stories/$slug': typeof StoriesSlugRoute
+  '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
   '/writer/series': typeof WriterSeriesRoute
   '/writer/stories': typeof WriterStoriesRoute
   '/writers/$slug': typeof WritersSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/blogs/': typeof BlogsIndexRoute
   '/reader/': typeof ReaderIndexRoute
   '/stories/': typeof StoriesIndexRoute
+  '/videos/': typeof VideosIndexRoute
   '/writer/': typeof WriterIndexRoute
   '/writers/': typeof WritersIndexRoute
   '/admin/writers/$slug': typeof AdminWritersSlugRoute
@@ -283,33 +332,38 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
-  '/blogs': typeof BlogsRoute
   '/categories': typeof CategoriesRoute
   '/coming-soon': typeof ComingSoonRoute
   '/contact': typeof ContactRoute
+  '/faq': typeof FaqRoute
   '/privacy': typeof PrivacyRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
   '/terms': typeof TermsRoute
-  '/videos': typeof VideosRoute
+  '/upcoming-projects': typeof UpcomingProjectsRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/blogs': typeof AdminBlogsRoute
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
+  '/admin/upcoming-projects': typeof AdminUpcomingProjectsRoute
   '/admin/videos': typeof AdminVideosRoute
+  '/blogs/$slug': typeof BlogsSlugRoute
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
   '/stories/$slug': typeof StoriesSlugRoute
+  '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
   '/writer/series': typeof WriterSeriesRoute
   '/writer/stories': typeof WriterStoriesRoute
   '/writers/$slug': typeof WritersSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/blogs': typeof BlogsIndexRoute
   '/reader': typeof ReaderIndexRoute
   '/stories': typeof StoriesIndexRoute
+  '/videos': typeof VideosIndexRoute
   '/writer': typeof WriterIndexRoute
   '/writers': typeof WritersIndexRoute
   '/admin/writers/$slug': typeof AdminWritersSlugRoute
@@ -323,34 +377,41 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
-  '/blogs': typeof BlogsRoute
+  '/blogs': typeof BlogsRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/coming-soon': typeof ComingSoonRoute
   '/contact': typeof ContactRoute
+  '/faq': typeof FaqRoute
   '/privacy': typeof PrivacyRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
   '/terms': typeof TermsRoute
-  '/videos': typeof VideosRoute
+  '/upcoming-projects': typeof UpcomingProjectsRoute
+  '/videos': typeof VideosRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/blogs': typeof AdminBlogsRoute
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
+  '/admin/upcoming-projects': typeof AdminUpcomingProjectsRoute
   '/admin/videos': typeof AdminVideosRoute
   '/admin/writers': typeof AdminWritersRouteWithChildren
+  '/blogs/$slug': typeof BlogsSlugRoute
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
   '/stories/$slug': typeof StoriesSlugRoute
+  '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
   '/writer/series': typeof WriterSeriesRoute
   '/writer/stories': typeof WriterStoriesRoute
   '/writers/$slug': typeof WritersSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/blogs/': typeof BlogsIndexRoute
   '/reader/': typeof ReaderIndexRoute
   '/stories/': typeof StoriesIndexRoute
+  '/videos/': typeof VideosIndexRoute
   '/writer/': typeof WriterIndexRoute
   '/writers/': typeof WritersIndexRoute
   '/admin/writers/$slug': typeof AdminWritersSlugRoute
@@ -369,30 +430,37 @@ export interface FileRouteTypes {
     | '/categories'
     | '/coming-soon'
     | '/contact'
+    | '/faq'
     | '/privacy'
     | '/search'
     | '/series'
     | '/terms'
+    | '/upcoming-projects'
     | '/videos'
     | '/admin/analytics'
     | '/admin/blogs'
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
+    | '/admin/upcoming-projects'
     | '/admin/videos'
     | '/admin/writers'
+    | '/blogs/$slug'
     | '/reader/bookmarks'
     | '/reader/following'
     | '/reader/history'
     | '/stories/$slug'
+    | '/videos/$slug'
     | '/writer/analytics'
     | '/writer/profile'
     | '/writer/series'
     | '/writer/stories'
     | '/writers/$slug'
     | '/admin/'
+    | '/blogs/'
     | '/reader/'
     | '/stories/'
+    | '/videos/'
     | '/writer/'
     | '/writers/'
     | '/admin/writers/$slug'
@@ -405,33 +473,38 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/auth'
-    | '/blogs'
     | '/categories'
     | '/coming-soon'
     | '/contact'
+    | '/faq'
     | '/privacy'
     | '/search'
     | '/series'
     | '/terms'
-    | '/videos'
+    | '/upcoming-projects'
     | '/admin/analytics'
     | '/admin/blogs'
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
+    | '/admin/upcoming-projects'
     | '/admin/videos'
+    | '/blogs/$slug'
     | '/reader/bookmarks'
     | '/reader/following'
     | '/reader/history'
     | '/stories/$slug'
+    | '/videos/$slug'
     | '/writer/analytics'
     | '/writer/profile'
     | '/writer/series'
     | '/writer/stories'
     | '/writers/$slug'
     | '/admin'
+    | '/blogs'
     | '/reader'
     | '/stories'
+    | '/videos'
     | '/writer'
     | '/writers'
     | '/admin/writers/$slug'
@@ -448,30 +521,37 @@ export interface FileRouteTypes {
     | '/categories'
     | '/coming-soon'
     | '/contact'
+    | '/faq'
     | '/privacy'
     | '/search'
     | '/series'
     | '/terms'
+    | '/upcoming-projects'
     | '/videos'
     | '/admin/analytics'
     | '/admin/blogs'
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
+    | '/admin/upcoming-projects'
     | '/admin/videos'
     | '/admin/writers'
+    | '/blogs/$slug'
     | '/reader/bookmarks'
     | '/reader/following'
     | '/reader/history'
     | '/stories/$slug'
+    | '/videos/$slug'
     | '/writer/analytics'
     | '/writer/profile'
     | '/writer/series'
     | '/writer/stories'
     | '/writers/$slug'
     | '/admin/'
+    | '/blogs/'
     | '/reader/'
     | '/stories/'
+    | '/videos/'
     | '/writer/'
     | '/writers/'
     | '/admin/writers/$slug'
@@ -485,20 +565,23 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
-  BlogsRoute: typeof BlogsRoute
+  BlogsRoute: typeof BlogsRouteWithChildren
   CategoriesRoute: typeof CategoriesRoute
   ComingSoonRoute: typeof ComingSoonRoute
   ContactRoute: typeof ContactRoute
+  FaqRoute: typeof FaqRoute
   PrivacyRoute: typeof PrivacyRoute
   SearchRoute: typeof SearchRoute
   SeriesRoute: typeof SeriesRoute
   TermsRoute: typeof TermsRoute
-  VideosRoute: typeof VideosRoute
+  UpcomingProjectsRoute: typeof UpcomingProjectsRoute
+  VideosRoute: typeof VideosRouteWithChildren
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBlogsRoute: typeof AdminBlogsRoute
   AdminHomepageBuilderRoute: typeof AdminHomepageBuilderRoute
   AdminProfileRoute: typeof AdminProfileRoute
   AdminReviewQueueRoute: typeof AdminReviewQueueRoute
+  AdminUpcomingProjectsRoute: typeof AdminUpcomingProjectsRoute
   AdminVideosRoute: typeof AdminVideosRoute
   AdminWritersRoute: typeof AdminWritersRouteWithChildren
   ReaderBookmarksRoute: typeof ReaderBookmarksRoute
@@ -571,6 +654,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -597,6 +687,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/upcoming-projects': {
+      id: '/upcoming-projects'
+      path: '/upcoming-projects'
+      fullPath: '/upcoming-projects'
+      preLoaderRoute: typeof UpcomingProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/videos': {
@@ -648,6 +745,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReviewQueueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/upcoming-projects': {
+      id: '/admin/upcoming-projects'
+      path: '/admin/upcoming-projects'
+      fullPath: '/admin/upcoming-projects'
+      preLoaderRoute: typeof AdminUpcomingProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/videos': {
       id: '/admin/videos'
       path: '/admin/videos'
@@ -661,6 +765,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/writers'
       preLoaderRoute: typeof AdminWritersRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/blogs/': {
+      id: '/blogs/'
+      path: '/'
+      fullPath: '/blogs/'
+      preLoaderRoute: typeof BlogsIndexRouteImport
+      parentRoute: typeof BlogsRoute
+    }
+    '/blogs/$slug': {
+      id: '/blogs/$slug'
+      path: '/$slug'
+      fullPath: '/blogs/$slug'
+      preLoaderRoute: typeof BlogsSlugRouteImport
+      parentRoute: typeof BlogsRoute
     }
     '/reader/': {
       id: '/reader/'
@@ -703,6 +821,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/stories/$slug'
       preLoaderRoute: typeof StoriesSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/videos/': {
+      id: '/videos/'
+      path: '/'
+      fullPath: '/videos/'
+      preLoaderRoute: typeof VideosIndexRouteImport
+      parentRoute: typeof VideosRoute
+    }
+    '/videos/$slug': {
+      id: '/videos/$slug'
+      path: '/$slug'
+      fullPath: '/videos/$slug'
+      preLoaderRoute: typeof VideosSlugRouteImport
+      parentRoute: typeof VideosRoute
     }
     '/writer/': {
       id: '/writer/'
@@ -791,6 +923,31 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface BlogsRouteChildren {
+  BlogsSlugRoute: typeof BlogsSlugRoute
+  BlogsIndexRoute: typeof BlogsIndexRoute
+}
+
+const BlogsRouteChildren: BlogsRouteChildren = {
+  BlogsSlugRoute: BlogsSlugRoute,
+  BlogsIndexRoute: BlogsIndexRoute,
+}
+
+const BlogsRouteWithChildren = BlogsRoute._addFileChildren(BlogsRouteChildren)
+
+interface VideosRouteChildren {
+  VideosSlugRoute: typeof VideosSlugRoute
+  VideosIndexRoute: typeof VideosIndexRoute
+}
+
+const VideosRouteChildren: VideosRouteChildren = {
+  VideosSlugRoute: VideosSlugRoute,
+  VideosIndexRoute: VideosIndexRoute,
+}
+
+const VideosRouteWithChildren =
+  VideosRoute._addFileChildren(VideosRouteChildren)
+
 interface AdminWritersRouteChildren {
   AdminWritersSlugRoute: typeof AdminWritersSlugRoute
   AdminWritersIndexRoute: typeof AdminWritersIndexRoute
@@ -809,20 +966,23 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
-  BlogsRoute: BlogsRoute,
+  BlogsRoute: BlogsRouteWithChildren,
   CategoriesRoute: CategoriesRoute,
   ComingSoonRoute: ComingSoonRoute,
   ContactRoute: ContactRoute,
+  FaqRoute: FaqRoute,
   PrivacyRoute: PrivacyRoute,
   SearchRoute: SearchRoute,
   SeriesRoute: SeriesRoute,
   TermsRoute: TermsRoute,
-  VideosRoute: VideosRoute,
+  UpcomingProjectsRoute: UpcomingProjectsRoute,
+  VideosRoute: VideosRouteWithChildren,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminBlogsRoute: AdminBlogsRoute,
   AdminHomepageBuilderRoute: AdminHomepageBuilderRoute,
   AdminProfileRoute: AdminProfileRoute,
   AdminReviewQueueRoute: AdminReviewQueueRoute,
+  AdminUpcomingProjectsRoute: AdminUpcomingProjectsRoute,
   AdminVideosRoute: AdminVideosRoute,
   AdminWritersRoute: AdminWritersRouteWithChildren,
   ReaderBookmarksRoute: ReaderBookmarksRoute,

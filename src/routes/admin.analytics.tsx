@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Download } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { AppShell, StatCard } from "@/components/tossa/AppShell";
 import { Button, Panel } from "@/components/tossa/kit";
+import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { pageHead } from "@/lib/head";
-import { categories, stories, writerBySlug } from "@/lib/data";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/admin/analytics")({
   head: () =>
@@ -12,85 +15,87 @@ export const Route = createFileRoute("/admin/analytics")({
   component: AdminAnalytics,
 });
 
-const bars = [
-  { label: "Mon", value: 62 },
-  { label: "Tue", value: 74 },
-  { label: "Wed", value: 58 },
-  { label: "Thu", value: 88 },
-  { label: "Fri", value: 100 },
-  { label: "Sat", value: 81 },
-  { label: "Sun", value: 69 },
-];
-
 function AdminAnalytics() {
+  const { data: analyticsData, isLoading } = useQuery({
+    queryKey: ["admin-analytics-overview"],
+    queryFn: async () => {
+      const res = await api.get("/admin/analytics/overview/");
+      return res.data || {};
+    },
+  });
+
+  const summary = analyticsData?.platform_summary || {
+    total_published_stories: 0,
+    total_views: 0,
+    total_likes: 0,
+    total_writers: 0,
+  };
+
+  const topStories = (analyticsData?.top_stories && Array.isArray(analyticsData.top_stories))
+    ? analyticsData.top_stories
+    : [];
+
+  const handleExportCSV = async () => {
+    try {
+      window.open("http://127.0.0.1:8000/api/v1/admin/analytics/platform/export/", "_blank");
+      toast.success("Downloading analytics CSV statement...");
+    } catch {
+      toast.error("Failed to export statement");
+    }
+  };
+
   return (
     <AppShell
       role="admin"
       title="Platform analytics"
       blurb="Ninety days of reading behaviour — where attention goes and how deep it runs."
       actions={
-        <Button variant="ghostOutline">
+        <Button variant="ghostOutline" onClick={handleExportCSV}>
           <Download className="size-4" /> Export CSV
         </Button>
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Reads (90d)" value="4.82M" delta="+18.2%" hint="vs prior period" />
-        <StatCard label="Reading hours" value="1.4M" delta="+12%" />
-        <StatCard label="Finish rate" value="86%" delta="+2.4%" />
-        <StatCard label="New members" value="41,206" delta="+7.8%" />
+        <StatCard label="Total Views" value={String(summary.total_views)} />
+        <StatCard label="Published Stories" value={String(summary.total_published_stories)} />
+        <StatCard label="Total Likes" value={String(summary.total_likes)} />
+        <StatCard label="Total Writers" value={String(summary.total_writers)} />
       </div>
-
-      <Panel className="p-6">
-        <h2 className="text-xl">Reads this week</h2>
-        <div className="mt-8 flex h-56 items-end gap-3">
-          {bars.map((b) => (
-            <div key={b.label} className="flex flex-1 flex-col items-center gap-3">
-              <div
-                className="w-full rounded-t-xl ink-gradient transition-all duration-700"
-                style={{ height: `${b.value}%` }}
-              />
-              <span className="font-sans text-[0.75rem] font-bold text-subtle">{b.label}</span>
-            </div>
-          ))}
-        </div>
-      </Panel>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel className="p-6">
-          <h2 className="text-xl">Top categories</h2>
-          <ul className="mt-5 space-y-4">
-            {categories.slice(0, 6).map((c) => {
-              const pct = Math.min(100, Math.round((c.count / 500) * 100));
-              return (
-                <li key={c.slug}>
-                  <div className="flex items-baseline justify-between">
-                    <span className="font-sans text-[0.9375rem] font-bold text-heading">{c.name}</span>
-                    <span className="text-[0.8125rem] text-subtle">{c.count} stories</span>
-                  </div>
-                  <div className="mt-2 h-2 rounded-full bg-surface-alt">
-                    <div className="h-2 rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <h2 className="text-xl font-display font-bold text-heading">Category breakdown</h2>
+          <EmptySectionFallback
+            icon="category"
+            title="Category Statistics"
+            description="Category readership performance metrics are tracked dynamically as readers engage with content."
+          />
         </Panel>
 
         <Panel className="p-6">
-          <h2 className="text-xl">Best performing stories</h2>
-          <ul className="mt-5 divide-y divide-border">
-            {stories.slice(0, 6).map((s, i) => (
-              <li key={s.slug} className="flex items-center gap-4 py-3">
-                <span className="font-display text-lg text-primary">{String(i + 1).padStart(2, "0")}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-sans text-[0.9375rem] font-bold text-heading">{s.title}</p>
-                  <p className="text-[0.8125rem] text-subtle">{writerBySlug(s.writer)?.name}</p>
-                </div>
-                <span className="shrink-0 font-sans text-[0.875rem] font-bold text-heading">{s.views}</span>
-              </li>
-            ))}
-          </ul>
+          <h2 className="text-xl font-display font-bold text-heading">Best performing stories</h2>
+          {isLoading ? (
+            <div className="py-12 text-center text-subtle font-medium">Loading platform analytics...</div>
+          ) : topStories.length === 0 ? (
+            <EmptySectionFallback
+              icon="book"
+              title="No Readership Data"
+              description="Top performing stories across the platform will display here once readers begin reading."
+            />
+          ) : (
+            <ul className="mt-5 divide-y divide-border">
+              {topStories.map((s: any, i: number) => (
+                <li key={s.slug} className="flex items-center gap-4 py-3">
+                  <span className="font-display text-lg text-primary">{String(i + 1).padStart(2, "0")}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-sans text-[0.9375rem] font-bold text-heading">{s.title}</p>
+                    <p className="text-[0.8125rem] text-subtle">{s.writer?.name || s.writer?.user?.full_name || "Author"}</p>
+                  </div>
+                  <span className="shrink-0 font-sans text-[0.875rem] font-bold text-heading">{s.views_count || 0} reads</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
       </div>
     </AppShell>

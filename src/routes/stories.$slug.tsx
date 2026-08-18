@@ -11,6 +11,7 @@ import {
   Twitter,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal, useScrollProgress } from "@/components/tossa/Reveal";
@@ -24,17 +25,23 @@ import {
   Tag,
   VerifiedBadge,
 } from "@/components/tossa/kit";
-import { stories, storyBySlug, writerBySlug } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/stories/$slug")({
-  loader: ({ params }) => {
-    const story = storyBySlug(params.slug);
-    if (!story) throw notFound();
-    return { story };
+  loader: async ({ params }) => {
+    try {
+      const res = await api.get(`/public/stories/${params.slug}/`);
+      if (res.data) {
+        return { story: res.data };
+      }
+    } catch {
+      // Fallback if detail view throws
+    }
+    return { story: null };
   },
   head: ({ loaderData }) => {
-    if (!loaderData) {
+    if (!loaderData?.story) {
       return {
         meta: [{ title: "Story not found — tossatale" }, { name: "robots", content: "noindex" }],
       };
@@ -43,9 +50,9 @@ export const Route = createFileRoute("/stories/$slug")({
     return {
       meta: [
         { title: `${story.title} — tossatale` },
-        { name: "description", content: story.dek },
+        { name: "description", content: story.subtitle || story.seo_description || "Read story on tossatale" },
         { property: "og:title", content: `${story.title} — tossatale` },
-        { property: "og:description", content: story.dek },
+        { property: "og:description", content: story.subtitle || story.seo_description || "Read story on tossatale" },
         { property: "og:type", content: "article" },
       ],
     };
@@ -58,9 +65,9 @@ function StoryNotFound() {
   return (
     <SiteLayout>
       <div className="mx-auto max-w-xl px-5 py-32 text-center">
-        <h1 className="text-4xl">This story has moved</h1>
+        <h1 className="text-4xl font-display font-bold text-heading">Story not found</h1>
         <p className="mt-4 text-body">
-          The piece you're looking for isn't here. It may have been unpublished by its writer.
+          The story you are looking for is unavailable or may have been unpublished.
         </p>
         <div className="mt-8">
           <ButtonLink to="/stories">Browse the library</ButtonLink>
@@ -105,13 +112,56 @@ function FloatingShare() {
 }
 
 function StoryDetail() {
-  const { story } = Route.useLoaderData();
-  const writer = writerBySlug(story.writer)!;
+  const loaderData = Route.useLoaderData();
+  const story = loaderData?.story;
   const progress = useScrollProgress();
   const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(Boolean(story.bookmarked));
-  const related = stories.filter((s) => s.slug !== story.slug).slice(0, 3);
-  const next = stories.find((s) => s.slug !== story.slug && s.series === story.series) ?? related[0]!;
+  const [saved, setSaved] = useState(false);
+
+  const categoryParam = story?.category?.slug || story?.category?.id;
+  const tagParam = story?.tags?.[0]?.slug || story?.tags?.[0]?.name || story?.tags?.[0];
+
+  const { data: relatedStories } = useQuery({
+    queryKey: ["public-stories-related", story?.id, categoryParam, tagParam],
+    queryFn: async () => {
+      let endpoint = "/public/stories/";
+      const queryParams = new URLSearchParams();
+      if (categoryParam) {
+        queryParams.append("category", categoryParam);
+      } else if (tagParam) {
+        queryParams.append("tag", tagParam);
+      }
+      if (queryParams.toString()) {
+        endpoint += `?${queryParams.toString()}`;
+      }
+      const res = await api.get(endpoint);
+      let items = res.data?.results || res.data || [];
+
+      // Exclude active story
+      items = items.filter((item: any) => item.slug !== story?.slug && item.id !== story?.id);
+
+      // Fallback if fewer than 3 items found
+      if (items.length < 3) {
+        const fallbackRes = await api.get("/public/stories/");
+        const fallbackItems = fallbackRes.data?.results || fallbackRes.data || [];
+        for (const fbItem of fallbackItems) {
+          if (fbItem.slug !== story?.slug && fbItem.id !== story?.id && !items.some((it: any) => it.id === fbItem.id)) {
+            items.push(fbItem);
+            if (items.length >= 3) break;
+          }
+        }
+      }
+      return items;
+    },
+    enabled: !!story,
+  });
+
+  if (!story) {
+    return <StoryNotFound />;
+  }
+
+  const writerName = story.writer?.name || story.writer?.user?.full_name || "Author";
+  const writerInitials = writerName.substring(0, 2).toUpperCase();
 
   return (
     <SiteLayout>
@@ -134,52 +184,57 @@ function StoryDetail() {
                 Stories
               </Link>
               <span className="px-2">/</span>
-              <span className="text-body">{story.category}</span>
+              <span className="text-body">{story.category?.name || "General"}</span>
             </nav>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <CategoryPill>{story.category}</CategoryPill>
-              {story.series && (
-                <span className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold text-primary">
-                  <Layers className="size-3.5" /> {story.series} · {story.part}
-                </span>
-              )}
+              <CategoryPill>{story.category?.name || "General"}</CategoryPill>
+              <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle">
+                <Clock className="size-3.5" /> {story.estimated_reading_time || 5} min read
+              </span>
             </div>
 
-            <h1 className="mt-5 text-[clamp(2.1rem,4.6vw,3.5rem)] leading-[1.05]">{story.title}</h1>
-            <p className="mt-5 font-display text-[1.25rem] leading-relaxed text-body italic">
-              {story.dek}
+            <h1 className="mt-4 text-[clamp(2.1rem,4.2vw,3.6rem)] leading-[1.1] font-display font-bold text-heading">
+              {story.title}
+            </h1>
+            <p className="mt-4 text-[1.125rem] leading-relaxed text-body">
+              {story.subtitle || story.seo_description || "A story published on tossatale."}
             </p>
 
-            <div className="mt-9 flex flex-wrap items-center gap-4 border-t border-divider pt-6">
-              <Avatar initials={writer.initials} size="lg" />
-              <div className="mr-auto">
-                <p className="flex items-center gap-1.5 font-sans text-[1rem] font-bold text-heading">
-                  {writer.name}
-                  {writer.verified && <VerifiedBadge />}
-                </p>
-                <p className="text-[0.8125rem] text-subtle">
-                  {story.date} · {story.readingTime} min read · finish by{" "}
-                  {story.readingTime > 12 ? "two cups of tea" : "one cup of tea"}
-                </p>
-              </div>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-divider pt-6">
+              <Link
+                to="/writers/$slug"
+                params={{ slug: story.writer?.slug || "writer" }}
+                className="flex items-center gap-3.5"
+              >
+                <Avatar initials={writerInitials} size="lg" />
+                <div>
+                  <p className="flex items-center gap-1.5 font-sans text-[1rem] font-bold text-heading">
+                    {writerName} {story.writer?.is_verified && <VerifiedBadge />}
+                  </p>
+                  <p className="text-[0.8125rem] text-subtle">
+                    Published {story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recently"}
+                  </p>
+                </div>
+              </Link>
+
               <div className="flex items-center gap-2">
                 <Button
-                  variant="ghostOutline"
+                  variant={liked ? "primary" : "ghostOutline"}
                   size="sm"
-                  aria-pressed={liked}
                   onClick={() => setLiked((v) => !v)}
+                  className="gap-1.5"
                 >
-                  <Heart className={cn("size-4", liked && "animate-pop fill-destructive text-destructive")} />
-                  {story.likes}
+                  <Heart className={cn("size-4", liked && "fill-current")} />
+                  {liked ? "Liked" : "Like"}
                 </Button>
                 <Button
-                  variant="ghostOutline"
+                  variant={saved ? "primary" : "ghostOutline"}
                   size="sm"
-                  aria-pressed={saved}
                   onClick={() => setSaved((v) => !v)}
+                  className="gap-1.5"
                 >
-                  <Bookmark className={cn("size-4", saved && "animate-pop fill-primary text-primary")} />
+                  <Bookmark className={cn("size-4", saved && "fill-current")} />
                   {saved ? "Saved" : "Save"}
                 </Button>
               </div>
@@ -187,141 +242,49 @@ function StoryDetail() {
           </div>
         </header>
 
-        <div className="mx-auto grid max-w-[1100px] gap-10 px-5 pt-12 lg:grid-cols-[72px_1fr]">
-          <FloatingShare />
-          <div className="max-w-[680px]">
-            <div className="prose-reading">
-              {story.body.map((block: string, i: number) => {
-                if (block.startsWith("## ")) return <h2 key={i}>{block.slice(3)}</h2>;
-                if (block.startsWith("> ")) return <blockquote key={i}>{block.slice(2)}</blockquote>;
-                return (
-                  <p key={i} className={i === 0 ? "drop-cap" : undefined}>
-                    {block}
-                  </p>
-                );
-              })}
+        <div className="mx-auto max-w-[1040px] px-5 py-14 lg:px-8">
+          <div className="grid gap-12 lg:grid-cols-[1fr_56px]">
+            <div className="prose prose-lg max-w-none text-body font-sans leading-relaxed space-y-6">
+              {story.content ? (
+                <div dangerouslySetInnerHTML={{ __html: story.content }} />
+              ) : (
+                <p>{story.subtitle || "Full story text content."}</p>
+              )}
             </div>
-
-            <div className="mt-10 flex flex-wrap gap-2">
-              {story.tags.map((t: string) => (
-                <Tag key={t}>{t}</Tag>
-              ))}
-            </div>
-
-            <Panel className="mt-14 p-7">
-              <div className="flex flex-wrap items-start gap-5">
-                <Avatar initials={writer.initials} size="xl" />
-                <div className="min-w-56 flex-1">
-                  <p className="text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-                    About the writer
-                  </p>
-                  <h3 className="mt-2 flex items-center gap-2 text-[1.35rem]">
-                    {writer.name}
-                    {writer.verified && <VerifiedBadge label />}
-                  </h3>
-                  <p className="mt-3 text-[0.9375rem] leading-relaxed text-body">{writer.bio}</p>
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    <ButtonLink to="/writers/$slug" params={{ slug: writer.slug }} size="sm">
-                      View profile
-                    </ButtonLink>
-                    <Button variant="ghostOutline" size="sm">
-                      Follow
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </Panel>
-
-            {story.series && (
-              <Panel className="mt-8 p-7">
-                <p className="text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-                  In this series
-                </p>
-                <h3 className="mt-2 text-[1.25rem]">{story.series}</h3>
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <Button variant="ghostOutline" size="md" className="flex-1">
-                    Previous chapter
-                  </Button>
-                  <ButtonLink
-                    to="/stories/$slug"
-                    params={{ slug: next.slug }}
-                    size="md"
-                    className="flex-1"
-                  >
-                    Next chapter <ArrowRight className="size-4" />
-                  </ButtonLink>
-                </div>
-              </Panel>
-            )}
-
-            <Panel className="mt-8 p-7">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="size-4 text-primary" />
-                <h3 className="text-[1.15rem]">Responses (48)</h3>
-              </div>
-              <p className="mt-3 text-[0.9375rem] text-body">
-                Readers are talking about this story. Sign in to join the conversation.
-              </p>
-              <div className="mt-5 space-y-3">
-                {[1, 2].map((i) => (
-                  <div key={i} className="rounded-2xl bg-surface-alt p-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar initials={i === 1 ? "SR" : "PD"} size="sm" />
-                      <p className="font-sans text-[0.875rem] font-bold text-heading">
-                        {i === 1 ? "Sana Rao" : "Pritam Das"}
-                      </p>
-                      <span className="text-[0.75rem] text-subtle">2d ago</span>
-                    </div>
-                    <p className="mt-3 text-[0.9375rem] text-body">
-                      {i === 1
-                        ? "The ledger detail undid me. I called my mother halfway through."
-                        : "Read this twice. The second time slower, on the terrace."}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-5">
-                <ButtonLink to="/auth" variant="soft" size="sm">
-                  Sign in to respond
-                </ButtonLink>
-              </div>
-            </Panel>
+            <FloatingShare />
           </div>
         </div>
+      </article>
 
-        <section className="mx-auto max-w-[1240px] px-5 pt-24 lg:px-8">
-          <Reveal>
-            <Panel className="ink-gradient grain overflow-hidden p-8 lg:p-12">
-              <p className="text-[0.6875rem] font-black tracking-[0.2em] text-white/70 uppercase">
-                Read next
-              </p>
-              <h2 className="mt-3 max-w-2xl text-[clamp(1.6rem,3vw,2.4rem)] leading-tight text-white">
-                {next.title}
-              </h2>
-              <p className="mt-3 max-w-xl text-[1.0625rem] text-white/80">{next.dek}</p>
-              <p className="mt-4 flex items-center gap-2 text-[0.8125rem] text-white/70">
-                <Clock className="size-3.5" /> {next.readingTime} min
-              </p>
-              <div className="mt-7">
-                <ButtonLink to="/stories/$slug" params={{ slug: next.slug }} variant="inkOnDark">
-                  Continue reading <ArrowRight className="size-4" />
-                </ButtonLink>
-              </div>
-            </Panel>
-          </Reveal>
-        </section>
-
-        <section className="mx-auto max-w-[1240px] px-5 pt-24 lg:px-8">
-          <h2 className="text-[clamp(1.6rem,2.8vw,2.2rem)]">Related stories</h2>
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
-            {related.map((s, i) => (
-              <Reveal key={s.slug} delay={i * 70}>
-                <StoryCard story={s} />
-              </Reveal>
-            ))}
+      {relatedStories && relatedStories.length > 0 && (
+        <section className="border-t border-border bg-surface-alt/50 py-16">
+          <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+            <h2 className="text-2xl font-display font-bold text-heading">
+              More stories in {story.category?.name || "this collection"}
+            </h2>
+            <p className="mt-1 text-sm text-subtle">
+              Discover stories matching the same category and tags.
+            </p>
+            <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {relatedStories.slice(0, 3).map((s: any) => (
+                <StoryCard key={s.slug} story={{
+                  slug: s.slug,
+                  title: s.title,
+                  dek: s.subtitle || s.seo_description || "A longform story.",
+                  writer: s.writer?.slug || "writer",
+                  writerName: s.writer?.name || s.writer?.user?.full_name || "Author",
+                  category: s.category?.name || "General",
+                  date: s.published_at ? new Date(s.published_at).toLocaleDateString() : "Recent",
+                  readingTime: s.estimated_reading_time || 5,
+                  cover: s.cover_image || "/assets/cover-lane.jpg",
+                  views: s.views_count || 0,
+                  likes: s.likes_count || 0,
+                } as any} />
+              ))}
+            </div>
           </div>
         </section>
-      </article>
+      )}
     </SiteLayout>
   );
 }

@@ -16,13 +16,16 @@ import {
   Sparkles,
   User,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppShell, StatCard } from "@/components/tossa/AppShell";
 import { Avatar, Badge, Button, ButtonLink, Field, Input, Panel, Textarea, VerifiedBadge } from "@/components/tossa/kit";
 import { pageHead } from "@/lib/head";
 import { storiesByWriter, writerBySlug } from "@/lib/data";
+import { api } from "@/lib/api";
+import { useAuth } from "@/components/auth/AuthContext";
 
 export const Route = createFileRoute("/writer/profile")({
   head: () =>
@@ -34,46 +37,69 @@ export const Route = createFileRoute("/writer/profile")({
 });
 
 function WriterProfileScreen() {
-  // Default to Meera Raghavan writer data for demonstration
-  const defaultWriter = writerBySlug("meera-raghavan") ?? {
-    slug: "meera-raghavan",
-    name: "Meera Raghavan",
-    initials: "MR",
-    handle: "@meera.writes",
-    verified: true,
-    role: "Longform & memoir",
-    location: "Varanasi, IN",
-    bio: "I write about the small rooms of ordinary lives — grandmothers, ledgers, monsoon lanes. Nine years in print, three in longform serials.",
-    stories: 42,
-    followers: "18.4k",
-    reads: "1.2M",
-    joined: "March 2021",
-    socials: [
-      { label: "Website", href: "https://meeraraghavan.com" },
-      { label: "Instagram", href: "https://instagram.com/meera.writes" },
-      { label: "Substack", href: "https://meera.substack.com" },
-    ],
-    achievements: ["Editor's Pick ×7", "100k Reads Club", "Series of the Year 2025"],
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: profileData } = useQuery({
+    queryKey: ["writer-profile-me"],
+    queryFn: async () => {
+      const res = await api.get("/writer/profile/");
+      return res.data;
+    },
+  });
+
+  const [name, setName] = useState(user?.full_name || "Writer");
+  const [handle, setHandle] = useState("@writer");
+  const [role, setRole] = useState("Longform Storyteller");
+  const [location, setLocation] = useState("India");
+  const [email, setEmail] = useState(user?.email || "");
+  const [phone, setPhone] = useState("+91 98765 43210");
+  const [bio, setBio] = useState("");
+
+  const [website, setWebsite] = useState("");
+  const [substack, setSubstack] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [medium, setMedium] = useState("");
+  const [youtube, setYoutube] = useState("");
+
+  useEffect(() => {
+    if (profileData) {
+      setName(profileData.user?.full_name || profileData.name || user?.full_name || "Writer");
+      setBio(profileData.bio || "");
+      setWebsite(profileData.website_url || "");
+      setInstagram(profileData.instagram_url || "");
+      setTwitter(profileData.x_url || "");
+      setLinkedin(profileData.linkedin_url || "");
+      setYoutube(profileData.youtube_url || "");
+    }
+  }, [profileData, user]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      return await api.patch("/writer/profile/", payload);
+    },
+    onSuccess: () => {
+      toast.success("Writer profile updated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["writer-profile-me"] });
+    },
+    onError: (err: any) => {
+      toast.error("Failed to update profile", { description: err.message });
+    },
+  });
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateMutation.mutate({
+      bio,
+      website_url: website,
+      instagram_url: instagram,
+      x_url: twitter,
+      linkedin_url: linkedin,
+      youtube_url: youtube,
+    });
   };
-
-  const [name, setName] = useState(defaultWriter.name);
-  const [handle, setHandle] = useState(defaultWriter.handle);
-  const [role, setRole] = useState(defaultWriter.role);
-  const [location, setLocation] = useState(defaultWriter.location);
-  const [email, setEmail] = useState("meera.raghavan@tossatale.com");
-  const [phone, setPhone] = useState("+91 (080) 9876-5432");
-  const [bio, setBio] = useState(defaultWriter.bio);
-
-  // Social & Portfolio Link States
-  const [website, setWebsite] = useState("https://meeraraghavan.com");
-  const [substack, setSubstack] = useState("https://meera.substack.com");
-  const [instagram, setInstagram] = useState("https://instagram.com/meera.writes");
-  const [twitter, setTwitter] = useState("https://x.com/meera_writes");
-  const [linkedin, setLinkedin] = useState("https://linkedin.com/in/meeraraghavan");
-  const [medium, setMedium] = useState("https://medium.com/@meera.writes");
-  const [youtube, setYoutube] = useState("https://youtube.com/@meeraraghavan");
-
-  const linkedStories = storiesByWriter(defaultWriter.slug);
 
   const activeSocials = [
     { label: "Website", href: website },
@@ -85,13 +111,6 @@ function WriterProfileScreen() {
     { label: "YouTube", href: youtube },
   ].filter((s) => Boolean(s.href.trim()));
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Writer profile, contact info & social links saved!", {
-      description: "Your author page and contact details have been updated across tossatale.",
-    });
-  };
-
   return (
     <AppShell
       role="writer"
@@ -99,33 +118,31 @@ function WriterProfileScreen() {
       blurb="Manage your author bio, location, contact numbers, social links, and view your editorial statistics."
       actions={
         <div className="flex items-center gap-3">
-          <ButtonLink to="/writers/$slug" params={{ slug: defaultWriter.slug }} variant="ghostOutline">
+          <ButtonLink to="/writers/$slug" params={{ slug: profileData?.slug || "writer" }} variant="ghostOutline">
             <Eye className="size-4" /> View public profile
           </ButtonLink>
-          <Button onClick={handleSaveProfile}>
-            <Save className="size-4" /> Save changes
+          <Button onClick={handleSaveProfile} disabled={updateMutation.isPending}>
+            <Save className="size-4" /> {updateMutation.isPending ? "Saving..." : "Save changes"}
           </Button>
         </div>
       }
     >
-      {/* Top Writer Metrics Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Published Stories" value={String(defaultWriter.stories)} hint="in tossatale library" />
-        <StatCard label="Total Readers / Reads" value={defaultWriter.reads} delta="+18%" hint="this month" />
-        <StatCard label="Active Followers" value={defaultWriter.followers} delta="+340" hint="new this week" />
-        <StatCard label="Verification Status" value="Verified" hint={`Member since ${defaultWriter.joined}`} />
+        <StatCard label="Published Stories" value={String(profileData?.total_published_stories || 42)} hint="in tossatale library" />
+        <StatCard label="Total Readers / Reads" value={String(profileData?.total_reads || "1.2M")} delta="+18%" hint="this month" />
+        <StatCard label="Total Likes" value={String(profileData?.total_likes || "18.4k")} delta="+340" hint="new this week" />
+        <StatCard label="Verification Status" value={profileData?.is_verified ? "Verified Author" : "Pending"} hint="Member" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1.7fr]">
-        {/* Left Column: Personal Info & Bio Editor */}
         <div className="space-y-6">
           <Panel className="p-6">
             <div className="flex items-start gap-4 border-b border-border pb-5">
-              <Avatar initials={defaultWriter.initials} size="lg" />
+              <Avatar initials={(name || "W").substring(0, 2).toUpperCase()} size="lg" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-display font-bold text-heading">{name}</h2>
-                  <VerifiedBadge />
+                  {profileData?.is_verified && <VerifiedBadge />}
                 </div>
                 <p className="text-[0.875rem] text-subtle">{handle}</p>
                 <p className="mt-1 font-sans text-[0.8125rem] font-bold text-primary">{role}</p>
@@ -151,7 +168,6 @@ function WriterProfileScreen() {
                 </Field>
               </div>
 
-              {/* Personal Contact Details */}
               <div className="border-t border-border pt-4">
                 <h3 className="font-sans text-[0.6875rem] font-black tracking-widest text-subtle uppercase mb-3">
                   Personal Contact Details
@@ -180,7 +196,6 @@ function WriterProfileScreen() {
                 <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} placeholder="Write a short author bio..." />
               </Field>
 
-              {/* Social Media Platform Links */}
               <div className="border-t border-border pt-4">
                 <h3 className="font-sans text-[0.6875rem] font-black tracking-widest text-primary uppercase mb-3 flex items-center gap-1.5">
                   <Globe className="size-3.5" /> Social Media & Portfolio Links ({activeSocials.length} Active)
@@ -239,35 +254,15 @@ function WriterProfileScreen() {
               </div>
 
               <div className="pt-2">
-                <Button type="submit" className="w-full">
-                  <Save className="size-4" /> Save Profile Details
+                <Button type="submit" disabled={updateMutation.isPending} className="w-full">
+                  <Save className="size-4" /> {updateMutation.isPending ? "Saving..." : "Save Profile Details"}
                 </Button>
               </div>
             </form>
           </Panel>
-
-          {/* Achievements Card */}
-          <Panel className="p-6">
-            <h3 className="font-sans text-[0.6875rem] font-black tracking-widest text-subtle uppercase">
-              Editorial Badges & Recognition
-            </h3>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {defaultWriter.achievements.map((ach) => (
-                <Badge key={ach} tone="info">
-                  <Award className="mr-1 size-3.5 inline text-primary" />
-                  {ach}
-                </Badge>
-              ))}
-            </div>
-            <p className="mt-3 text-[0.8125rem] text-subtle">
-              Badges are awarded by tossatale editors based on reader engagement, editorial picks, and serial completions.
-            </p>
-          </Panel>
         </div>
 
-        {/* Right Column: Writer Stories & Active Social Badges */}
         <div className="space-y-6">
-          {/* Active Social Media Badges Card */}
           <Panel className="p-6">
             <h3 className="font-sans text-[0.6875rem] font-black tracking-widest text-primary uppercase flex items-center gap-1.5">
               <Globe className="size-3.5" /> Public Social Links & Contact Channels
@@ -290,117 +285,8 @@ function WriterProfileScreen() {
               ))}
             </div>
           </Panel>
-
-          <Panel className="p-6">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div>
-                <h2 className="text-xl">Stories by {name}</h2>
-                <p className="mt-1 text-[0.8125rem] text-subtle">
-                  Catalog of your published pieces and active drafts.
-                </p>
-              </div>
-              <ButtonLink to="/writer/editor" size="sm">
-                <PenLine className="size-4" /> New story
-              </ButtonLink>
-            </div>
-
-            {linkedStories.length === 0 ? (
-              <div className="py-12 text-center text-subtle">
-                <BookOpen className="mx-auto size-10 text-subtle/50" />
-                <p className="mt-3 font-sans text-[0.9375rem] font-bold">No published stories yet</p>
-                <p className="mt-1 text-[0.8125rem]">Start your first longform story using the editor!</p>
-              </div>
-            ) : (
-              <ul className="mt-5 divide-y divide-border">
-                {linkedStories.map((s) => (
-                  <li key={s.slug} className="py-4 first:pt-0 last:pb-0">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <Badge tone="success">Published</Badge>
-                          <span className="text-[0.75rem] text-subtle">{s.readingTimeMin} min read · {s.date}</span>
-                        </div>
-                        <h3 className="mt-1 font-display text-[1.0625rem] font-bold text-heading truncate">
-                          {s.title}
-                        </h3>
-                        <p className="text-[0.8125rem] text-subtle line-clamp-1">{s.dek}</p>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="flex items-center gap-3 text-[0.8125rem] text-subtle mr-2">
-                          <span className="flex items-center gap-1">
-                            <Eye className="size-3.5" /> {s.views}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Heart className="size-3.5" /> {s.likes}
-                          </span>
-                        </div>
-
-                        <ButtonLink
-                          to="/stories/$slug"
-                          params={{ slug: s.slug }}
-                          variant="ghostOutline"
-                          size="sm"
-                        >
-                          Read
-                        </ButtonLink>
-                        <ButtonLink
-                          to="/writer/editor/$storyId"
-                          params={{ storyId: s.slug }}
-                          variant="soft"
-                          size="sm"
-                        >
-                          Edit
-                        </ButtonLink>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-
-          {/* Quick Access Info Panel */}
-          <Panel className="p-6">
-            <h3 className="font-sans text-[0.6875rem] font-black tracking-widest text-primary uppercase">
-              Writer Account Contact Details
-            </h3>
-            <div className="mt-4 grid gap-3 text-[0.875rem] text-body">
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <span className="text-subtle flex items-center gap-1.5">
-                  <Mail className="size-3.5 text-primary" /> Email:
-                </span>
-                <span className="font-sans font-bold text-heading">{email}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <span className="text-subtle flex items-center gap-1.5">
-                  <Phone className="size-3.5 text-primary" /> Contact Phone:
-                </span>
-                <span className="font-sans font-bold text-heading">{phone}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <span className="text-subtle flex items-center gap-1.5">
-                  <ShieldCheck className="size-3.5 text-success" /> Status:
-                </span>
-                <span className="font-sans font-bold text-success flex items-center gap-1">
-                  Verified Author
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-subtle">Public Author Page:</span>
-                <Link
-                  to="/writers/$slug"
-                  params={{ slug: defaultWriter.slug }}
-                  className="font-bold text-primary underline hover:text-primary-hover"
-                >
-                  /writers/{defaultWriter.slug}
-                </Link>
-              </div>
-            </div>
-          </Panel>
         </div>
       </div>
     </AppShell>
   );
 }
-

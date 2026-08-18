@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bookmark, Clock, Eye, Heart, Layers } from "lucide-react";
+import { Bookmark, Clock, Eye, Heart } from "lucide-react";
 import { useState } from "react";
 
 import { Avatar, CategoryPill, VerifiedBadge } from "@/components/tossa/kit";
@@ -29,6 +29,7 @@ function ActionButtons({ story }: { story: Story }) {
     <div className="flex items-center gap-1">
       <button
         type="button"
+        suppressHydrationWarning
         aria-label={liked ? "Unlike story" : "Like story"}
         aria-pressed={liked}
         onClick={(e) => {
@@ -43,6 +44,7 @@ function ActionButtons({ story }: { story: Story }) {
       </button>
       <button
         type="button"
+        suppressHydrationWarning
         aria-label={saved ? "Remove bookmark" : "Bookmark story"}
         aria-pressed={saved}
         onClick={(e) => {
@@ -66,7 +68,10 @@ export function StoryCard({
   story: Story;
   layout?: "vertical" | "horizontal" | "compact";
 }) {
-  const writer = writerBySlug(story.writer);
+  const writerObj = writerBySlug(story.writer);
+  const authorName = (story as any).writerName || writerObj?.name || "Author";
+  const authorInitials = authorName.substring(0, 2).toUpperCase();
+  const isVerified = writerObj?.verified || (story as any).verified || false;
 
   if (layout === "compact") {
     return (
@@ -85,7 +90,7 @@ export function StoryCard({
             {story.title}
           </h3>
           <p className="mt-1.5 text-[0.8125rem] text-subtle">
-            {writer?.name} · {story.readingTime} min read
+            {authorName} · {story.readingTime} min read
           </p>
         </div>
       </Link>
@@ -97,7 +102,7 @@ export function StoryCard({
   return (
     <article
       className={cn(
-        "group flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-surface shadow-paper transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/25 hover:shadow-lift p-6 md:p-7",
+        "group flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-border bg-surface shadow-paper transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/25 hover:shadow-lift p-6 md:p-7",
         horizontal && "md:p-8",
       )}
     >
@@ -114,14 +119,14 @@ export function StoryCard({
         <Link to="/stories/$slug" params={{ slug: story.slug }} className="block mt-2">
           <h3
             className={cn(
-              "leading-[1.2] font-display font-bold text-heading transition-colors group-hover:text-primary-hover",
-              horizontal ? "text-[clamp(1.4rem,2.2vw,1.9rem)]" : "text-[1.35rem]",
+              "line-clamp-2 min-h-[3.25rem] leading-[1.2] font-display font-bold text-heading transition-colors group-hover:text-primary-hover",
+              horizontal ? "text-[clamp(1.4rem,2.2vw,1.9rem)] min-h-0" : "text-[1.35rem]",
             )}
           >
             {story.title}
           </h3>
         </Link>
-        <p className="mt-3 line-clamp-3 text-[0.9375rem] leading-relaxed text-body">{story.dek}</p>
+        <p className="mt-3 line-clamp-2 min-h-[2.5rem] text-[0.9375rem] leading-relaxed text-body">{story.dek}</p>
       </div>
 
       <div className="mt-6 border-t border-divider pt-5 space-y-4">
@@ -131,11 +136,11 @@ export function StoryCard({
             params={{ slug: story.writer }}
             className="flex items-center gap-3 min-w-0"
           >
-            <Avatar initials={writer?.initials ?? "TT"} size="sm" />
+            <Avatar initials={authorInitials} size="sm" />
             <span className="min-w-0">
               <span className="flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-heading truncate">
-                {writer?.name}
-                {writer?.verified && <VerifiedBadge />}
+                {authorName}
+                {isVerified && <VerifiedBadge />}
               </span>
               <span className="block text-[0.75rem] text-subtle">{story.date}</span>
             </span>

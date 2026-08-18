@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Download } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import { AppShell, StatCard } from "@/components/tossa/AppShell";
 import { Button, Panel } from "@/components/tossa/kit";
+import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { pageHead } from "@/lib/head";
-import { stories } from "@/lib/data";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/writer/analytics")({
   head: () =>
@@ -12,23 +14,31 @@ export const Route = createFileRoute("/writer/analytics")({
   component: WriterAnalytics,
 });
 
-const months = [
-  { label: "Feb", value: 42 },
-  { label: "Mar", value: 55 },
-  { label: "Apr", value: 48 },
-  { label: "May", value: 72 },
-  { label: "Jun", value: 84 },
-  { label: "Jul", value: 96 },
-];
-
-const payouts = [
-  { month: "July 2026", reads: "182k", amount: "₹48,200", status: "Processing" },
-  { month: "June 2026", reads: "164k", amount: "₹42,900", status: "Paid" },
-  { month: "May 2026", reads: "141k", amount: "₹36,400", status: "Paid" },
-  { month: "April 2026", reads: "118k", amount: "₹30,150", status: "Paid" },
-];
-
 function WriterAnalytics() {
+  const { data: analyticsData, isLoading } = useQuery({
+    queryKey: ["writer-analytics-overview"],
+    queryFn: async () => {
+      const res = await api.get("/writer/analytics/overview/");
+      return res.data || {};
+    },
+  });
+
+  const summary = analyticsData?.summary || {
+    total_views: 0,
+    total_likes: 0,
+    total_stories: 0,
+    published_stories: 0,
+  };
+
+  const topStories = (analyticsData?.top_stories && Array.isArray(analyticsData.top_stories))
+    ? analyticsData.top_stories.map((s: any) => ({
+        slug: s.slug,
+        title: s.title,
+        views: s.views_count || 0,
+        cover: s.cover_image || "/assets/cover-lane.jpg",
+      }))
+    : [];
+
   return (
     <AppShell
       role="writer"
@@ -41,56 +51,47 @@ function WriterAnalytics() {
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Reads (30d)" value="182k" delta="+11%" />
-        <StatCard label="Finish rate" value="79%" delta="+3.1%" />
-        <StatCard label="New followers" value="312" delta="+18%" />
-        <StatCard label="Earnings (30d)" value="₹48,200" delta="+9%" />
+        <StatCard label="Total Reads" value={String(summary.total_views)} />
+        <StatCard label="Total Likes" value={String(summary.total_likes)} />
+        <StatCard label="Published Stories" value={String(summary.published_stories)} />
+        <StatCard label="Total Stories" value={String(summary.total_stories)} />
       </div>
-
-      <Panel className="p-6">
-        <h2 className="text-xl">Reads by month</h2>
-        <div className="mt-8 flex h-56 items-end gap-4">
-          {months.map((m) => (
-            <div key={m.label} className="flex flex-1 flex-col items-center gap-3">
-              <div className="w-full rounded-t-xl ink-gradient" style={{ height: `${m.value}%` }} />
-              <span className="font-sans text-[0.75rem] font-bold text-subtle">{m.label}</span>
-            </div>
-          ))}
-        </div>
-      </Panel>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel className="p-6">
-          <h2 className="text-xl">Top stories</h2>
-          <ul className="mt-5 divide-y divide-border">
-            {stories.slice(0, 5).map((s) => (
-              <li key={s.slug} className="flex items-center gap-4 py-3">
-                <img src={s.cover} alt="" loading="lazy" className="h-11 w-14 rounded-lg object-cover" />
-                <p className="min-w-0 flex-1 truncate font-sans text-[0.9375rem] font-bold text-heading">
-                  {s.title}
-                </p>
-                <span className="shrink-0 text-[0.875rem] text-subtle">{s.views}</span>
-              </li>
-            ))}
-          </ul>
+          <h2 className="text-xl font-display font-bold text-heading">Top performing stories</h2>
+          {isLoading ? (
+            <div className="py-12 text-center text-subtle font-medium">Loading top stories...</div>
+          ) : topStories.length === 0 ? (
+            <EmptySectionFallback
+              icon="write"
+              title="No Story Analytics Available"
+              description="Publish stories to start tracking reader engagement, views, and likes."
+            />
+          ) : (
+            <ul className="mt-5 divide-y divide-border">
+              {topStories.map((s: any) => (
+                <li key={s.slug} className="flex items-center gap-4 py-3">
+                  <img src={s.cover} alt="" loading="lazy" className="h-11 w-14 rounded-lg object-cover" />
+                  <p className="min-w-0 flex-1 truncate font-sans text-[0.9375rem] font-bold text-heading">
+                    {s.title}
+                  </p>
+                  <span className="shrink-0 text-[0.875rem] text-subtle">{s.views} reads</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
 
         <Panel className="p-6">
-          <h2 className="text-xl">Payouts</h2>
-          <ul className="mt-5 divide-y divide-border">
-            {payouts.map((p) => (
-              <li key={p.month} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-sans text-[0.9375rem] font-bold text-heading">{p.month}</p>
-                  <p className="text-[0.8125rem] text-subtle">{p.reads} reads</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-sans text-[0.9375rem] font-bold text-heading">{p.amount}</p>
-                  <p className="text-[0.8125rem] text-subtle">{p.status}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <h2 className="text-xl font-display font-bold text-heading">Payouts & Statements</h2>
+          <div className="mt-5 py-8 text-center">
+            <EmptySectionFallback
+              icon="series"
+              title="No Payout History"
+              description="Earnings statement calculations are processed at the end of each billing cycle."
+            />
+          </div>
         </Panel>
       </div>
     </AppShell>

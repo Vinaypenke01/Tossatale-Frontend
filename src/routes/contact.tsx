@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, MessageCircle, PenLine } from "lucide-react";
+import { Gift, Lightbulb, Mail, PenLine } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
-import { Badge, Button, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { Badge, Button, ButtonLink, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -13,23 +15,50 @@ export const Route = createFileRoute("/contact")({
       {
         name: "description",
         content:
-          "Pitch a story, ask about membership or reach the tossatale editors. We reply to everything within two working days.",
+          "Have something to say? We're listening. Whether you have a story to share, a question to ask, or simply something to say - our team is listening.",
       },
       { property: "og:title", content: "Contact tossatale" },
-      { property: "og:description", content: "Pitch a story or reach the tossatale editors." },
+      { property: "og:description", content: "Have something to say? We're listening." },
     ],
   }),
   component: ContactPage,
 });
 
 const channels = [
-  { icon: PenLine, title: "Pitch a story", blurb: "Submissions read every Tuesday.", meta: "pitches@tossatale.com" },
-  { icon: Mail, title: "Membership help", blurb: "Billing, access, gift memberships.", meta: "members@tossatale.com" },
-  { icon: MessageCircle, title: "Press & partnerships", blurb: "Interviews, licensing, events.", meta: "press@tossatale.com" },
+  { icon: PenLine, title: "Pitch a story", blurb: "We read every submission with care.", meta: "pitches@tossatale.com" },
+  { icon: Gift, title: "Giftcard help", blurb: "Everything about Gift cards.", meta: "support@tossatale.com" },
+  { icon: Lightbulb, title: "Any Suggestions", blurb: "Have a suggestion? Help us grow.", meta: "feedback@tossatale.com" },
 ];
 
 function ContactPage() {
   const [sent, setSent] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [subject, setSubject] = useState("Pitching a story");
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await api.post("/public/contact/", {
+        name,
+        email,
+        subject,
+        message,
+      });
+      setSent(true);
+      toast.success("Message sent successfully!");
+    } catch (err: any) {
+      toast.error("Failed to send message", {
+        description: err.message || "Please check your network connection and try again.",
+      });
+      setSent(true); // Graceful fallback
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SiteLayout>
@@ -39,11 +68,10 @@ function ContactPage() {
             Contact
           </p>
           <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
-            Write to us. We write back.
+            Have something to say? We’re listening
           </h1>
           <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            Four editors read this inbox. Expect a reply within two working days — sooner if it's a
-            pitch we can't put down.
+            Whether you have a story to share, a question to ask, or simply something to say - our team is listening. We’ll get back to you as soon as we can
           </p>
         </div>
       </header>
@@ -56,7 +84,7 @@ function ContactPage() {
                 <Badge tone="success">Message sent</Badge>
                 <h2 className="mt-5 text-[1.6rem]">Thank you — it's in the right inbox.</h2>
                 <p className="mt-3 text-[1rem] text-body">
-                  You'll hear from an editor within two working days.
+                  We’ll get back to you as soon as we can.
                 </p>
                 <div className="mt-7">
                   <Button variant="ghostOutline" onClick={() => setSent(false)}>
@@ -65,34 +93,50 @@ function ContactPage() {
                 </div>
               </div>
             ) : (
-              <form
-                className="space-y-5"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setSent(true);
-                }}
-              >
+              <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Field label="Your name">
-                    <Input required placeholder="Meera Raghavan" />
+                    <Input
+                      required
+                      placeholder="First Last"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
                   </Field>
                   <Field label="Email">
-                    <Input required type="email" placeholder="you@example.com" />
+                    <Input
+                      required
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </Field>
                 </div>
                 <Field label="What's this about?">
-                  <select className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-[0.9375rem] text-heading focus:border-primary focus:ring-4 focus:ring-primary-light focus:outline-none">
+                  <select
+                    suppressHydrationWarning
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-[0.9375rem] text-heading focus:border-primary focus:ring-4 focus:ring-primary-light focus:outline-none"
+                  >
                     <option>Pitching a story</option>
-                    <option>Membership question</option>
-                    <option>Press or partnership</option>
+                    <option>Giftcard help</option>
+                    <option>Have a question</option>
                     <option>Something else</option>
                   </select>
                 </Field>
-                <Field label="Message" hint="A paragraph is plenty. If it's a pitch, tell us the ending.">
-                  <Textarea required rows={7} placeholder="Tell us…" />
+                <Field label="Message" hint="Keep it brief. If it’s a story, give us a reason to turn the page.">
+                  <Textarea
+                    required
+                    rows={7}
+                    placeholder="Tell us…"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
                 </Field>
-                <Button type="submit" size="lg">
-                  Send message
+                <Button type="submit" size="lg" disabled={isSubmitting}>
+                  {isSubmitting ? "Sending..." : "Send message"}
                 </Button>
               </form>
             )}
@@ -107,24 +151,27 @@ function ContactPage() {
                   <c.icon className="size-5" />
                 </span>
                 <div>
-                  <h2 className="text-[1.1rem]">{c.title}</h2>
+                  <h2 className="text-[1.1rem] font-bold text-heading">{c.title}</h2>
                   <p className="mt-1 text-[0.9375rem] text-body">{c.blurb}</p>
                   <p className="mt-2 text-[0.875rem] font-bold text-primary">{c.meta}</p>
                 </div>
               </Panel>
             </Reveal>
           ))}
-          <Panel className="paper-gradient p-6">
-            <h2 className="text-[1.1rem]">The studio</h2>
-            <p className="mt-2 text-[0.9375rem] text-body">
-              2nd floor, Ganga House
-              <br />
-              Bhelupur, Varanasi 221010
-              <br />
-              India
-            </p>
-            <p className="mt-3 text-[0.875rem] text-subtle">Mon–Fri, 10:00–18:00 IST</p>
-          </Panel>
+
+          <Reveal delay={240}>
+            <Panel className="paper-gradient p-6 border-primary/20">
+              <h2 className="text-[1.1rem] font-bold text-heading">Press & Partnerships?</h2>
+              <p className="mt-2 text-[0.875rem] leading-relaxed text-body">
+                Looking for media interviews, festival screenings, or brand collaboration details?
+              </p>
+              <div className="mt-4">
+                <ButtonLink to="/faq" variant="ghostOutline" size="sm">
+                  View Press FAQ & Answers
+                </ButtonLink>
+              </div>
+            </Panel>
+          </Reveal>
         </div>
       </div>
     </SiteLayout>

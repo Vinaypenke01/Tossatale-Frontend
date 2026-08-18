@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { Check, ChevronRight } from "lucide-react";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import { Check, ChevronDown, ChevronRight, User } from "lucide-react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { cn } from "@/lib/utils";
@@ -23,10 +23,10 @@ export const buttonVariants = cva(
         danger: "bg-destructive text-destructive-foreground hover:opacity-90",
       },
       size: {
-        sm: "h-9 px-4 text-[0.8125rem]",
-        md: "h-11 px-6 text-[0.9375rem]",
-        lg: "h-14 px-8 text-base",
-        icon: "size-10",
+        sm: "h-8 px-3.5 text-[0.8125rem]",
+        md: "h-10 px-5 text-[0.875rem]",
+        lg: "h-12 px-6 text-[0.9375rem]",
+        icon: "size-9",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },
@@ -105,9 +105,11 @@ export function Tag({ children }: { children: ReactNode }) {
 export function Badge({
   children,
   tone = "neutral",
+  className,
 }: {
   children: ReactNode;
   tone?: "neutral" | "success" | "warning" | "error" | "info";
+  className?: string;
 }) {
   const tones = {
     neutral: "bg-surface-alt text-subtle",
@@ -121,6 +123,7 @@ export function Badge({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.75rem] font-bold",
         tones[tone],
+        className,
       )}
     >
       {children}
@@ -147,10 +150,12 @@ export function VerifiedBadge({ label = false }: { label?: boolean }) {
 
 export function Avatar({
   initials,
+  useIcon = true,
   size = "md",
   className,
 }: {
-  initials: string;
+  initials?: string;
+  useIcon?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }) {
@@ -160,6 +165,14 @@ export function Avatar({
     lg: "size-14 text-sm",
     xl: "size-24 text-xl",
   } as const;
+
+  const iconSizes = {
+    sm: "size-4",
+    md: "size-5",
+    lg: "size-7",
+    xl: "size-12",
+  } as const;
+
   return (
     <span
       className={cn(
@@ -168,7 +181,11 @@ export function Avatar({
         className,
       )}
     >
-      {initials}
+      {useIcon ? (
+        <User className={cn(iconSizes[size], "opacity-90")} />
+      ) : (
+        initials
+      )}
     </span>
   );
 }
@@ -248,6 +265,77 @@ export function Textarea({
       )}
       {...props}
     />
+  );
+}
+
+export function CustomSelect({
+  value,
+  onChange,
+  options,
+  placeholder = "Select option",
+  className,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { label: string; value: string }[];
+  placeholder?: string;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  const selectedOption = options.find((o) => o.value === value) || options[0];
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className={cn("relative w-full", className)}>
+      <button
+        type="button"
+        suppressHydrationWarning
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex h-11 w-full items-center justify-between rounded-xl border border-border bg-surface px-3.5 font-sans text-[0.875rem] font-medium text-heading shadow-xs transition-all hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary-light focus:outline-none"
+      >
+        <span className="truncate">{selectedOption?.label || placeholder}</span>
+        <ChevronDown className={cn("size-4 text-subtle transition-transform duration-200", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-[calc(100%+6px)] left-0 z-50 max-h-60 w-full overflow-y-auto rounded-2xl border border-border bg-surface p-1.5 shadow-lift backdrop-blur-md animate-in fade-in-50 zoom-in-95">
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                suppressHydrationWarning
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 font-sans text-[0.875rem] font-medium transition-colors text-left",
+                  isSelected
+                    ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                    : "text-heading hover:bg-surface-hover hover:text-primary"
+                )}
+              >
+                <span>{opt.label}</span>
+                {isSelected && <Check className="size-4 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
