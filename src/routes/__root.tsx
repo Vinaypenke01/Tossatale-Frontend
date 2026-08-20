@@ -100,6 +100,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
+    scripts: [
+      {
+        src: "https://accounts.google.com/gsi/client",
+        async: true,
+        defer: true,
+      },
+    ],
   }),
 
   shellComponent: RootShell,
@@ -122,32 +129,80 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { useQuery } from "@tanstack/react-query";
+import { useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/components/auth/AuthContext";
+import { AuthProvider, useAuth } from "@/components/auth/AuthContext";
 import { UnderConstructionScreen } from "@/components/tossa/UnderConstructionScreen";
+import { api } from "@/lib/api";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const isUnderConstruction =
-    import.meta.env.VITE_UNDER_CONSTRUCTION === "true" ||
-    import.meta.env.VITE_UNDER_CONSTRUCTION === "TRUE";
-
-  if (isUnderConstruction) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <UnderConstructionScreen />
-        <Toaster />
-      </QueryClientProvider>
-    );
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-        <Toaster />
+        <AppRootContent />
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppRootContent() {
+  const { user } = useAuth();
+  const routerState = useRouterState();
+  const currentPath =
+    routerState?.location?.pathname ||
+    (typeof window !== "undefined" ? window.location.pathname : "/");
+
+  // Fetch live maintenance_mode from settings
+  const { data: siteSettings } = useQuery({
+    queryKey: ["public-site-settings"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/public/settings/");
+        return res.data?.data || res.data || {};
+      } catch {
+        return {};
+      }
+    },
+    staleTime: 1000 * 30, // 30 seconds
+  });
+
+  const isServerMaintenance = Boolean(siteSettings?.maintenance_mode);
+  const isEnvUnderConstruction =
+    import.meta.env.VITE_UNDER_CONSTRUCTION === "true" ||
+    import.meta.env.VITE_UNDER_CONSTRUCTION === "TRUE";
+
+  const isUnderConstructionActive = isServerMaintenance || isEnvUnderConstruction;
+
+  // Admins or users accessing admin studio / auth route bypass the maintenance screen
+  const isAdmin =
+    user?.role === "ADMIN" ||
+    (typeof window !== "undefined" &&
+      (localStorage.getItem("tossatale_user_role") === "ADMIN" ||
+        localStorage.getItem("tossatale_user_role") === "admin"));
+
+  const isExemptPath =
+    currentPath === "/auth" ||
+    currentPath === "/auth/" ||
+    currentPath === "/admin" ||
+    currentPath.startsWith("/admin/");
+
+  if (isUnderConstructionActive && !isAdmin && !isExemptPath) {
+    return (
+      <>
+        <UnderConstructionScreen message={siteSettings?.maintenance_message} />
+        <Toaster />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+      <Outlet />
+      <Toaster />
+    </>
   );
 }

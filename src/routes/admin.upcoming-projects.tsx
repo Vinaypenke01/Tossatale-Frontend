@@ -101,10 +101,15 @@ function AdminUpcomingProjects() {
   };
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      toast.error("Project title is required!");
+    if (!title.trim() || title.trim().length < 2) {
+      toast.error("Please provide a project title (minimum 2 characters).");
       return;
     }
+    if (!description.trim() || description.trim().length < 10) {
+      toast.error("Please provide a brief storyline / synopsis (at least 10 characters).");
+      return;
+    }
+
     setIsPublishing(true);
     try {
       const payload = {
@@ -127,10 +132,10 @@ function AdminUpcomingProjects() {
       queryClient.invalidateQueries({ queryKey: ["public-upcoming-projects"] });
       handleClearEditor();
       setActiveTab("library");
-    } catch {
-      toast.success("Project Saved!", { description: `"${title}" added to upcoming projects showcase.` });
-      handleClearEditor();
-      setActiveTab("library");
+    } catch (err: any) {
+      toast.error("Failed to save project", {
+        description: err.response?.data?.message || err.response?.data?.error || err.message || "Could not save upcoming project.",
+      });
     } finally {
       setIsPublishing(false);
     }
@@ -143,6 +148,7 @@ function AdminUpcomingProjects() {
     setDescription(project.description || project.logline || "");
     setCoverImage(project.cover_image || project.thumbnail_url || "");
     setActiveTab("editor");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDeleteProject = async (project: any) => {
@@ -151,9 +157,10 @@ function AdminUpcomingProjects() {
       await api.delete(`/admin/videos/${project.id || project.slug}/`);
       toast.success("Project Removed", { description: `"${project.title}" removed.` });
       queryClient.invalidateQueries({ queryKey: ["admin-upcoming-projects-list"] });
-    } catch {
-      toast.success("Project Removed");
-      queryClient.invalidateQueries({ queryKey: ["admin-upcoming-projects-list"] });
+    } catch (err: any) {
+      toast.error("Failed to remove project", {
+        description: err.response?.data?.message || err.message || "An error occurred while deleting.",
+      });
     }
   };
 

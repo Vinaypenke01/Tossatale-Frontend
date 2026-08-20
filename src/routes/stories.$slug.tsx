@@ -10,12 +10,16 @@ import {
   Share2,
   Twitter,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal, useScrollProgress } from "@/components/tossa/Reveal";
 import { StoryCard } from "@/components/tossa/StoryCard";
+import { LikeAuthModal } from "@/components/auth/LikeAuthModal";
+import { useAuth } from "@/components/auth/AuthContext";
+import coverLane from "@/assets/cover-lane.jpg";
 import {
   Avatar,
   Button,
@@ -115,8 +119,98 @@ function StoryDetail() {
   const loaderData = Route.useLoaderData();
   const story = loaderData?.story;
   const progress = useScrollProgress();
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const [liked, setLiked] = useState(Boolean(story?.is_liked));
+  const [likesCount, setLikesCount] = useState<number>(story?.likes_count || story?.likes || 0);
+  const [saved, setSaved] = useState(Boolean(story?.is_bookmarked));
+  const [showLikeModal, setShowLikeModal] = useState(false);
+
+  // Trigger 1-view-per-user-per-day tracking
+  useEffect(() => {
+    if (story?.id) {
+      api.post(`/public/stories/${story.id}/view/`, {
+        referrer: typeof document !== "undefined" ? document.referrer : "",
+      }).catch(() => {});
+    }
+  }, [story?.id]);
+
+  useEffect(() => {
+    if (story) {
+      if (typeof story.is_liked === "boolean") {
+        setLiked(story.is_liked);
+      }
+      if (typeof story.is_bookmarked === "boolean") {
+        setSaved(story.is_bookmarked);
+      }
+      if (typeof story.likes_count === "number") {
+        setLikesCount(story.likes_count);
+      }
+    }
+  }, [story?.id, story?.is_liked, story?.is_bookmarked, story?.likes_count]);
+
+  const handleLikeClick = async () => {
+    if (!isAuthenticated) {
+      setShowLikeModal(true);
+      return;
+    }
+    try {
+      if (!liked) {
+        const res = await api.post(`/public/stories/${story.id}/like/`, {});
+        setLiked(true);
+        if (typeof res.data?.likes_count === "number") {
+          setLikesCount(res.data.likes_count);
+        } else {
+          setLikesCount((c) => c + 1);
+        }
+        toast.success("Story Liked!", {
+          description: `Added "${story.title}" to your reading collection.`,
+        });
+      } else {
+        const res = await api.delete(`/public/stories/${story.id}/like/`);
+        setLiked(false);
+        if (typeof res.data?.likes_count === "number") {
+          setLikesCount(res.data.likes_count);
+        } else {
+          setLikesCount((c) => Math.max(0, c - 1));
+        }
+        toast.success("Removed like");
+      }
+    } catch (err: any) {
+      if (err.message?.toLowerCase()?.includes("already liked")) {
+        setLiked(true);
+        toast.success("Story is already in your liked collection.");
+      } else {
+        toast.error("Like Action Failed", { description: err.message });
+      }
+    }
+  };
+
+  const handleBookmarkClick = async () => {
+    if (!isAuthenticated) {
+      setShowLikeModal(true);
+      return;
+    }
+    try {
+      if (!saved) {
+        await api.post(`/user/stories/${story.id}/bookmark/`, {});
+        setSaved(true);
+        toast.success("Saved to Bookmarks", {
+          description: `Added "${story.title}" to your saved shelf.`,
+        });
+      } else {
+        await api.delete(`/user/stories/${story.id}/bookmark/`);
+        setSaved(false);
+        toast.success("Removed from Bookmarks");
+      }
+    } catch (err: any) {
+      if (err.message?.toLowerCase()?.includes("already bookmarked")) {
+        setSaved(true);
+        toast.success("Story is already in your bookmarks.");
+      } else {
+        toast.error("Bookmark Action Failed", { description: err.message });
+      }
+    }
+  };
 
   const categoryParam = story?.category?.slug || story?.category?.id;
   const tagParam = story?.tags?.[0]?.slug || story?.tags?.[0]?.name || story?.tags?.[0];
@@ -165,6 +259,17 @@ function StoryDetail() {
 
   return (
     <SiteLayout>
+      <LikeAuthModal
+        isOpen={showLikeModal}
+        storyId={story.id}
+        storyTitle={story.title}
+        onClose={() => setShowLikeModal(false)}
+        onLikeSuccess={(newCount) => {
+          setLiked(true);
+          setLikesCount(typeof newCount === "number" ? newCount : (likesCount + 1));
+        }}
+      />
+
       <div className="fixed top-0 left-0 z-[60] h-0.5 w-full bg-transparent">
         <div
           className="h-full bg-primary transition-[width] duration-150"
@@ -198,16 +303,21 @@ function StoryDetail() {
               {story.title}
             </h1>
             <p className="mt-4 text-[1.125rem] leading-relaxed text-body">
-              {story.subtitle || story.seo_description || "A story published on tossatale."}
+              {story.subtitle || "A quiet piece of prose written for thoughtful readers."}
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-divider pt-6">
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-border/80 pt-6">
               <Link
                 to="/writers/$slug"
                 params={{ slug: story.writer?.slug || "writer" }}
-                className="flex items-center gap-3.5"
+                className="flex items-center gap-3 text-body hover:text-heading"
               >
-                <Avatar initials={writerInitials} size="lg" />
+                <Avatar
+                  initials={writerInitials}
+                  size="md"
+                  gender={story.writer?.gender || "OTHER"}
+                  src={story.writer?.profile_photo || ""}
+                />
                 <div>
                   <p className="flex items-center gap-1.5 font-sans text-[1rem] font-bold text-heading">
                     {writerName} {story.writer?.is_verified && <VerifiedBadge />}
@@ -222,19 +332,25 @@ function StoryDetail() {
                 <Button
                   variant={liked ? "primary" : "ghostOutline"}
                   size="sm"
-                  onClick={() => setLiked((v) => !v)}
-                  className="gap-1.5"
+                  onClick={handleLikeClick}
+                  className={cn(
+                    "gap-1.5 transition-all",
+                    liked && "bg-destructive text-white hover:bg-destructive/90 border-destructive shadow-xs"
+                  )}
                 >
-                  <Heart className={cn("size-4", liked && "fill-current")} />
-                  {liked ? "Liked" : "Like"}
+                  <Heart className={cn("size-4 transition-transform", liked ? "fill-current text-white animate-pop" : "text-subtle")} />
+                  {liked ? "Liked" : "Like"} ({likesCount})
                 </Button>
                 <Button
                   variant={saved ? "primary" : "ghostOutline"}
                   size="sm"
-                  onClick={() => setSaved((v) => !v)}
-                  className="gap-1.5"
+                  onClick={handleBookmarkClick}
+                  className={cn(
+                    "gap-1.5 transition-all",
+                    saved && "bg-primary text-white hover:bg-primary/90 border-primary shadow-xs"
+                  )}
                 >
-                  <Bookmark className={cn("size-4", saved && "fill-current")} />
+                  <Bookmark className={cn("size-4 transition-transform", saved ? "fill-current text-white animate-pop" : "text-subtle")} />
                   {saved ? "Saved" : "Save"}
                 </Button>
               </div>
@@ -276,7 +392,7 @@ function StoryDetail() {
                   category: s.category?.name || "General",
                   date: s.published_at ? new Date(s.published_at).toLocaleDateString() : "Recent",
                   readingTime: s.estimated_reading_time || 5,
-                  cover: s.cover_image || "/assets/cover-lane.jpg",
+                  cover: s.cover_image || coverLane,
                   views: s.views_count || 0,
                   likes: s.likes_count || 0,
                 } as any} />

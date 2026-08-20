@@ -63,10 +63,21 @@ function AdminVideos() {
   };
 
   const handlePublish = async () => {
-    if (!url.trim() || !title.trim()) {
-      toast.error("YouTube URL and title are required!");
+    if (!url.trim()) {
+      toast.error("Please enter a YouTube video URL.");
       return;
     }
+    if (!id) {
+      toast.error("Invalid YouTube URL", {
+        description: "Please enter a valid YouTube link (e.g. https://www.youtube.com/watch?v=... or https://youtu.be/...)",
+      });
+      return;
+    }
+    if (!title.trim() || title.trim().length < 2) {
+      toast.error("Please provide a video title (at least 2 characters).");
+      return;
+    }
+
     setIsPublishing(true);
     try {
       const payload = {
@@ -87,9 +98,9 @@ function AdminVideos() {
       handleClearEditor();
       setActiveTab("library");
     } catch (err: any) {
-      toast.success("Video saved!", { description: `"${title}" published to video library.` });
-      handleClearEditor();
-      setActiveTab("library");
+      toast.error("Failed to save video", {
+        description: err.response?.data?.message || err.response?.data?.error || err.message || "An unexpected error occurred.",
+      });
     } finally {
       setIsPublishing(false);
     }
@@ -101,17 +112,19 @@ function AdminVideos() {
     setTitle(video.title || "");
     setNotes(video.editorial_note || video.description || "");
     setActiveTab("editor");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDeleteVideo = async (video: any) => {
     if (!confirm(`Are you sure you want to delete "${video.title}"?`)) return;
     try {
       await api.delete(`/admin/videos/${video.id || video.slug}/`);
-      toast.success("Video Deleted", { description: `"${video.title}" removed.` });
+      toast.success("Video Deleted", { description: `"${video.title}" was removed.` });
       queryClient.invalidateQueries({ queryKey: ["admin-videos-list"] });
-    } catch {
-      toast.success("Video Removed");
-      queryClient.invalidateQueries({ queryKey: ["admin-videos-list"] });
+    } catch (err: any) {
+      toast.error("Failed to delete video", {
+        description: err.response?.data?.message || err.message || "An error occurred while deleting.",
+      });
     }
   };
 

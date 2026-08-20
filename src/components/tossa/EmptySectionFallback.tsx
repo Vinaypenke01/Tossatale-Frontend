@@ -57,6 +57,7 @@ export function EmptySectionFallback({
       {actionText && onAction && (
         <button
           type="button"
+          suppressHydrationWarning
           onClick={onAction}
           className="mt-5 rounded-full border border-primary/30 bg-primary/10 px-5 py-2 font-sans text-[0.8125rem] font-bold text-primary transition-all hover:bg-primary hover:text-primary-foreground"
         >

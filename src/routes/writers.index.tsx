@@ -47,6 +47,8 @@ function WritersIndex() {
         name: w.name || w.user?.full_name || "Writer",
         initials: (w.name || w.user?.full_name || "W").substring(0, 2).toUpperCase(),
         handle: `@${w.slug}`,
+        gender: w.gender || "OTHER",
+        photo: w.profile_photo || "",
         verified: w.is_verified || false,
         role: w.bio ? w.bio.slice(0, 30) : "Storyteller",
         location: w.location || "tossatale",
@@ -64,27 +66,32 @@ function WritersIndex() {
             The community
           </p>
           <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
-            Writers you'll want to follow
+            Meet our writers
           </h1>
           <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            Meet the writers who bring tossatale to life.
+            Original voices writing about memory, places, speculative futures, love, and what matters.
           </p>
-          <div className="mt-8 max-w-sm">
-            <Input
-              placeholder="Search writers by name, role, or genre…"
-              aria-label="Search writers"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
+      <div className="mx-auto max-w-[1240px] px-5 py-10 lg:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search writers by name or bio…"
+            aria-label="Search writers"
+            className="sm:max-w-xs"
+          />
+          <p className="text-[0.875rem] text-subtle font-medium">
+            {displayWriters.length} active writers
+          </p>
+        </div>
+
         {isLoading ? (
           <div className="py-16 text-center text-subtle font-medium">Loading writers...</div>
         ) : displayWriters.length === 0 ? (
-          <Panel className="p-12 text-center">
+          <Panel className="mt-8 p-12 text-center">
             <h3 className="font-display text-xl font-bold text-heading">No writers found</h3>
             <p className="mt-2 text-[0.875rem] text-subtle">
               {search ? `No writers match "${search}".` : "There are currently no registered writers in the community."}
@@ -97,7 +104,7 @@ function WritersIndex() {
                 <Panel hover className="flex h-[250px] flex-col justify-between p-6">
                   <div>
                     <div className="flex items-start gap-4">
-                      <Avatar initials={w.initials} size="lg" />
+                      <Avatar initials={w.initials} gender={w.gender} src={w.photo} size="lg" />
                       <div className="min-w-0 flex-1">
                         <h2 className="flex items-center gap-2 text-[1.15rem] font-display font-bold text-heading truncate">
                           {w.name}

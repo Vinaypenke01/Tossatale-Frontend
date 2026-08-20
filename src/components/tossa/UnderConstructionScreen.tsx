@@ -6,7 +6,7 @@ import heroArt from "@/assets/Hero_section_pic.jpeg";
 import logo from "@/assets/tossatale_redefine_logo.jpg";
 import { Button, Input } from "@/components/tossa/kit";
 
-export function UnderConstructionScreen() {
+export function UnderConstructionScreen({ message }: { message?: string }) {
   const [email, setEmail] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -56,7 +56,8 @@ export function UnderConstructionScreen() {
         </h1>
 
         <p className="mx-auto mt-4 max-w-md text-[1rem] leading-relaxed text-zinc-300">
-          tossatale is currently undergoing scheduled platform upgrades to refine your storytelling experience. All page access is temporarily restricted.
+          {message ||
+            "tossatale is currently undergoing scheduled platform upgrades to refine your storytelling experience. All page access is temporarily restricted."}
         </p>
 
         <form
@@ -79,9 +80,17 @@ export function UnderConstructionScreen() {
           </Button>
         </form>
 
-        <div className="mt-8 border-t border-white/10 pt-5 text-[0.8125rem] text-zinc-400 flex items-center justify-center gap-2">
-          <span className="size-2 rounded-full bg-emerald-500 animate-ping" />
-          <span>Platform updates in progress · Back live soon</span>
+        <div className="mt-8 border-t border-white/10 pt-5 text-[0.8125rem] text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-emerald-500 animate-ping" />
+            <span>Platform updates in progress · Back live soon</span>
+          </div>
+          <a
+            href="/auth"
+            className="text-xs text-zinc-500 hover:text-white transition-colors underline-offset-4 hover:underline"
+          >
+            Admin Sign In →
+          </a>
         </div>
       </div>
     </div>

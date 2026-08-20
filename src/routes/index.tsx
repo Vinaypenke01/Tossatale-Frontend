@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookMarked, Mail, Play, Quote } from "lucide-react";
+import { ArrowRight, BookMarked, Clock, Eye, Heart, Mail, Play, Quote } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 import heroArt from "@/assets/Hero_section_pic.jpeg";
+import coverBoat from "@/assets/cover-boat.jpg";
+import coverLane from "@/assets/cover-lane.jpg";
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { UnderConstruction } from "@/components/tossa/UnderConstruction";
 import { Reveal } from "@/components/tossa/Reveal";
@@ -82,63 +84,68 @@ function Hero() {
   );
 }
 
-function FeaturedStory({ story }: { story?: any }) {
-  if (!story) {
-    return (
-      <section className="mx-auto max-w-[1240px] px-5 pt-12 lg:px-8">
-        <EmptySectionFallback
-          icon="book"
-          title="No Featured Story Yet"
-          description="The editorial team is selecting featured longform pieces. Check back soon for highlighted stories!"
-          actionText="Browse Library"
-          onAction={() => window.location.href = "/stories"}
-        />
-      </section>
-    );
-  }
+function FeaturedStories({ stories }: { stories?: any[] }) {
+  const displayList = (stories && Array.isArray(stories) && stories.length > 0)
+    ? stories.slice(0, 2)
+    : [];
+
+  if (displayList.length === 0) return null;
 
   return (
-    <Reveal as="section" className="mx-auto max-w-[1240px] px-5 pt-12 lg:px-8">
-      <Panel className="grain overflow-hidden p-7 lg:p-9 border-primary/20 flex flex-col justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-              FEATURED STORY
-            </span>
-            <CategoryPill>{story.category?.name || "Featured"}</CategoryPill>
-          </div>
+    <section className="mx-auto max-w-[1240px] px-5 pt-12 lg:px-8">
+      <div className="grid gap-6 md:grid-cols-2">
+        {displayList.map((story, i) => (
+          <Reveal key={story.slug || i} delay={i * 70}>
+            <Panel className="grain overflow-hidden p-7 lg:p-9 border-primary/20 flex flex-col justify-between h-full">
+              <div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
+                    FEATURED STORY
+                  </span>
+                  <CategoryPill>{story.category?.name || story.category || "Featured"}</CategoryPill>
+                </div>
 
-          <h2 className="mt-5 text-[clamp(1.5rem,2.5vw,2.1rem)] leading-[1.12] text-heading font-display font-bold">
-            {story.title}
-          </h2>
-          <p className="mt-3.5 line-clamp-3 text-[0.9375rem] leading-relaxed text-body">
-            {story.subtitle || story.seo_description || "A longform story selected by our editorial team."}
-          </p>
-        </div>
+                <h2 className="mt-5 text-[clamp(1.4rem,2.2vw,1.9rem)] leading-[1.12] text-heading font-display font-bold">
+                  {story.title}
+                </h2>
+                <p className="mt-3.5 line-clamp-3 text-[0.9375rem] leading-relaxed text-body">
+                  {story.subtitle || story.seo_description || "A longform story selected by our editorial team."}
+                </p>
+              </div>
 
-        <div>
-          <div className="mt-6 flex items-center gap-3 border-t border-divider pt-4">
-            <Avatar initials={(story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2).toUpperCase()} />
-            <div>
-              <p className="flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-heading">
-                {story.writer?.name || story.writer?.user?.full_name || "Author"} {story.writer?.is_verified && <VerifiedBadge />}
-              </p>
-              <p className="text-[0.75rem] text-subtle">
-                {story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent"} · {story.estimated_reading_time || 5} min read
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-2.5">
-            <ButtonLink to="/stories/$slug" params={{ slug: story.slug }} size="md">
-              Read story <ArrowRight className="size-4" />
-            </ButtonLink>
-            <Button variant="ghostOutline" size="md">
-              <BookMarked className="size-4" /> Save for later
-            </Button>
-          </div>
-        </div>
-      </Panel>
-    </Reveal>
+              <div>
+                <div className="mt-6 flex items-center gap-3 border-t border-divider pt-4">
+                  <Avatar
+                    initials={(story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2).toUpperCase()}
+                    gender={story.writer?.gender}
+                    src={story.writer?.profile_photo}
+                  />
+                  <div>
+                    <p className="flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-heading">
+                      {story.writer?.name || story.writer?.user?.full_name || "Author"} {story.writer?.is_verified && <VerifiedBadge />}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2.5 text-[0.75rem] text-subtle mt-0.5">
+                      <span>{story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent"}</span>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-1"><Clock className="size-3" /> {story.estimated_reading_time || 5} min read</span>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-1"><Eye className="size-3" /> {story.views_count || 0}</span>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-1 text-destructive"><Heart className="size-3 fill-current" /> {story.likes_count || 0}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 flex flex-wrap gap-2.5">
+                  <ButtonLink to="/stories/$slug" params={{ slug: story.slug }} size="md">
+                    Read story <ArrowRight className="size-4" />
+                  </ButtonLink>
+                </div>
+              </div>
+            </Panel>
+          </Reveal>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -175,17 +182,23 @@ function LatestStories({ stories }: { stories?: any[] }) {
         {stories.slice(0, 3).map((story, i) => (
           <Reveal key={story.slug} delay={i * 70}>
             <StoryCard story={{
+              id: story.id,
               slug: story.slug,
               title: story.title,
               dek: story.subtitle || story.seo_description || "A longform story.",
               writer: story.writer?.slug || "writer",
               writerName: story.writer?.name || story.writer?.user?.full_name || "Author",
+              writerGender: story.writer?.gender || "OTHER",
+              writerPhoto: story.writer?.profile_photo || "",
               category: story.category?.name || "General",
               date: story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent",
               readingTime: story.estimated_reading_time || 5,
-              cover: story.cover_image || "/assets/cover-lane.jpg",
+              cover: story.cover_image || coverLane,
               views: story.views_count || 0,
               likes: story.likes_count || 0,
+              likes_count: story.likes_count || 0,
+              is_liked: Boolean(story.is_liked),
+              is_bookmarked: Boolean(story.is_bookmarked),
             } as any} />
           </Reveal>
         ))}
@@ -217,20 +230,26 @@ function Trending({ stories }: { stories?: any[] }) {
           <SectionHeading eyebrow="Reader Favorites" title="Trending Stories" />
         </Reveal>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {stories.slice(0, 6).map((story, i) => (
+          {stories.slice(0, 3).map((story, i) => (
             <Reveal key={story.slug} delay={i * 60}>
               <StoryCard story={{
+                id: story.id,
                 slug: story.slug,
                 title: story.title,
                 dek: story.subtitle || story.seo_description || "A longform story.",
                 writer: story.writer?.slug || "writer",
                 writerName: story.writer?.name || story.writer?.user?.full_name || "Author",
+                writerGender: story.writer?.gender || "OTHER",
+                writerPhoto: story.writer?.profile_photo || "",
                 category: story.category?.name || "General",
                 date: story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent",
                 readingTime: story.estimated_reading_time || 5,
-                cover: story.cover_image || "/assets/cover-lane.jpg",
+                cover: story.cover_image || coverLane,
                 views: story.views_count || 0,
                 likes: story.likes_count || 0,
+                likes_count: story.likes_count || 0,
+                is_liked: Boolean(story.is_liked),
+                is_bookmarked: Boolean(story.is_bookmarked),
               } as any} />
             </Reveal>
           ))}
@@ -410,12 +429,12 @@ function VideoLibrary({ videos }: { videos?: any[] }) {
         />
       </Reveal>
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {videos.map((v, i) => (
+        {videos.slice(0, 4).map((v, i) => (
           <Reveal key={v.slug || v.id || i} delay={i * 70}>
             <Link to="/videos/$slug" params={{ slug: v.slug || "video" }} className="group block">
               <div className="relative overflow-hidden rounded-2xl border border-border shadow-paper">
                 <img
-                  src={v.thumbnail_url || "/assets/cover-boat.jpg"}
+                  src={v.thumbnail_url || coverBoat}
                   alt={v.title}
                   loading="lazy"
                   width={1200}
@@ -559,17 +578,25 @@ function Home() {
     return <UnderConstruction />;
   }
 
-  const featuredStoryData = homepageData?.featured_story || publicStories?.[0];
+  const featuredStoriesData = (homepageData?.featured_stories && homepageData.featured_stories.length > 0)
+    ? homepageData.featured_stories
+    : (publicStories ? publicStories.slice(0, 2) : []);
   const latestStoriesData = homepageData?.latest_stories || publicStories;
   const trendingStoriesData = homepageData?.trending_stories || publicStories;
   const categoriesData = homepageData?.categories || publicCategories;
-  const blogsData = homepageData?.featured_blogs || publicBlogs;
-  const videosData = homepageData?.featured_videos || publicVideos;
+  const blogsData = (homepageData?.featured_blogs && homepageData.featured_blogs.length > 0)
+    ? homepageData.featured_blogs.slice(0, 4)
+    : (publicBlogs ? publicBlogs.slice(0, 4) : []);
+  const videosData = (homepageData?.latest_videos && homepageData.latest_videos.length > 0)
+    ? homepageData.latest_videos.slice(0, 4)
+    : (publicVideos ? publicVideos.slice(0, 4) : []);
+  const announcementData = homepageData?.announcement || undefined;
+  const footerData = homepageData?.footer || undefined;
 
   return (
-    <SiteLayout>
+    <SiteLayout announcement={announcementData} footer={footerData}>
       <Hero />
-      <FeaturedStory story={featuredStoryData} />
+      <FeaturedStories stories={featuredStoriesData} />
       <LatestStories stories={latestStoriesData} />
       <Trending stories={trendingStoriesData} />
       <ReadingJourney />

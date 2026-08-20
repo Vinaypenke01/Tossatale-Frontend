@@ -26,6 +26,7 @@ import { Route as VideosRouteImport } from './routes/videos'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBlogsRouteImport } from './routes/admin.blogs'
+import { Route as AdminFaqRouteImport } from './routes/admin.faq'
 import { Route as AdminHomepageBuilderRouteImport } from './routes/admin.homepage-builder'
 import { Route as AdminProfileRouteImport } from './routes/admin.profile'
 import { Route as AdminReviewQueueRouteImport } from './routes/admin.review-queue'
@@ -138,6 +139,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
 const AdminBlogsRoute = AdminBlogsRouteImport.update({
   id: '/admin/blogs',
   path: '/admin/blogs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminFaqRoute = AdminFaqRouteImport.update({
+  id: '/admin/faq',
+  path: '/admin/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminHomepageBuilderRoute = AdminHomepageBuilderRouteImport.update({
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/videos': typeof VideosRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/blogs': typeof AdminBlogsRoute
+  '/admin/faq': typeof AdminFaqRoute
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/upcoming-projects': typeof UpcomingProjectsRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/blogs': typeof AdminBlogsRoute
+  '/admin/faq': typeof AdminFaqRoute
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
@@ -390,6 +398,7 @@ export interface FileRoutesById {
   '/videos': typeof VideosRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/blogs': typeof AdminBlogsRoute
+  '/admin/faq': typeof AdminFaqRoute
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
@@ -439,6 +448,7 @@ export interface FileRouteTypes {
     | '/videos'
     | '/admin/analytics'
     | '/admin/blogs'
+    | '/admin/faq'
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
@@ -484,6 +494,7 @@ export interface FileRouteTypes {
     | '/upcoming-projects'
     | '/admin/analytics'
     | '/admin/blogs'
+    | '/admin/faq'
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
@@ -530,6 +541,7 @@ export interface FileRouteTypes {
     | '/videos'
     | '/admin/analytics'
     | '/admin/blogs'
+    | '/admin/faq'
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
@@ -578,6 +590,7 @@ export interface RootRouteChildren {
   VideosRoute: typeof VideosRouteWithChildren
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBlogsRoute: typeof AdminBlogsRoute
+  AdminFaqRoute: typeof AdminFaqRoute
   AdminHomepageBuilderRoute: typeof AdminHomepageBuilderRoute
   AdminProfileRoute: typeof AdminProfileRoute
   AdminReviewQueueRoute: typeof AdminReviewQueueRoute
@@ -722,6 +735,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/blogs'
       fullPath: '/admin/blogs'
       preLoaderRoute: typeof AdminBlogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/faq': {
+      id: '/admin/faq'
+      path: '/admin/faq'
+      fullPath: '/admin/faq'
+      preLoaderRoute: typeof AdminFaqRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/homepage-builder': {
@@ -979,6 +999,7 @@ const rootRouteChildren: RootRouteChildren = {
   VideosRoute: VideosRouteWithChildren,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminBlogsRoute: AdminBlogsRoute,
+  AdminFaqRoute: AdminFaqRoute,
   AdminHomepageBuilderRoute: AdminHomepageBuilderRoute,
   AdminProfileRoute: AdminProfileRoute,
   AdminReviewQueueRoute: AdminReviewQueueRoute,

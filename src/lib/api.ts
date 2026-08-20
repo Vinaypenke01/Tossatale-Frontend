@@ -51,7 +51,8 @@ export const clearAuthTokens = () => {
   localStorage.removeItem("tossatale_refresh_token");
   localStorage.removeItem("tossatale_user_role");
   localStorage.removeItem("tossatale_user_data");
-  if (window.location.pathname !== "/auth") {
+  const path = window.location.pathname;
+  if (path.startsWith("/admin") || path.startsWith("/writer") || path.startsWith("/reader")) {
     window.location.href = "/auth";
   }
 };

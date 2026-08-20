@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Play } from "lucide-react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
+import { Pagination } from "@/components/tossa/Pagination";
 import { CategoryPill, Panel } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
 import { videos as mockVideos } from "@/lib/data";
@@ -31,20 +33,26 @@ function youtubeId(url: string) {
 }
 
 function VideosIndexPage() {
-  const { data: apiVideos, isLoading } = useQuery({
-    queryKey: ["public-videos"],
+  const [page, setPage] = useState(1);
+
+  const { data: apiResponse, isLoading } = useQuery({
+    queryKey: ["public-videos", page],
     queryFn: async () => {
       try {
-        const res = await api.get("/public/videos/");
-        return res.data?.results || res.data?.data || res.data || [];
+        const res = await api.get(`/public/videos/?page=${page}&page_size=12`);
+        return res.data?.data || res.data || {};
       } catch {
         return mockVideos;
       }
     },
   });
 
-  const displayVideos = (apiVideos && Array.isArray(apiVideos) && apiVideos.length > 0)
-    ? apiVideos.map((v: any) => {
+  const rawVideos = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : mockVideos);
+  const totalVideosCount = apiResponse?.count || rawVideos.length || 0;
+  const totalPages = Math.ceil(totalVideosCount / 12);
+
+  const displayVideos = (rawVideos && Array.isArray(rawVideos) && rawVideos.length > 0)
+    ? rawVideos.map((v: any) => {
         const ytId = v.youtube_id || youtubeId(v.youtube_url || "") || "default";
         return {
           slug: v.slug,
@@ -56,15 +64,7 @@ function VideosIndexPage() {
           editorialNote: v.editorial_note || v.description || "",
         };
       })
-    : mockVideos.map((m: any) => ({
-        slug: m.slug,
-        title: m.title,
-        series: m.series || "Documentary",
-        duration: m.duration || "12:40",
-        views: m.views || "1.2k",
-        cover: m.cover || "/assets/cover-boat.jpg",
-        editorialNote: m.dek || "",
-      }));
+    : [];
 
   return (
     <SiteLayout>
@@ -115,20 +115,20 @@ function VideosIndexPage() {
                         </span>
                       </div>
 
-                      <div className="p-6">
+                      <div className="p-5">
                         <CategoryPill>{v.series}</CategoryPill>
-                        <h3 className="mt-3 text-[1.2rem] leading-snug font-display font-bold text-heading line-clamp-2 min-h-[3.25rem]">
+                        <h3 className="mt-2.5 text-[1.125rem] leading-snug font-display font-bold text-heading line-clamp-2">
                           {v.title}
                         </h3>
                         {v.editorialNote && (
-                          <p className="mt-2 text-[0.9375rem] text-body line-clamp-2 min-h-[2.5rem]">
+                          <p className="mt-1.5 text-[0.875rem] text-body line-clamp-2">
                             {v.editorialNote}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <div className="px-6 pb-6 pt-3 border-t border-border/40 text-[0.8125rem] text-subtle flex items-center justify-between">
+                    <div className="px-5 pb-5 pt-3 border-t border-border/40 text-[0.8125rem] text-subtle flex items-center justify-between">
                       <span>Watch film</span>
                       <span className="font-bold text-primary">Play &rarr;</span>
                     </div>
@@ -138,6 +138,17 @@ function VideosIndexPage() {
             ))}
           </div>
         )}
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalVideosCount}
+          pageSize={12}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            window.scrollTo({ top: 300, behavior: "smooth" });
+          }}
+        />
       </div>
     </SiteLayout>
   );

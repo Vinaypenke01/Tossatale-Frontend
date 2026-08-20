@@ -7,6 +7,7 @@ import { Button, Panel } from "@/components/tossa/kit";
 import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { pageHead } from "@/lib/head";
 import { api } from "@/lib/api";
+import coverLane from "@/assets/cover-lane.jpg";
 
 export const Route = createFileRoute("/writer/analytics")({
   head: () =>
@@ -35,7 +36,7 @@ function WriterAnalytics() {
         slug: s.slug,
         title: s.title,
         views: s.views_count || 0,
-        cover: s.cover_image || "/assets/cover-lane.jpg",
+        cover: s.cover_image || coverLane,
       }))
     : [];
 

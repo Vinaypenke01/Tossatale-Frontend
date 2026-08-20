@@ -14,11 +14,15 @@ export const covers = {
   bookshop: coverBookshop,
 };
 
+export const defaultCover = coverLane;
+
 export type Writer = {
   slug: string;
   name: string;
   initials: string;
   handle: string;
+  gender?: string;
+  photo?: string;
   verified: boolean;
   role: string;
   location: string;

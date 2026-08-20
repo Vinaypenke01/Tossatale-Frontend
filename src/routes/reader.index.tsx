@@ -10,6 +10,7 @@ import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { pageHead } from "@/lib/head";
 import { useAuth } from "@/components/auth/AuthContext";
 import { api } from "@/lib/api";
+import coverLane from "@/assets/cover-lane.jpg";
 
 export const Route = createFileRoute("/reader/")({
   head: () => pageHead("Your reading dashboard · tossatale", "Pick up where you left off, and see what your writers published."),
@@ -120,7 +121,7 @@ function ReaderDashboard() {
                 category: s.category?.name || "General",
                 date: s.published_at ? new Date(s.published_at).toLocaleDateString() : "Recent",
                 readingTime: s.estimated_reading_time || 5,
-                cover: s.cover_image || "/assets/cover-lane.jpg",
+                cover: s.cover_image || coverLane,
                 views: s.views_count || 0,
                 likes: s.likes_count || 0,
               } as any} />

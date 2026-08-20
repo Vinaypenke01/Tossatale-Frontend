@@ -28,6 +28,7 @@ function AdminAnalytics() {
     total_published_stories: 0,
     total_views: 0,
     total_likes: 0,
+    total_unauthenticated_like_attempts: 0,
     total_writers: 0,
   };
 
@@ -48,17 +49,18 @@ function AdminAnalytics() {
     <AppShell
       role="admin"
       title="Platform analytics"
-      blurb="Ninety days of reading behaviour — where attention goes and how deep it runs."
+      blurb="Real-time reading metrics, reader retention, verified likes, and unauthenticated intent analysis."
       actions={
         <Button variant="ghostOutline" onClick={handleExportCSV}>
           <Download className="size-4" /> Export CSV
         </Button>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Total Views" value={String(summary.total_views)} />
         <StatCard label="Published Stories" value={String(summary.total_published_stories)} />
-        <StatCard label="Total Likes" value={String(summary.total_likes)} />
+        <StatCard label="Verified Likes" value={String(summary.total_likes)} />
+        <StatCard label="Dismissed Like Intents" value={String(summary.total_unauthenticated_like_attempts || 0)} />
         <StatCard label="Total Writers" value={String(summary.total_writers)} />
       </div>
 

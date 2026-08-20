@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
+import { Pagination } from "@/components/tossa/Pagination";
 import { CategoryPill, Panel } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
 import { covers } from "@/lib/data";
@@ -24,16 +26,22 @@ export const Route = createFileRoute("/blogs/")({
 });
 
 function BlogsPage() {
-  const { data: apiBlogs, isLoading } = useQuery({
-    queryKey: ["public-blogs"],
+  const [page, setPage] = useState(1);
+
+  const { data: apiResponse, isLoading } = useQuery({
+    queryKey: ["public-blogs", page],
     queryFn: async () => {
-      const res = await api.get("/public/blogs/");
-      return res.data?.results || res.data || [];
+      const res = await api.get(`/public/blogs/?page=${page}&page_size=12`);
+      return res.data?.data || res.data || {};
     },
   });
 
-  const displayBlogs = (apiBlogs && Array.isArray(apiBlogs))
-    ? apiBlogs.map((b: any) => ({
+  const rawBlogs = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : []);
+  const totalBlogsCount = apiResponse?.count || rawBlogs.length || 0;
+  const totalPages = Math.ceil(totalBlogsCount / 12);
+
+  const displayBlogs = (rawBlogs && Array.isArray(rawBlogs))
+    ? rawBlogs.map((b: any) => ({
         slug: b.slug,
         title: b.title,
         dek: b.subtitle || b.excerpt || b.seo_description || "Editorial blog post",
@@ -82,17 +90,17 @@ function BlogsPage() {
                         height={800}
                         className="aspect-[16/10] w-full object-cover"
                       />
-                      <div className="p-6">
+                      <div className="p-5">
                         <CategoryPill>{b.tag}</CategoryPill>
-                        <h3 className="mt-3 text-[1.2rem] leading-snug font-display font-bold text-heading line-clamp-2 min-h-[3.25rem]">
+                        <h3 className="mt-2.5 text-[1.125rem] leading-snug font-display font-bold text-heading line-clamp-2">
                           {b.title}
                         </h3>
-                        <p className="mt-2 text-[0.9375rem] text-body line-clamp-3 min-h-[4rem]">
+                        <p className="mt-1.5 text-[0.875rem] text-body line-clamp-3">
                           {b.dek}
                         </p>
                       </div>
                     </div>
-                    <div className="px-6 pb-6 pt-3 border-t border-border/40 text-[0.8125rem] text-subtle">
+                    <div className="px-5 pb-5 pt-3 border-t border-border/40 text-[0.8125rem] text-subtle">
                       {b.date} · {b.readingTime} min read
                     </div>
                   </Panel>
@@ -101,6 +109,17 @@ function BlogsPage() {
             ))}
           </div>
         )}
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalBlogsCount}
+          pageSize={12}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            window.scrollTo({ top: 300, behavior: "smooth" });
+          }}
+        />
       </div>
     </SiteLayout>
   );

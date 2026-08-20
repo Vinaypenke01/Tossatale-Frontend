@@ -117,7 +117,7 @@ function AdminWriterDetail() {
 
       <Panel className="p-6">
         <div className="flex items-start gap-6">
-          <Avatar initials={initials} size="xl" />
+          <Avatar initials={initials} gender={writer.gender} src={writer.profile_photo} size="xl" />
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-display font-bold text-heading">
               {name}

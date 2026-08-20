@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Eye, EyeOff, Loader2, ShieldAlert } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import authArt from "@/assets/cover-desk.jpg";
 import logo from "@/assets/tossatale_offical_logo-removebg-preview.png";
 import { Button, Field, Input } from "@/components/tossa/kit";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthContext";
 
@@ -49,10 +50,86 @@ function AuthPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { login, register } = useAuth();
+  // Check live maintenance mode status
+  const { data: siteSettings } = useQuery({
+    queryKey: ["public-site-settings"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/public/settings/");
+        return res.data?.data || res.data || {};
+      } catch {
+        return {};
+      }
+    },
+  });
+
+  const isMaintenance = Boolean(siteSettings?.maintenance_mode);
+
+  const { login, googleLogin, register } = useAuth();
   const navigate = useNavigate();
 
   const isSignup = mode === "signup";
+
+  useEffect(() => {
+    const googleClientId =
+      (import.meta.env as Record<string, string>)["VITE_GOOGLE_CLIENT_ID"] ||
+      "994213208335-fpqa9rm8h4pav9mcsaer73j2omr3quek.apps.googleusercontent.com";
+
+    const initGoogle = () => {
+      if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
+        try {
+          (window as any).google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: async (response: { credential?: string }) => {
+              if (!response.credential) {
+                toast.error("Google authentication failed. No credential returned.");
+                return;
+              }
+              setIsSubmitting(true);
+              try {
+                const res = await googleLogin(response.credential);
+                const userObj = res.data?.user;
+                toast.success("Welcome!", {
+                  description: `Signed in as ${userObj?.email || "User"}.`,
+                });
+
+                if (userObj?.role === "ADMIN") {
+                  navigate({ to: "/admin" });
+                } else if (userObj?.role === "WRITER") {
+                  navigate({ to: "/writer" });
+                } else {
+                  navigate({ to: "/" });
+                }
+              } catch (err: any) {
+                toast.error("Google Sign-In Failed", {
+                  description: err.message || "Could not complete Google authentication.",
+                });
+              } finally {
+                setIsSubmitting(false);
+              }
+            },
+          });
+
+          const btnDiv = document.getElementById("google-signin-btn-container");
+          if (btnDiv) {
+            btnDiv.innerHTML = "";
+            (window as any).google.accounts.id.renderButton(btnDiv, {
+              theme: "outline",
+              size: "large",
+              width: 320,
+              text: mode === "signup" ? "signup_with" : "signin_with",
+              shape: "pill",
+            });
+          }
+        } catch (e) {
+          console.warn("Google initialization deferred:", e);
+        }
+      }
+    };
+
+    const timer = setTimeout(initGoogle, 400);
+    return () => clearTimeout(timer);
+  }, [mode, googleLogin, navigate]);
 
   const handleModeSwitch = (newMode: "signin" | "signup") => {
     setMode(newMode);
@@ -229,37 +306,53 @@ function AuthPage() {
               : "Access your dashboard, saved stories, and publisher tools."}
           </p>
 
-          <div
-            className={cn(
-              "flex rounded-full border border-border bg-surface p-1 transition-all",
-              isSignup ? "mt-3" : "mt-4",
-            )}
-          >
-            {(
-              [
-                ["signin", "Sign in"],
-                ["signup", "Create account"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => handleModeSwitch(key)}
-                className={cn(
-                  "flex-1 rounded-full py-1.5 font-sans text-[0.8125rem] font-bold transition-colors disabled:opacity-50",
-                  mode === key ? "bg-primary text-primary-foreground" : "text-body hover:text-primary",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {isMaintenance && (
+            <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-left text-xs text-amber-600 dark:text-amber-300 flex items-start gap-2.5 shadow-sm">
+              <ShieldAlert className="size-4 shrink-0 text-amber-500 mt-0.5" />
+              <div>
+                <span className="font-bold block text-amber-700 dark:text-amber-200">
+                  Platform Under Maintenance
+                </span>
+                Sign-in is currently restricted to Administrators only. Reader and Writer access and new registrations are temporarily paused.
+              </div>
+            </div>
+          )}
+
+          {!isMaintenance && (
+            <div
+              className={cn(
+                "flex rounded-full border border-border bg-surface p-1 transition-all",
+                isSignup ? "mt-3" : "mt-4",
+              )}
+            >
+              {(
+                [
+                  ["signin", "Sign in"],
+                  ["signup", "Create account"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  suppressHydrationWarning
+                  disabled={isSubmitting}
+                  onClick={() => handleModeSwitch(key)}
+                  className={cn(
+                    "flex-1 rounded-full py-1.5 font-sans text-[0.8125rem] font-bold transition-colors disabled:opacity-50",
+                    mode === key ? "bg-primary text-primary-foreground" : "text-body hover:text-primary",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {isSignup && (
             <div className="mt-3 flex rounded-xl border border-border bg-surface p-1">
               <button
                 type="button"
+                suppressHydrationWarning
                 disabled={isSubmitting}
                 onClick={() => setSignupRole("WRITER")}
                 className={cn(
@@ -271,6 +364,7 @@ function AuthPage() {
               </button>
               <button
                 type="button"
+                suppressHydrationWarning
                 disabled={isSubmitting}
                 onClick={() => setSignupRole("READER")}
                 className={cn(
@@ -377,6 +471,7 @@ function AuthPage() {
                 />
                 <button
                   type="button"
+                  suppressHydrationWarning
                   disabled={isSubmitting}
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors"
@@ -411,6 +506,7 @@ function AuthPage() {
                   />
                   <button
                     type="button"
+                    suppressHydrationWarning
                     disabled={isSubmitting}
                     onClick={() => setShowConfirmPassword((prev) => !prev)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors"
@@ -449,24 +545,24 @@ function AuthPage() {
             </Button>
           </form>
 
-          <div
-            className={cn(
-              "flex items-center gap-3 text-subtle transition-all",
-              isSignup ? "mt-2.5 text-[0.7rem]" : "mt-4 text-[0.75rem]",
-            )}
-          >
-            <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
-          </div>
-          <div className={isSignup ? "mt-2" : "mt-3"}>
-            <Button
-              variant="ghostOutline"
-              size="sm"
-              disabled={isSubmitting}
-              className={cn("w-full transition-all", isSignup ? "h-8 text-[0.75rem]" : "h-9 text-[0.8125rem]")}
-            >
-              Continue with Google
-            </Button>
-          </div>
+          {!isMaintenance && (!isSignup || signupRole === "READER") && (
+            <>
+              <div
+                className={cn(
+                  "flex items-center gap-3 text-subtle transition-all",
+                  isSignup ? "mt-2.5 text-[0.7rem]" : "mt-4 text-[0.75rem]",
+                )}
+              >
+                <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
+              </div>
+              <div className={cn("flex flex-col items-center justify-center", isSignup ? "mt-2" : "mt-3")}>
+                <div id="google-signin-btn-container" className="min-h-[40px] flex items-center justify-center" />
+                <p className="mt-1 text-[0.7rem] text-subtle text-center">
+                  Reader access via Google
+                </p>
+              </div>
+            </>
+          )}
 
           <p className={cn("text-subtle transition-all", isSignup ? "mt-3 text-[0.7rem]" : "mt-5 text-[0.75rem]")}>
             By continuing you agree to our{" "}

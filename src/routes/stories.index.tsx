@@ -6,9 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
 import { StoryCard } from "@/components/tossa/StoryCard";
+import { Pagination } from "@/components/tossa/Pagination";
 import { CategoryPill, CustomSelect, Input, Panel } from "@/components/tossa/kit";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import coverLane from "@/assets/cover-lane.jpg";
 
 export const Route = createFileRoute("/stories/")({
   head: () => ({
@@ -36,6 +38,7 @@ function StoriesIndex() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sort, setSort] = useState<(typeof sorts)[number]>("Newest");
+  const [page, setPage] = useState(1);
 
   const { data: categoriesData } = useQuery({
     queryKey: ["public-categories"],
@@ -45,39 +48,65 @@ function StoriesIndex() {
     },
   });
 
-  const { data: apiStories, isLoading } = useQuery({
-    queryKey: ["public-stories", activeCategory, query, sort],
+  const { data: apiResponse, isLoading } = useQuery({
+    queryKey: ["public-stories", activeCategory, query, sort, page],
     queryFn: async () => {
       let ordering = "-published_at";
       if (sort === "Most read") ordering = "-views_count";
       if (sort === "Most liked") ordering = "-likes_count";
       if (sort === "Shortest read") ordering = "estimated_reading_time";
 
-      let endpoint = `/public/stories/?ordering=${ordering}`;
+      let endpoint = `/public/stories/?ordering=${ordering}&page=${page}&page_size=12`;
       if (activeCategory !== "all") endpoint += `&category=${encodeURIComponent(activeCategory)}`;
       if (query.trim()) endpoint += `&search=${encodeURIComponent(query.trim())}`;
 
       const res = await api.get(endpoint);
-      return res.data?.results || res.data || [];
+      return res.data?.data || res.data || {};
     },
   });
+
+  const apiStories = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : []);
+  const totalStoriesCount = apiResponse?.count || apiStories.length || 0;
+  const totalPages = Math.ceil(totalStoriesCount / 12);
+
+  const handleCategoryChange = (catSlug: string) => {
+    setActiveCategory(catSlug);
+    setPage(1);
+  };
+
+  const handleSearchChange = (q: string) => {
+    setQuery(q);
+    setPage(1);
+  };
+
+  const handleSortChange = (s: (typeof sorts)[number]) => {
+    setSort(s);
+    setPage(1);
+  };
 
   const displayStories = useMemo(() => {
     if (!apiStories || !Array.isArray(apiStories)) return [];
     return apiStories.map((s: any) => ({
+      id: s.id,
       slug: s.slug,
       title: s.title,
       dek: s.subtitle || s.seo_description || "A longform story worth reading.",
       writer: s.writer?.slug || "writer",
       writerName: s.writer?.name || s.writer?.user?.full_name || "Writer",
+      writerGender: s.writer?.gender || "OTHER",
+      writerPhoto: s.writer?.profile_photo || "",
+      verified: s.writer?.is_verified || false,
       category: s.category?.name || "General",
       categorySlug: s.category?.slug || "general",
       date: s.published_at ? new Date(s.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recent",
       readingTime: s.estimated_reading_time || 5,
-      cover: s.cover_image || s.banner_image || "/assets/cover-lane.jpg",
+      cover: s.cover_image || s.banner_image || coverLane,
       tags: s.tags?.map((t: any) => t.name) || [],
       views: s.views_count || 0,
       likes: s.likes_count || 0,
+      likes_count: s.likes_count || 0,
+      is_liked: Boolean(s.is_liked),
+      is_bookmarked: Boolean(s.is_bookmarked),
     }));
   }, [apiStories]);
 
@@ -86,8 +115,13 @@ function StoriesIndex() {
     return categoriesData.map((c: any) => ({
       slug: c.slug || c.id,
       name: c.name,
+      count: typeof c.stories_count === "number" ? c.stories_count : 0,
     }));
   }, [categoriesData]);
+
+  const totalCategoryStoriesCount = useMemo(() => {
+    return categoriesList.reduce((acc: number, curr: any) => acc + (curr.count || 0), 0);
+  }, [categoriesList]);
 
   return (
     <SiteLayout>
@@ -152,12 +186,16 @@ function StoriesIndex() {
           </div>
 
           <div className="flex flex-wrap gap-2 border-t border-divider pt-4">
-            <button type="button" onClick={() => setActiveCategory("all")}>
-              <CategoryPill tone={activeCategory === "all" ? "solid" : "light"}>All</CategoryPill>
+            <button type="button" onClick={() => handleCategoryChange("all")}>
+              <CategoryPill tone={activeCategory === "all" ? "solid" : "light"}>
+                All ({totalCategoryStoriesCount})
+              </CategoryPill>
             </button>
             {categoriesList.map((c: any) => (
-              <button key={c.slug} type="button" onClick={() => setActiveCategory(c.slug)}>
-                <CategoryPill tone={activeCategory === c.slug ? "solid" : "light"}>{c.name}</CategoryPill>
+              <button key={c.slug} type="button" onClick={() => handleCategoryChange(c.slug)}>
+                <CategoryPill tone={activeCategory === c.slug ? "solid" : "light"}>
+                  {c.name} ({c.count})
+                </CategoryPill>
               </button>
             ))}
           </div>
@@ -192,6 +230,17 @@ function StoriesIndex() {
             ))}
           </div>
         )}
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalStoriesCount}
+          pageSize={12}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            window.scrollTo({ top: 300, behavior: "smooth" });
+          }}
+        />
       </div>
     </SiteLayout>
   );

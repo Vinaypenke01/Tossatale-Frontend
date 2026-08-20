@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Edit3, Eye, EyeOff, FileText, Folder, Plus, RefreshCw, Save, Send, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -22,19 +22,33 @@ export function StoryEditor({
   const [activeTab, setActiveTab] = useState<"editor" | "library">("editor");
 
   const [title, setTitle] = useState(story?.title ?? "");
-  const [dek, setDek] = useState(story?.dek ?? "");
+  const [dek, setDek] = useState(story?.dek ?? (story as any)?.subtitle ?? "");
   const initialBody = (story as any)?.content || (story as any)?.body?.join?.("\n\n") || "";
   const [body, setBody] = useState(initialBody);
   const [preview, setPreview] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(story?.categorySlug ?? "");
+  const [selectedCategory, setSelectedCategory] = useState(story?.categorySlug ?? (story as any)?.category?.id ?? (story as any)?.category?.slug ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeEditingSlug, setActiveEditingSlug] = useState<string | null>(story?.slug ?? null);
+  const [activeEditingSlug, setActiveEditingSlug] = useState<string | null>(story?.slug ?? (story as any)?.id ?? null);
 
   const initialTags = story?.tags ? (Array.isArray(story.tags) ? story.tags.map((t: any) => t.name || t).join(", ") : "") : "";
   const [tagsInput, setTagsInput] = useState(initialTags);
   const [readingTimeInput, setReadingTimeInput] = useState(
     String((story as any)?.estimated_reading_time || (story as any)?.reading_time || "5")
   );
+
+  useEffect(() => {
+    if (story) {
+      setTitle(story.title || "");
+      setDek(story.dek || (story as any).subtitle || "");
+      setBody((story as any).content || (story as any).body?.join?.("\n\n") || "");
+      setSelectedCategory(story.categorySlug || (story as any).category?.id || (story as any).category?.slug || "");
+      setActiveEditingSlug(story.slug || (story as any).id || null);
+      if (story.tags) {
+        setTagsInput(Array.isArray(story.tags) ? story.tags.map((t: any) => t.name || t).join(", ") : "");
+      }
+      setReadingTimeInput(String((story as any).estimated_reading_time || (story as any).reading_time || "5"));
+    }
+  }, [story]);
 
   // Category creation modal/inline form state
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
@@ -117,16 +131,24 @@ export function StoryEditor({
   };
 
   const handleSave = async (status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED") => {
-    if (!title.trim()) {
-      toast.error("Story title is required");
+    if (!title.trim() || title.trim().length < 2) {
+      toast.error("Please provide a story title (at least 2 characters).");
       return;
     }
+
+    if (status !== "DRAFT" && (!body.trim() || body.trim().length < 20)) {
+      toast.error("Story body is too short", {
+        description: "Please write at least a few paragraphs (min 20 characters) before submitting for editorial review.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const endpoint = isAdmin ? "/admin/stories/" : "/writer/stories/";
       const payload = {
-        title,
-        subtitle: dek,
+        title: title.trim(),
+        subtitle: dek.trim(),
         content: body,
         category: selectedCategory || categoriesList[0]?.id || categoriesList[0]?.slug,
         tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
@@ -156,8 +178,11 @@ export function StoryEditor({
 
       queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["writer-stories"] });
     } catch (err: any) {
-      toast.error("Failed to save story", { description: err.message });
+      toast.error("Failed to save story", {
+        description: err.response?.data?.message || err.response?.data?.error || err.message || "An unexpected error occurred.",
+      });
     } finally {
       setIsSubmitting(false);
     }

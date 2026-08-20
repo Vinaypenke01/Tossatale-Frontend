@@ -19,6 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: any) => Promise<any>;
+  googleLogin: (idToken: string) => Promise<any>;
   register: (data: any) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -99,6 +100,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res;
   };
 
+  const googleLogin = async (idToken: string) => {
+    const res = await api.post("/auth/google/", { id_token: idToken });
+    if (res.success && res.data) {
+      const { access, refresh, user: userData } = res.data;
+      setAuthTokens(access, refresh);
+      let currentUser = userData;
+      if (!currentUser) {
+        try {
+          const meRes = await api.get<User>("/auth/me/");
+          if (meRes.success && meRes.data) {
+            currentUser = meRes.data;
+          }
+        } catch {
+          // Ignore
+        }
+      }
+      if (currentUser) {
+        setUser(currentUser);
+        res.data.user = currentUser;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("tossatale_user_data", JSON.stringify(currentUser));
+          localStorage.setItem("tossatale_user_role", currentUser.role.toLowerCase());
+        }
+      }
+    }
+    return res;
+  };
+
   const register = async (data: any) => {
     const res = await api.post("/auth/register/", data);
     if (res.success && res.data) {
@@ -116,12 +145,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       const refresh = typeof window !== "undefined" ? localStorage.getItem("tossatale_refresh_token") : null;
-      await api.post("/auth/logout/", { refresh });
+      if (refresh) {
+        await api.post("/auth/logout/", { refresh });
+      }
     } catch {
       // Ignore logout API error
     } finally {
       setUser(null);
       clearAuthTokens();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("tossatale_user_data");
+        localStorage.setItem("tossatale_user_role", "guest");
+        window.dispatchEvent(new Event("storage"));
+      }
     }
   };
 
@@ -133,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        googleLogin,
         register,
         logout,
         refreshUser,

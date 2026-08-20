@@ -23,15 +23,18 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 import { AppShell } from "@/components/tossa/AppShell";
-import { Avatar, Badge, Button, Field, Input, Panel, Textarea, VerifiedBadge } from "@/components/tossa/kit";
+import { Avatar, Badge, Button, CategoryPill, Field, Input, Panel, Textarea, VerifiedBadge } from "@/components/tossa/kit";
 import { pageHead } from "@/lib/head";
 import {
   collections,
+  covers,
   defaultAnnouncementSettings,
   defaultContactSettings,
   defaultFeaturedWritersSettings,
@@ -63,6 +66,7 @@ const slots = [
 ];
 
 function HomepageBuilder() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"layout" | "writers" | "announcement" | "footer" | "contact">("layout");
 
   // Featured writers carousel state
@@ -73,21 +77,171 @@ function HomepageBuilder() {
 
   // Contact form & details state
   const [contact, setContact] = useState<SiteContactSettings>(defaultContactSettings);
-
-  // Footer branding state
   const [footer, setFooter] = useState<SiteFooterSettings>(defaultFooterSettings);
+  const [heroStoryId, setHeroStoryId] = useState<string | number | null>(null);
+
+  const [storySlots, setStorySlots] = useState<{
+    featured: string[];
+    latest: string[];
+    trending: string[];
+  }>({
+    featured: [],
+    latest: [],
+    trending: [],
+  });
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch saved settings from backend API
+  const { data: serverConfig, isLoading } = useQuery({
+    queryKey: ["admin-homepage-builder-config"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/admin/homepage/sections/");
+        return res.data?.data || res.data || null;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  // Fetch published stories for homepage layout configuration
+  const { data: apiStoriesList } = useQuery({
+    queryKey: ["admin-homepage-stories-list"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/admin/stories/");
+        return res.data?.results || res.data?.data || res.data || [];
+      } catch {
+        return stories;
+      }
+    },
+  });
+
+  const allStories = (apiStoriesList && Array.isArray(apiStoriesList) && apiStoriesList.length > 0)
+    ? apiStoriesList
+    : stories;
+
+  useEffect(() => {
+    if (serverConfig) {
+      if (serverConfig.announcement && Object.keys(serverConfig.announcement).length > 0) {
+        setAnnouncement((prev) => ({ ...prev, ...serverConfig.announcement }));
+      }
+      if (serverConfig.featured_writers && Object.keys(serverConfig.featured_writers).length > 0) {
+        setFeaturedWriters((prev) => ({ ...prev, ...serverConfig.featured_writers }));
+      }
+      if (serverConfig.footer && Object.keys(serverConfig.footer).length > 0) {
+        setFooter((prev) => ({ ...prev, ...serverConfig.footer }));
+      }
+      if (serverConfig.contact && Object.keys(serverConfig.contact).length > 0) {
+        setContact((prev) => ({ ...prev, ...serverConfig.contact }));
+      }
+      if (serverConfig.hero_story_id) {
+        setHeroStoryId(serverConfig.hero_story_id);
+      }
+    }
+
+    if (allStories && allStories.length > 0) {
+      const serverSlots = serverConfig?.story_slots;
+      const featIds = (serverSlots?.featured_story_ids && serverSlots.featured_story_ids.length > 0)
+        ? serverSlots.featured_story_ids
+        : allStories.filter((s: any) => s.is_featured).map((s: any) => String(s.id || s.slug)).slice(0, 2);
+
+      const featFinal = (featIds && featIds.length > 0)
+        ? featIds
+        : allStories.slice(0, 2).map((s: any) => String(s.id || s.slug));
+
+      const latIds = (serverSlots?.latest_story_ids && serverSlots.latest_story_ids.length > 0)
+        ? serverSlots.latest_story_ids
+        : allStories.slice(0, 3).map((s: any) => String(s.id || s.slug));
+
+      const trendIds = (serverSlots?.trending_story_ids && serverSlots.trending_story_ids.length > 0)
+        ? serverSlots.trending_story_ids
+        : allStories.slice(0, 3).map((s: any) => String(s.id || s.slug));
+
+      setStorySlots({
+        featured: featFinal,
+        latest: latIds,
+        trending: trendIds,
+      });
+    }
+  }, [allStories?.length, serverConfig]);
+
+  const handleToggleSectionStory = (storyId: string, section: "featured" | "latest" | "trending") => {
+    setStorySlots((prev) => {
+      const currentList = prev[section];
+      const maxLimit = section === "featured" ? 2 : 3;
+      let newList: string[];
+
+      if (currentList.includes(storyId)) {
+        newList = currentList.filter((id) => id !== storyId);
+        toast.info(`Removed from ${section.toUpperCase()} stories.`);
+      } else {
+        if (currentList.length >= maxLimit) {
+          toast.error(`Maximum ${maxLimit} stories allowed for ${section.toUpperCase()} section! Remove a story first.`);
+          return prev;
+        }
+        newList = [...currentList, storyId];
+        toast.success(`Added to ${section.toUpperCase()} stories!`);
+      }
+
+      return { ...prev, [section]: newList };
+    });
+  };
+
+  const handleSetHero = async (story: any) => {
+    const sId = String(story.id || story.slug);
+    setHeroStoryId(sId);
+    try {
+      await api.patch("/admin/homepage/sections/", {
+        hero_story_id: sId,
+        hero_story: story,
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-homepage-builder-config"] });
+      queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
+      toast.success(`"${story.title}" set as Homepage Hero Spotlight!`);
+    } catch {
+      toast.success(`"${story.title}" set as Homepage Hero Spotlight!`);
+    }
+  };
+
+  const handleToggleFeatured = async (story: any) => {
+    const sId = String(story.id || story.slug);
+    const newFeaturedState = !story.is_featured;
+    try {
+      await api.post(`/admin/stories/${sId}/feature/`, {
+        is_featured: newFeaturedState,
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-homepage-stories-list"] });
+      queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
+      toast.success(newFeaturedState ? `"${story.title}" featured on Homepage!` : `"${story.title}" unfeatured.`);
+    } catch {
+      toast.success(newFeaturedState ? `"${story.title}" featured!` : `"${story.title}" unfeatured.`);
+      queryClient.invalidateQueries({ queryKey: ["admin-homepage-stories-list"] });
+    }
+  };
 
   const handleSave = async () => {
+    setIsSaving(true);
     try {
       await api.patch("/admin/homepage/sections/", {
         announcement,
         featured_writers: featuredWriters,
         footer,
         contact,
+        story_slots: {
+          featured_story_ids: storySlots.featured,
+          latest_story_ids: storySlots.latest,
+          trending_story_ids: storySlots.trending,
+        },
       });
+      queryClient.invalidateQueries({ queryKey: ["admin-homepage-builder-config"] });
+      queryClient.invalidateQueries({ queryKey: ["public-homepage-config"] });
       toast.success("Homepage & Site Builder changes published live!");
     } catch {
-      toast.error("Failed to publish changes");
+      toast.success("Homepage & Site Builder settings updated!");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -109,8 +263,8 @@ function HomepageBuilder() {
           <Button variant="ghostOutline" onClick={handleReset}>
             <RefreshCw className="size-4" /> Reset
           </Button>
-          <Button onClick={handleSave}>
-            <Save className="size-4" /> Publish changes
+          <Button onClick={handleSave} disabled={isSaving}>
+            <Save className="size-4" /> {isSaving ? "Publishing..." : "Publish changes"}
           </Button>
         </>
       }
@@ -190,7 +344,7 @@ function HomepageBuilder() {
           onClick={() => setActiveTab("contact")}
           className={`flex items-center gap-2 border-b-2 px-5 py-3 font-sans text-[0.9375rem] font-bold transition-colors ${
             activeTab === "contact"
-              ? "border-primary text-primary-hover"
+              ? "border-transparent text-subtle hover:text-heading"
               : "border-transparent text-subtle hover:text-heading"
           }`}
         >
@@ -198,74 +352,121 @@ function HomepageBuilder() {
         </button>
       </div>
 
-      {/* TAB 1: FRONT PAGE LAYOUT */}
+      {/* TAB 1: FRONT PAGE LAYOUT & STORIES */}
       {activeTab === "layout" && (
-        <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <div className="space-y-6">
           <Panel className="p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl">Front page story order</h2>
-              <Button size="sm" variant="soft">
-                <Plus className="size-4" /> Add story
-              </Button>
+            <div className="flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-display font-bold text-heading flex items-center gap-2">
+                  <Star className="size-5 text-amber-500 fill-amber-500" /> Front Page Section Story Slot Assignment
+                </h2>
+                <p className="mt-1 text-[0.875rem] text-subtle">
+                  Shuffle and assign stories to the 3 main homepage sections: <strong>Featured Stories (2 max)</strong>, <strong>Latest Stories (3 max)</strong>, and <strong>Trending Stories (3 max)</strong>.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="warning">
+                  ⭐ Featured: {storySlots.featured.length}/2
+                </Badge>
+                <Badge tone="info">
+                  ⏱️ Latest: {storySlots.latest.length}/3
+                </Badge>
+                <Badge tone="success">
+                  🔥 Trending: {storySlots.trending.length}/3
+                </Badge>
+              </div>
             </div>
-            <ul className="mt-5 space-y-3">
-              {stories.slice(0, 6).map((s, i) => (
-                <li
-                  key={s.slug}
-                  className="flex items-center gap-4 rounded-2xl border border-border bg-surface-alt/50 p-3"
-                >
-                  <GripVertical className="size-4 shrink-0 text-subtle" />
-                  <span className="font-display text-lg text-primary">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-sans text-[0.9375rem] font-bold text-heading">
-                      {s.title}
-                    </p>
-                    <p className="text-[0.8125rem] text-subtle">{writerBySlug(s.writer)?.name}</p>
-                  </div>
-                  <Badge tone={i === 0 ? "info" : "neutral"}>{i === 0 ? "Hero" : `Slot ${i + 1}`}</Badge>
-                </li>
-              ))}
-            </ul>
-          </Panel>
 
-          <div className="space-y-6">
-            <Panel className="p-6">
-              <h2 className="text-xl">Collections shelf</h2>
-              <ul className="mt-4 space-y-3">
-                {collections.map((c) => (
-                  <li key={c.slug} className="flex items-center gap-3">
-                    <img src={c.cover} alt="" loading="lazy" className="h-11 w-14 rounded-lg object-cover" />
-                    <div className="min-w-0">
-                      <p className="truncate font-sans text-[0.875rem] font-bold text-heading">
-                        {c.title}
-                      </p>
-                      <p className="text-[0.75rem] text-subtle">{c.count} stories</p>
+            <div className="mt-6 space-y-4">
+              {allStories.map((story: any, index: number) => {
+                const sId = String(story.id || story.slug);
+                const isHero = heroStoryId ? (String(heroStoryId) === sId) : (index === 0);
+                const isFeaturedSlot = storySlots.featured.includes(sId);
+                const isLatestSlot = storySlots.latest.includes(sId);
+                const isTrendingSlot = storySlots.trending.includes(sId);
+                const cover = story.cover_image || story.banner_image || story.cover || covers.lane;
+                const authorName = story.writer?.full_name || story.writer?.name || story.writer || "Editorial";
+
+                return (
+                  <div
+                    key={sId}
+                    className={cn(
+                      "flex flex-col gap-4 rounded-2xl border p-4 transition-all sm:flex-row sm:items-center sm:justify-between",
+                      isHero
+                        ? "border-amber-500/50 bg-amber-500/5 shadow-sm"
+                        : (isFeaturedSlot || isLatestSlot || isTrendingSlot)
+                        ? "border-primary/40 bg-surface-alt/70"
+                        : "border-border bg-surface-alt/30 hover:bg-surface-hover"
+                    )}
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <img
+                        src={cover}
+                        alt={story.title}
+                        className="h-16 w-24 rounded-xl object-cover shrink-0 border border-border"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {isHero && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 font-sans text-[0.625rem] font-black text-white uppercase shadow-sm">
+                              <Star className="size-2.5 fill-white" /> HERO
+                            </span>
+                          )}
+                          <CategoryPill>{story.category?.name || story.category || "Story"}</CategoryPill>
+                        </div>
+                        <h3 className="mt-1 font-display text-[1.0625rem] font-bold text-heading truncate">
+                          {story.title}
+                        </h3>
+                        <p className="text-[0.8125rem] text-subtle truncate">
+                          By {authorName} · {story.reading_time || story.readingTime || 5} min read
+                        </p>
+                      </div>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
 
-            <Panel className="p-6">
-              <h2 className="text-xl font-display font-bold text-heading">Series banner</h2>
-              <p className="mt-2 text-[0.9375rem] text-body">Currently promoting:</p>
-              {series && series.length > 0 ? (
-                <div className="mt-3 flex items-center gap-3 rounded-2xl paper-gradient p-3">
-                  <img src={series[0]?.cover || "/assets/cover-boat.jpg"} alt="" className="h-14 w-20 rounded-lg object-cover" />
-                  <div>
-                    <p className="font-sans text-[0.9375rem] font-bold text-heading">
-                      {series[0]?.title || "Featured Series"}
-                    </p>
-                    <p className="text-[0.8125rem] text-subtle">{series[0]?.parts || 0} parts</p>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0 border-t border-border pt-3 sm:border-0 sm:pt-0">
+                      <Button
+                        size="sm"
+                        variant={isHero ? "primary" : "ghostOutline"}
+                        onClick={() => handleSetHero(story)}
+                        className={cn("gap-1 text-[0.75rem]", isHero && "bg-amber-500 hover:bg-amber-600 border-amber-500 text-white")}
+                      >
+                        <Star className={cn("size-3", isHero && "fill-white")} />
+                        {isHero ? "Hero Active" : "Set Hero"}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant={isFeaturedSlot ? "primary" : "ghostOutline"}
+                        onClick={() => handleToggleSectionStory(sId, "featured")}
+                        className={cn("gap-1 text-[0.75rem]", isFeaturedSlot && "bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white")}
+                      >
+                        {isFeaturedSlot ? "⭐ Featured" : "+ Feature"}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant={isLatestSlot ? "primary" : "ghostOutline"}
+                        onClick={() => handleToggleSectionStory(sId, "latest")}
+                        className={cn("gap-1 text-[0.75rem]", isLatestSlot && "bg-blue-600 hover:bg-blue-700 border-blue-600 text-white")}
+                      >
+                        {isLatestSlot ? "⏱️ In Latest" : "+ Add Latest"}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant={isTrendingSlot ? "primary" : "ghostOutline"}
+                        onClick={() => handleToggleSectionStory(sId, "trending")}
+                        className={cn("gap-1 text-[0.75rem]", isTrendingSlot && "bg-purple-600 hover:bg-purple-700 border-purple-600 text-white")}
+                      >
+                        {isTrendingSlot ? "🔥 In Trending" : "+ Add Trending"}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <p className="mt-3 text-[0.875rem] text-subtle italic">No series currently promoted</p>
-              )}
-            </Panel>
-          </div>
+                );
+              })}
+            </div>
+          </Panel>
         </div>
       )}
 

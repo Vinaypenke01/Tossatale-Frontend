@@ -23,15 +23,24 @@ function History() {
   });
 
   const historyItems = (apiHistory && Array.isArray(apiHistory))
-    ? apiHistory.map((item: any) => ({
-        slug: item.story?.slug || item.story_id,
-        title: item.story?.title || "Recently Read Story",
-        writerName: item.story?.writer?.name || "Writer",
-        category: item.story?.category?.name || "General",
-        readingTime: item.story?.estimated_reading_time || 5,
-        progress: item.progress_percent || 100,
-      }))
+    ? apiHistory.map((item: any) => {
+        const rawProgress = Number(item.reading_progress ?? item.progress_percent ?? 0);
+        const progressVal = Math.min(100, Math.max(0, Math.round(rawProgress)));
+        const isCompleted = Boolean(item.completed) || progressVal >= 95;
+        return {
+          slug: item.story?.slug || item.story_id,
+          title: item.story?.title || "Recently Read Story",
+          writerName: item.story?.writer?.name || item.story?.writer?.user?.full_name || "Writer",
+          category: item.story?.category?.name || "General",
+          readingTime: item.story?.estimated_reading_time || 5,
+          progress: progressVal,
+          completed: isCompleted,
+        };
+      })
     : [];
+
+  const finishedCount = historyItems.filter((i: any) => i.completed).length;
+  const completionRate = historyItems.length > 0 ? Math.round((finishedCount / historyItems.length) * 100) : 0;
 
   return (
     <ReaderLayout
@@ -41,7 +50,7 @@ function History() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Stories read" value={String(historyItems.length)} />
         <StatCard label="Hours read" value="0" />
-        <StatCard label="Finished" value="100%" hint="completion" />
+        <StatCard label="Finished" value={`${completionRate}%`} hint="completion" />
         <StatCard label="Longest streak" value="0 days" />
       </div>
 
@@ -82,8 +91,8 @@ function History() {
                     <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle">
                       <Clock className="size-3.5" /> {s.readingTime} min
                     </span>
-                    <Badge tone={s.progress === 100 ? "success" : "info"}>
-                      {s.progress === 100 ? "Finished" : `${s.progress}%`}
+                    <Badge tone={s.completed ? "success" : "info"}>
+                      {s.completed ? "Finished" : s.progress > 0 ? `${s.progress}%` : "In progress"}
                     </Badge>
                   </div>
                 </li>

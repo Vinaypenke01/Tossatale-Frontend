@@ -29,17 +29,35 @@ function Bookmarks() {
   });
 
   const saved = (apiBookmarks && Array.isArray(apiBookmarks))
-    ? apiBookmarks.map((b: any) => ({
-        slug: b.story?.slug || b.story_id,
-        title: b.story?.title || "Bookmarked story",
-        dek: b.story?.subtitle || "Saved for later reading.",
-        writer: b.story?.writer?.slug || "writer",
-        category: b.story?.category?.name || "General",
-        date: "Saved",
-        readingTime: b.story?.estimated_reading_time || 5,
-        views: b.story?.views_count || 0,
-        likes: b.story?.likes_count || 0,
-      })).filter((s: any) => s.title.toLowerCase().includes(query.toLowerCase()))
+    ? apiBookmarks.map((b: any) => {
+        const storyObj = b.story || {};
+        const rawProgress = Number(b.reading_progress ?? storyObj.reading_progress ?? 0);
+        const progressVal = Math.min(100, Math.max(0, Math.round(rawProgress)));
+        const isLiked = typeof b.is_liked === "boolean" ? b.is_liked : typeof storyObj.is_liked === "boolean" ? storyObj.is_liked : false;
+
+        return {
+          id: storyObj.id || b.story_id,
+          slug: storyObj.slug || b.story_id,
+          title: storyObj.title || "Bookmarked story",
+          dek: storyObj.subtitle || storyObj.seo_description || "Saved for later reading.",
+          writer: storyObj.writer?.slug || "writer",
+          writerName: storyObj.writer?.name || storyObj.writer?.user?.full_name || "Author",
+          writerGender: storyObj.writer?.gender || "OTHER",
+          writerPhoto: storyObj.writer?.profile_photo || "",
+          verified: storyObj.writer?.is_verified || false,
+          category: storyObj.category?.name || "General",
+          date: b.created_at ? new Date(b.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Saved",
+          readingTime: storyObj.estimated_reading_time || 5,
+          views: storyObj.views_count || 0,
+          likes: storyObj.likes_count || 0,
+          likes_count: storyObj.likes_count || 0,
+          is_liked: isLiked,
+          is_bookmarked: true,
+          bookmarked: true,
+          progress: progressVal,
+          completed: b.completed || progressVal >= 95,
+        };
+      }).filter((s: any) => s.title.toLowerCase().includes(query.toLowerCase()))
     : [];
 
   return (

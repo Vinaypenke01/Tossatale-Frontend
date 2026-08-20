@@ -23,11 +23,15 @@ import {
   Youtube,
 } from "lucide-react";
 import { useState, useEffect, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Avatar, Button, ButtonLink } from "@/components/tossa/kit";
 import logo from "@/assets/tossatale_offical_logo-removebg-preview.png";
-import { categories, defaultAnnouncementSettings, defaultFooterSettings, type AnnouncementSettings } from "@/lib/data";
+import { api } from "@/lib/api";
+import { categories, defaultAnnouncementSettings, defaultFooterSettings, type AnnouncementSettings, type SiteFooterSettings } from "@/lib/data";
+import { CookieConsentBanner } from "@/components/tossa/CookieConsentBanner";
+import { useAuth } from "@/components/auth/AuthContext";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -39,6 +43,7 @@ const navLinks = [
 
 const mobileNavLinks = [
   { label: "Home", to: "/" },
+  { label: "Search Library", to: "/search" },
   { label: "Stories", to: "/stories" },
   { label: "Films", to: "/videos" },
   { label: "Upcoming Projects", to: "/upcoming-projects" },
@@ -57,14 +62,19 @@ export function getInitialRole(): UserRole {
   if (pathname.startsWith("/writer")) return "writer";
   if (pathname.startsWith("/reader")) return "reader";
 
-  const saved = localStorage.getItem("tossatale_user_role") as UserRole;
-  return saved || "guest";
+  const saved = (localStorage.getItem("tossatale_user_role") || "").toLowerCase();
+  if (saved === "user" || saved === "reader") return "reader";
+  if (saved === "writer") return "writer";
+  if (saved === "admin") return "admin";
+  return "guest";
 }
 
 export function useUserRole(): [UserRole, (role: UserRole) => void] {
-  const [role, setRoleState] = useState<UserRole>(getInitialRole);
+  const [role, setRoleState] = useState<UserRole>("guest");
 
   useEffect(() => {
+    setRoleState(getInitialRole());
+
     const handleStorageChange = () => {
       setRoleState(getInitialRole());
     };
@@ -81,18 +91,25 @@ export function useUserRole(): [UserRole, (role: UserRole) => void] {
   return [role, setRole];
 }
 
-export function useTheme(): [string, (theme: string) => void] {
-  const [theme, setThemeState] = useState<string>(() => {
-    if (typeof window === "undefined") return "light";
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
-  });
+function useTheme(): [string, (next: string) => void] {
+  const [theme, setThemeState] = useState<string>("light");
 
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setThemeState(document.documentElement.classList.contains("dark") ? "dark" : "light");
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
+    const saved = localStorage.getItem("tossatale_theme");
+    if (saved) {
+      setThemeState(saved);
+      if (saved === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    } else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setThemeState(prefersDark ? "dark" : "light");
+      if (prefersDark) {
+        document.documentElement.classList.add("dark");
+      }
+    }
   }, []);
 
   const toggleTheme = (next: string) => {
@@ -117,22 +134,16 @@ export function ThemeToggle() {
     <button
       type="button"
       suppressHydrationWarning
-      aria-label="Toggle theme"
-      onClick={() => {
-        const next = isDark ? "light" : "dark";
-        toggleTheme(next);
-        toast.info(next === "dark" ? "Switched to Dark Mode 🌙" : "Switched to Light Mode ☀️");
-      }}
+      aria-label={isDark ? "Switch to daylight reading mode" : "Switch to night reading mode"}
+      onClick={() => toggleTheme(isDark ? "light" : "dark")}
       className={cn(
-        "relative flex h-8 w-14 shrink-0 cursor-pointer items-center rounded-full p-1 transition-all duration-300 focus:outline-none border shadow-inner",
-        isDark
-          ? "bg-[#161618] border-white/15"
-          : "bg-[#dce6fd] border-[#b9cdfb]",
+        "relative flex h-8 w-14 items-center rounded-full p-1 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-inner",
+        isDark ? "bg-[#252529] border border-border" : "bg-[#d8e6fd] border border-primary/20",
       )}
     >
       <span
         className={cn(
-          "grid size-6 place-items-center rounded-full transition-all duration-300 ease-out shadow-md",
+          "flex size-6 items-center justify-center rounded-full transition-transform duration-300 shadow-md",
           isDark
             ? "translate-x-[1.45rem] bg-[#d5b064] text-[#161618] shadow-amber-900/40"
             : "translate-x-0 bg-[#5182ed] text-white shadow-blue-500/40",
@@ -157,21 +168,21 @@ const roleProfiles: Record<UserRole, { name: string; initials: string; role: str
     dashboardUrl: "/",
   },
   reader: {
-    name: "Ananya Sharma",
-    initials: "AS",
-    role: "Avid Reader",
+    name: "Reader",
+    initials: "RD",
+    role: "Community Reader",
     profileUrl: "/reader/history",
     dashboardUrl: "/reader",
   },
   writer: {
-    name: "Meera Raghavan",
-    initials: "MR",
+    name: "Writer",
+    initials: "WR",
     role: "Contributing Writer",
     profileUrl: "/writer/profile",
     dashboardUrl: "/writer",
   },
   admin: {
-    name: "Tossatale Desk",
+    name: "Editorial Desk",
     initials: "ED",
     role: "Managing Editor",
     profileUrl: "/admin/profile",
@@ -200,8 +211,18 @@ const roleNavLinks: Record<UserRole, Array<{ label: string; to: string }>> = {
 
 function UserProfileDropdown({ role, onRoleChange }: { role: UserRole; onRoleChange: (r: UserRole) => void }) {
   const [open, setOpen] = useState(false);
-  const profile = roleProfiles[role];
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const normalizedRole: UserRole = (role && roleProfiles[role.toLowerCase() as UserRole])
+    ? (role.toLowerCase() as UserRole)
+    : "guest";
+  const defaultProfile = roleProfiles[normalizedRole] || roleProfiles.guest;
+
+  const displayName = user?.full_name || (user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "") || user?.email || defaultProfile.name;
+  const userInitials = user?.first_name
+    ? user.first_name.substring(0, 2).toUpperCase()
+    : displayName.substring(0, 2).toUpperCase() || defaultProfile.initials;
 
   return (
     <div className="relative">
@@ -210,10 +231,10 @@ function UserProfileDropdown({ role, onRoleChange }: { role: UserRole; onRoleCha
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 rounded-full border border-border bg-surface p-1 pr-3 text-left transition-colors hover:border-primary shrink-0"
       >
-        <Avatar initials={profile.initials} size="sm" />
+        <Avatar initials={userInitials} size="sm" />
         <div className="hidden text-left md:block">
-          <p className="font-sans text-[0.8125rem] font-bold text-heading leading-tight">{profile.name}</p>
-          <p className="text-[0.6875rem] text-primary font-bold uppercase tracking-wider">{role}</p>
+          <p className="font-sans text-[0.8125rem] font-bold text-heading leading-tight max-w-[120px] truncate">{displayName}</p>
+          <p className="text-[0.6875rem] text-primary font-bold uppercase tracking-wider">{normalizedRole}</p>
         </div>
         <ChevronDown className="size-3.5 text-subtle" />
       </button>
@@ -221,24 +242,24 @@ function UserProfileDropdown({ role, onRoleChange }: { role: UserRole; onRoleCha
       {open && (
         <div className="absolute right-0 top-full mt-2 z-50 w-64 rounded-2xl border border-border bg-surface p-2 shadow-lift animate-in fade-in slide-in-from-top-2">
           <div className="border-b border-border p-3">
-            <p className="font-sans text-[0.875rem] font-bold text-heading">{profile.name}</p>
-            <p className="text-[0.75rem] text-subtle">{profile.role}</p>
+            <p className="font-sans text-[0.875rem] font-bold text-heading truncate">{displayName}</p>
+            <p className="text-[0.75rem] text-subtle truncate">{user?.email || defaultProfile.role}</p>
             <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary-light px-2.5 py-0.5 text-[0.6875rem] font-bold text-primary-hover uppercase tracking-wider">
-              <ShieldCheck className="size-3" /> Active: {role}
+              <ShieldCheck className="size-3" /> Active: {normalizedRole}
             </div>
           </div>
 
           <div className="py-2 border-b border-border">
             <Link
-              to={profile.dashboardUrl}
+              to={defaultProfile.dashboardUrl}
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover"
             >
               <LayoutDashboard className="size-4 text-primary" />
-              <span>{role === "reader" ? "Reader Space" : role === "writer" ? "Writer Studio" : role === "admin" ? "Admin Desk" : "Dashboard"}</span>
+              <span>{normalizedRole === "reader" ? "Reader Space" : normalizedRole === "writer" ? "Writer Studio" : normalizedRole === "admin" ? "Admin Desk" : "Dashboard"}</span>
             </Link>
             <Link
-              to={profile.profileUrl}
+              to={defaultProfile.profileUrl}
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover"
             >
@@ -250,16 +271,17 @@ function UserProfileDropdown({ role, onRoleChange }: { role: UserRole; onRoleCha
           <div className="p-1">
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
+                await logout();
                 onRoleChange("guest");
                 setOpen(false);
-                toast.success("Switched to Guest Mode");
+                toast.success("Signed out successfully");
                 navigate({ to: "/" });
               }}
               className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-destructive hover:bg-destructive/10"
             >
               <LogOut className="size-4" />
-              <span>Switch to Guest</span>
+              <span>Sign Out</span>
             </button>
           </div>
         </div>
@@ -332,13 +354,28 @@ function StoriesDropdown() {
 }
 
 export function AnnouncementBar({
-  announcement = defaultAnnouncementSettings,
+  announcement: propAnnouncement,
 }: {
   announcement?: AnnouncementSettings | undefined;
 }) {
   const [dismissed, setDismissed] = useState(false);
 
-  if (!announcement.enabled || !announcement.text || dismissed) {
+  const { data: homepageData } = useQuery({
+    queryKey: ["public-homepage-config"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/public/homepage/");
+        return res.data?.data || res.data || {};
+      } catch {
+        return {};
+      }
+    },
+    enabled: !propAnnouncement,
+  });
+
+  const announcement = propAnnouncement || homepageData?.announcement || defaultAnnouncementSettings;
+
+  if (!announcement || !announcement.enabled || !announcement.text || dismissed) {
     return null;
   }
 
@@ -379,8 +416,15 @@ export function AnnouncementBar({
 export function SiteHeader({ announcement }: { announcement?: AnnouncementSettings | undefined } = {}) {
   const [open, setOpen] = useState(false);
   const [currentRole, setCurrentRole] = useUserRole();
+  const [mounted, setMounted] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const roleLinks = roleNavLinks[currentRole];
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const roleLinks = (mounted && roleNavLinks[currentRole]) ? roleNavLinks[currentRole] : [];
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl">
@@ -402,32 +446,19 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
 
           <StoriesDropdown />
 
-          <Link
-            to="/videos"
-            activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
-            className="rounded-full px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
-          >
-            Films
-          </Link>
-
-          <Link
-            to="/blogs"
-            activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
-            className="rounded-full px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
-          >
-            Blog
-          </Link>
-
-          <Link
-            to="/contact"
-            activeProps={{ className: "bg-primary text-primary-foreground font-bold" }}
-            className="rounded-full px-3.5 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
-          >
-            Contact
-          </Link>
+          {navLinks.filter((l) => l.to !== "/").map((l) => (
+            <Link
+              key={l.to}
+              to={l.to as any}
+              activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
+              className="rounded-full px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+            >
+              {l.label}
+            </Link>
+          ))}
 
           {/* Integrated Reader Links in Navbar (Only for Readers) */}
-          {currentRole === "reader" && roleLinks.length > 0 && (
+          {mounted && currentRole === "reader" && roleLinks.length > 0 && (
             <div className="ml-1.5 flex items-center gap-0.5 border-l border-border pl-1.5 shrink-0">
               {roleLinks.map((rl) => (
                 <Link
@@ -446,6 +477,7 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
         <div className="justify-self-end flex items-center gap-3 shrink-0">
           <Link
             to="/search"
+            search={{ q: "" }}
             aria-label="Search tossatale"
             className="hidden size-8 place-items-center rounded-full border border-border bg-surface text-subtle transition-all hover:border-primary hover:text-primary md:grid shrink-0 shadow-xs"
           >
@@ -456,7 +488,7 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           <ThemeToggle />
 
           {/* User Profile Dropdown OR Guest Sign In Buttons */}
-          {currentRole === "guest" ? (
+          {!mounted || currentRole === "guest" ? (
             <div className="hidden sm:flex items-center gap-2">
               <ButtonLink to="/auth" variant="ghostOutline" size="sm">
                 Sign in
@@ -494,7 +526,7 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
             {mobileNavLinks.map((l) => (
               <Link
                 key={l.to}
-                to={l.to}
+                to={l.to as any}
                 onClick={() => setOpen(false)}
                 className="rounded-xl px-2.5 py-2 font-sans text-[0.8125rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
               >
@@ -503,31 +535,51 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
             ))}
           </nav>
 
-          {currentRole === "guest" && (
+          {currentRole === "guest" ? (
             <div className="mt-3 border-t border-border pt-2.5">
               <ButtonLink to="/auth" variant="ghostOutline" size="sm" className="w-full justify-center px-2 text-[0.75rem]" onClick={() => setOpen(false)}>
                 Sign in
               </ButtonLink>
             </div>
-          )}
-
-          {currentRole === "reader" && (
-            <div className="mt-3 border-t border-border pt-2">
-              <span className="px-2 font-sans text-[0.625rem] font-black tracking-[0.2em] text-primary uppercase">
-                Reader Options
-              </span>
-              <div className="mt-1 grid grid-cols-2 gap-1">
-                {roleLinks.map((rl) => (
-                  <Link
-                    key={rl.to}
-                    to={rl.to}
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl px-2.5 py-1.5 font-sans text-[0.75rem] font-bold text-primary hover:bg-primary-light"
-                  >
-                    {rl.label}
-                  </Link>
-                ))}
+          ) : (
+            <div className="mt-3 border-t border-border pt-2.5 space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="font-sans text-[0.625rem] font-black tracking-[0.2em] text-primary uppercase">
+                  Account ({currentRole})
+                </span>
+                <span className="text-xs text-subtle truncate max-w-[120px]">{user?.full_name || user?.email}</span>
               </div>
+
+              <div className="grid grid-cols-2 gap-1">
+                <Link
+                  to={currentRole === "writer" ? "/writer" : currentRole === "admin" ? "/admin" : "/reader"}
+                  onClick={() => setOpen(false)}
+                  className="rounded-xl px-2.5 py-1.5 font-sans text-[0.75rem] font-bold text-primary hover:bg-primary-light text-center border border-primary/20"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to={currentRole === "writer" ? "/writer/profile" : currentRole === "admin" ? "/admin/profile" : "/reader"}
+                  onClick={() => setOpen(false)}
+                  className="rounded-xl px-2.5 py-1.5 font-sans text-[0.75rem] font-bold text-heading hover:bg-surface-alt text-center border border-border"
+                >
+                  Profile
+                </Link>
+              </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout();
+                  setCurrentRole("guest");
+                  setOpen(false);
+                  toast.success("Signed out successfully");
+                  navigate({ to: "/" });
+                }}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-destructive/20 bg-destructive/5 py-2 text-xs font-bold text-destructive hover:bg-destructive/15 transition-colors"
+              >
+                <LogOut className="size-3.5" /> Sign Out
+              </button>
             </div>
           )}
         </div>
@@ -567,75 +619,30 @@ const footerColumns = [
   },
 ];
 
-function FooterRoleSwitcher() {
-  const [currentRole, setCurrentRole] = useUserRole();
-  const navigate = useNavigate();
+export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings | undefined } = {}) {
+  const { data: homepageData } = useQuery({
+    queryKey: ["public-homepage-config"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/public/homepage/");
+        return res.data?.data || res.data || {};
+      } catch {
+        return {};
+      }
+    },
+    enabled: !propFooter,
+  });
 
-  const handleRoleClick = (r: UserRole) => {
-    setCurrentRole(r);
-    if (r === "writer") {
-      toast.success("Switched to Writer Studio mode — Redirecting to Studio...");
-      navigate({ to: "/writer" });
-    } else if (r === "admin") {
-      toast.success("Switched to Admin Control Desk mode — Redirecting to Desk...");
-      navigate({ to: "/admin" });
-    } else if (r === "reader") {
-      toast.success("Switched to Reader Experience mode!");
-      navigate({ to: "/reader" });
-    } else {
-      toast.info("Switched to Guest Visitor view");
-      navigate({ to: "/" });
-    }
-  };
+  const footer = propFooter || homepageData?.footer || defaultFooterSettings;
 
-  return (
-    <div className="mt-12 rounded-3xl border border-border bg-surface-alt p-6 shadow-paper">
-      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block size-2 rounded-full bg-primary animate-pulse" />
-            <p className="font-sans text-[0.75rem] font-black tracking-[0.2em] text-primary uppercase">
-              Platform Mode & Role Switcher
-            </p>
-          </div>
-          <p className="mt-1 text-[0.875rem] text-body">
-            Switch application modes instantly to explore Reader, Writer Studio, or Admin Desk views.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2.5">
-          {(
-            [
-              ["guest", "👁️ Guest View"],
-              ["reader", "📖 Reader View"],
-              ["writer", "✍️ Writer Studio"],
-              ["admin", "🛡️ Admin Desk"],
-            ] as const
-          ).map(([rKey, label]) => {
-            const isActive = currentRole === rKey;
-            return (
-              <button
-                key={rKey}
-                type="button"
-                suppressHydrationWarning
-                onClick={() => handleRoleClick(rKey)}
-                className={cn(
-                  "rounded-2xl px-4 py-2.5 font-sans text-[0.875rem] font-bold transition-all shadow-sm",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-lift scale-[1.03]"
-                    : "bg-surface border border-border text-body hover:border-primary hover:text-primary hover:bg-primary-light/50",
-                )}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
+  const aboutText = footer.aboutText || footer.about_text || defaultFooterSettings.aboutText;
+  const tagline = footer.tagline || defaultFooterSettings.tagline;
+  const copyrightText = footer.copyrightText || footer.copyright_text || defaultFooterSettings.copyrightText;
+  const twitterUrl = footer.twitter || footer.socials?.twitter || "https://twitter.com";
+  const instagramUrl = footer.instagram || footer.socials?.instagram || "https://instagram.com";
+  const linkedinUrl = footer.linkedin || footer.socials?.linkedin || "https://linkedin.com";
+  const youtubeUrl = footer.youtube || footer.socials?.youtube || "https://youtube.com";
 
-export function SiteFooter() {
   return (
     <footer className="mt-10 border-t border-border bg-surface">
       <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
@@ -643,24 +650,32 @@ export function SiteFooter() {
           <div>
             <Wordmark />
             <p className="mt-5 max-w-sm text-[0.9375rem] text-body">
-              {defaultFooterSettings.aboutText}
+              {aboutText}
             </p>
             <div className="mt-4 flex items-center gap-3 text-subtle">
-              <a href="https://twitter.com" target="_blank" rel="noreferrer" aria-label="Twitter" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
-                <Twitter className="size-4" />
-              </a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
-                <Instagram className="size-4" />
-              </a>
-              <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
-                <Linkedin className="size-4" />
-              </a>
-              <a href="https://youtube.com" target="_blank" rel="noreferrer" aria-label="YouTube" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
-                <Youtube className="size-4" />
-              </a>
+              {twitterUrl && (
+                <a href={twitterUrl} target="_blank" rel="noreferrer" aria-label="Twitter" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
+                  <Twitter className="size-4" />
+                </a>
+              )}
+              {instagramUrl && (
+                <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
+                  <Instagram className="size-4" />
+                </a>
+              )}
+              {linkedinUrl && (
+                <a href={linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
+                  <Linkedin className="size-4" />
+                </a>
+              )}
+              {youtubeUrl && (
+                <a href={youtubeUrl} target="_blank" rel="noreferrer" aria-label="YouTube" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
+                  <Youtube className="size-4" />
+                </a>
+              )}
             </div>
             <p className="mt-6 font-display text-[1.0625rem] italic text-primary">
-              {defaultFooterSettings.tagline}
+              {tagline}
             </p>
           </div>
           <div className="grid gap-8 sm:grid-cols-3">
@@ -686,12 +701,12 @@ export function SiteFooter() {
           </div>
         </div>
 
-        {/* Footer Role Switcher Bar */}
-        <FooterRoleSwitcher />
-
         <div className="mt-10 flex flex-col gap-3 border-t border-divider pt-6 text-[0.8125rem] text-subtle sm:flex-row sm:items-center sm:justify-between">
-          <p>{defaultFooterSettings.copyrightText}</p>
-          <p>{defaultFooterSettings.subnoteText}</p>
+          <p>{copyrightText}</p>
+          <div className="flex items-center gap-4">
+            <Link to="/" className="hover:text-heading">Privacy Policy</Link>
+            <Link to="/" className="hover:text-heading">Terms of Service</Link>
+          </div>
         </div>
       </div>
     </footer>
@@ -701,15 +716,18 @@ export function SiteFooter() {
 export function SiteLayout({
   children,
   announcement,
+  footer,
 }: {
   children: ReactNode;
   announcement?: AnnouncementSettings | undefined;
+  footer?: SiteFooterSettings | undefined;
 }) {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader announcement={announcement} />
       <main>{children}</main>
-      <SiteFooter />
+      <SiteFooter footer={footer} />
+      <CookieConsentBanner />
     </div>
   );
 }

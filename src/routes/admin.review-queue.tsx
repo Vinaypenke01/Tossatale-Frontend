@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Clock, MessageSquare, X } from "lucide-react";
+import { BookOpen, Check, Clock, Eye, MessageSquare, X } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppShell, StatCard } from "@/components/tossa/AppShell";
-import { Badge, Button, Input, Panel } from "@/components/tossa/kit";
+import { Avatar, Badge, Button, Input, Panel, Textarea } from "@/components/tossa/kit";
 import { pageHead } from "@/lib/head";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -21,6 +21,9 @@ const filters = ["All", "New", "In review", "Published", "Needs revision", "Sche
 function ReviewQueue() {
   const [filter, setFilter] = useState<string>("All");
   const [query, setQuery] = useState("");
+  const [readingStory, setReadingStory] = useState<any | null>(null);
+  const [rejectingStory, setRejectingStory] = useState<any | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
   const queryClient = useQueryClient();
 
   const { data: apiQueue, isLoading } = useQuery({
@@ -43,12 +46,14 @@ function ReviewQueue() {
     },
     onSuccess: () => {
       toast.success("Story approved successfully!", {
-        description: "The story is now approved for publishing.",
+        description: "The story is now published and live in the tossatale library.",
       });
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
     },
     onError: (err: any) => {
-      toast.error("Approval failed", { description: err.message });
+      toast.error("Approval failed", {
+        description: err.response?.data?.message || err.message || "Could not approve story.",
+      });
     },
   });
 
@@ -57,23 +62,34 @@ function ReviewQueue() {
       return await api.post(`/admin/reviews/${storyId}/reject/`, { rejection_feedback: feedback });
     },
     onSuccess: () => {
-      toast.success("Story rejected with feedback", {
-        description: "Feedback sent to the writer.",
+      toast.success("Story sent back with feedback", {
+        description: "Feedback has been delivered to the writer's studio dashboard.",
       });
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
+      setRejectingStory(null);
+      setFeedbackText("");
     },
     onError: (err: any) => {
-      toast.error("Rejection failed", { description: err.message });
+      toast.error("Rejection failed", {
+        description: err.response?.data?.message || err.message || "Could not reject story.",
+      });
     },
   });
 
-  const handleReject = (storyId: string) => {
-    const feedback = window.prompt("Enter rejection feedback for the writer (mandatory):");
-    if (!feedback || !feedback.trim()) {
-      toast.error("Rejection requires feedback!");
+  const handleOpenReject = (story: any) => {
+    setRejectingStory(story);
+    setFeedbackText("");
+  };
+
+  const handleConfirmReject = () => {
+    if (!feedbackText.trim() || feedbackText.trim().length < 5) {
+      toast.error("Editorial feedback is mandatory (at least 5 characters).");
       return;
     }
-    rejectMutation.mutate({ storyId, feedback: feedback.trim() });
+    rejectMutation.mutate({
+      storyId: rejectingStory.id,
+      feedback: feedbackText.trim(),
+    });
   };
 
   const rows = (apiQueue && Array.isArray(apiQueue))
@@ -81,10 +97,15 @@ function ReviewQueue() {
         id: s.id,
         title: s.title,
         dek: s.subtitle || s.seo_description || "Submitted story",
+        subtitle: s.subtitle || "",
+        content: s.content || s.body || "No story content provided.",
+        coverImage: s.cover_image || s.featured_image || "",
         writerName: s.writer?.name || s.writer?.user?.display_name || s.writer?.user?.first_name || s.writer?.user?.email?.split?.("@")?.[0] || "Writer",
+        writerGender: s.writer?.gender || "OTHER",
         category: s.category?.name || "General",
         date: s.published_at || s.submitted_at || s.created_at ? new Date(s.published_at || s.submitted_at || s.created_at).toLocaleDateString() : "Recently",
         readingTime: s.estimated_reading_time || 5,
+        wordCount: s.word_count || (s.content ? s.content.trim().split(/\s+/).length : 0),
         rawStatus: s.status,
         status: s.status === "PUBLISHED" ? "Published" : s.status === "PENDING_REVIEW" ? "New" : s.status === "REJECTED" ? "Needs revision" : "In review",
       })).filter((r: any) => r.title.toLowerCase().includes(query.toLowerCase()))
@@ -94,7 +115,7 @@ function ReviewQueue() {
     <AppShell
       role="admin"
       title="Review queue"
-      blurb="Every submission, in the order it arrived. Read it, leave notes, then approve or send it back."
+      blurb="Every submission, in the order it arrived. Click any story to read, leave notes, and approve."
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="In queue" value={String(rows.length)} hint="pending review" />
@@ -143,28 +164,45 @@ function ReviewQueue() {
           </div>
         ) : (
           <ul className="mt-6 divide-y divide-border">
-            {rows.map(({ id, title, dek, writerName, category, date, readingTime, status }: any) => (
-              <li key={id} className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
-                <div className="min-w-0 flex-1">
+            {rows.map((story: any) => (
+              <li
+                key={story.id}
+                className="group flex flex-col gap-4 py-5 sm:flex-row sm:items-center transition-colors hover:bg-surface-alt/30 px-3 rounded-2xl"
+              >
+                <div
+                  onClick={() => setReadingStory(story)}
+                  className="min-w-0 flex-1 cursor-pointer"
+                >
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={status === "Published" ? "success" : status === "New" ? "warning" : "info"}>{status}</Badge>
-                    <span className="font-sans text-[0.75rem] font-bold text-subtle">{category}</span>
+                    <Badge tone={story.status === "Published" ? "success" : story.status === "New" ? "warning" : "info"}>{story.status}</Badge>
+                    <span className="font-sans text-[0.75rem] font-bold text-subtle">{story.category}</span>
                   </div>
-                  <h2 className="mt-2 text-[1.125rem] font-display font-bold leading-snug text-heading">{title}</h2>
-                  <p className="mt-1 line-clamp-1 text-[0.875rem] text-body">{dek}</p>
+                  <h2 className="mt-2 text-[1.125rem] font-display font-bold leading-snug text-heading group-hover:text-primary transition-colors">
+                    {story.title}
+                  </h2>
+                  <p className="mt-1 line-clamp-1 text-[0.875rem] text-body">{story.dek}</p>
                   <p className="mt-2 text-[0.8125rem] text-subtle">
-                    Submitted by <strong className="text-heading">{writerName}</strong> · {date} · {readingTime} min read
+                    Submitted by <strong className="text-heading">{story.writerName}</strong> · {story.date} · {story.readingTime} min read · {story.wordCount} words
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  {status === "Published" ? (
+                  <Button
+                    variant="ghostOutline"
+                    size="sm"
+                    onClick={() => setReadingStory(story)}
+                    className="gap-1.5"
+                  >
+                    <Eye className="size-4" /> Read
+                  </Button>
+                  {story.status === "Published" ? (
                     <Badge tone="success" className="px-3.5 py-1.5 font-bold text-xs">Published Live</Badge>
                   ) : (
                     <>
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => approveMutation.mutate(id)}
+                        disabled={approveMutation.isPending}
+                        onClick={() => approveMutation.mutate(story.id)}
                         className="gap-1.5"
                       >
                         <Check className="size-4" /> Approve
@@ -172,7 +210,7 @@ function ReviewQueue() {
                       <Button
                         variant="danger"
                         size="sm"
-                        onClick={() => handleReject(id)}
+                        onClick={() => handleOpenReject(story)}
                         className="gap-1.5"
                       >
                         <X className="size-4" /> Send back
@@ -185,6 +223,173 @@ function ReviewQueue() {
           </ul>
         )}
       </Panel>
+
+      {/* Story Reader Pop-up Modal */}
+      {readingStory && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setReadingStory(null)}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-3xl max-h-[90vh] rounded-3xl border border-border bg-surface shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface/95 px-6 py-4 backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <Badge tone={readingStory.status === "Published" ? "success" : readingStory.status === "New" ? "warning" : "info"}>
+                  {readingStory.status}
+                </Badge>
+                <span className="text-xs font-bold text-subtle font-sans">{readingStory.category}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReadingStory(null)}
+                aria-label="Close story preview"
+                className="grid size-9 place-items-center rounded-full text-subtle hover:bg-surface-hover hover:text-heading transition-colors"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Modal Body (Scrollable Full Story Content) */}
+            <div className="overflow-y-auto p-6 sm:p-8 space-y-6">
+              {readingStory.coverImage && (
+                <img
+                  src={readingStory.coverImage}
+                  alt={readingStory.title}
+                  className="w-full max-h-80 object-cover rounded-2xl border border-border shadow-xs"
+                />
+              )}
+
+              <div>
+                <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight text-heading">
+                  {readingStory.title}
+                </h1>
+                {readingStory.subtitle && (
+                  <p className="mt-2 text-[1.0625rem] text-body font-sans font-medium">
+                    {readingStory.subtitle}
+                  </p>
+                )}
+
+                <div className="mt-4 flex items-center gap-3 border-y border-border py-3">
+                  <Avatar
+                    initials={readingStory.writerName.substring(0, 2).toUpperCase()}
+                    gender={readingStory.writerGender}
+                    size="md"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-heading">{readingStory.writerName}</p>
+                    <p className="text-xs text-subtle">
+                      Submitted on {readingStory.date} · {readingStory.readingTime} min read · {readingStory.wordCount} words
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Story Content Typography */}
+              <div className="prose prose-stone dark:prose-invert max-w-none text-[1.0625rem] leading-relaxed font-serif whitespace-pre-line text-body border-t border-border pt-4">
+                {readingStory.content}
+              </div>
+            </div>
+
+            {/* Modal Review Actions Bar */}
+            <div className="sticky bottom-0 z-10 flex items-center justify-between border-t border-border bg-surface/95 px-6 py-4 backdrop-blur-md">
+              <Button variant="ghostOutline" size="sm" onClick={() => setReadingStory(null)}>
+                Close Preview
+              </Button>
+              <div className="flex items-center gap-2">
+                {readingStory.status !== "Published" && (
+                  <>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => {
+                        const storyToReject = readingStory;
+                        setReadingStory(null);
+                        handleOpenReject(storyToReject);
+                      }}
+                      className="gap-1.5"
+                    >
+                      <X className="size-4" /> Send back
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={approveMutation.isPending}
+                      onClick={() => {
+                        approveMutation.mutate(readingStory.id);
+                        setReadingStory(null);
+                      }}
+                      className="gap-1.5"
+                    >
+                      <Check className="size-4" /> Approve Story
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Feedback Modal */}
+      {rejectingStory && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setRejectingStory(null)}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-lg rounded-3xl border border-border bg-surface p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="font-display text-lg font-bold text-heading">Send Back for Revision</h3>
+                <p className="text-xs text-subtle truncate max-w-sm mt-0.5">"{rejectingStory.title}"</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingStory(null)}
+                className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface-hover"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-heading">
+                Editorial Feedback <span className="text-destructive">*</span>
+              </label>
+              <Textarea
+                rows={4}
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="Explain what revisions are needed before this story can be approved..."
+                className="w-full text-sm"
+              />
+              <p className="text-[0.75rem] text-subtle">
+                This note will be sent directly to <strong>{rejectingStory.writerName}</strong> in their Studio dashboard.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
+              <Button variant="ghostOutline" size="sm" onClick={() => setRejectingStory(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={rejectMutation.isPending || !feedbackText.trim()}
+                onClick={handleConfirmReject}
+                className="gap-1.5"
+              >
+                {rejectMutation.isPending ? "Sending..." : "Submit Feedback"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
