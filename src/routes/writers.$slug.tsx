@@ -1,6 +1,8 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { Award, MapPin } from "lucide-react";
+import { Award, Heart, MapPin, Sparkles } from "lucide-react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
@@ -8,6 +10,7 @@ import { StoryCard } from "@/components/tossa/StoryCard";
 import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { Avatar, Button, ButtonLink, Panel, VerifiedBadge } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import coverLane from "@/assets/cover-lane.jpg";
 
 export const Route = createFileRoute("/writers/$slug")({
@@ -57,6 +60,12 @@ function WriterProfile() {
   const loaderData = Route.useLoaderData();
   const writer = loaderData?.writer;
 
+  const [supportCount, setSupportCount] = useState(
+    Number(writer?.total_supports || writer?.total_likes || 0)
+  );
+  const [isSupporting, setIsSupporting] = useState(false);
+  const [hasSupported, setHasSupported] = useState(false);
+
   const { data: publicStories } = useQuery({
     queryKey: ["public-writer-stories", writer?.slug],
     queryFn: async () => {
@@ -66,6 +75,31 @@ function WriterProfile() {
     },
     enabled: Boolean(writer?.slug),
   });
+
+  const handleSupportWriter = async () => {
+    if (!writer?.slug || isSupporting) return;
+    setIsSupporting(true);
+    setSupportCount((prev) => prev + 1);
+    setHasSupported(true);
+
+    try {
+      const res = await api.post(`/public/writers/${writer.slug}/support/`);
+      const newCount = res.data?.data?.supports_count ?? res.data?.supports_count;
+      if (typeof newCount === "number") {
+        setSupportCount(newCount);
+      }
+      toast.success(`You supported ${name}! ❤️`, {
+        description: "Your appreciation has been sent directly to this storyteller.",
+      });
+    } catch {
+      // Keep optimistic count
+      toast.success(`You supported ${name}! ❤️`, {
+        description: "Thank you for appreciating independent writing on tossatale.",
+      });
+    } finally {
+      setIsSupporting(false);
+    }
+  };
 
   if (!writer) {
     return (
@@ -91,7 +125,7 @@ function WriterProfile() {
         <span className="pointer-events-none absolute -top-20 left-1/4 size-72 animate-drift rounded-full bg-white/10 blur-3xl" />
         <div className="relative mx-auto max-w-[1240px] px-5 py-20 lg:px-8">
           <div className="flex flex-wrap items-end gap-7">
-            <Avatar initials={initials} size="xl" className="ring-4 ring-white/25" />
+            <Avatar initials={initials} size="xl" className="ring-4 ring-white/25 shadow-2xl" />
             <div className="mr-auto">
               <h1 className="flex flex-wrap items-center gap-3 text-[clamp(2rem,4vw,3rem)] font-display font-bold text-white">
                 {name}
@@ -108,8 +142,22 @@ function WriterProfile() {
                 <MapPin className="size-3.5" /> India · tossatale author
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="inkOnDark">Follow</Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="inkOnDark"
+                onClick={handleSupportWriter}
+                disabled={isSupporting}
+                className={cn(
+                  "gap-2 px-5 py-2.5 transition-all duration-300 font-bold",
+                  hasSupported && "bg-rose-500 text-white border-rose-400 hover:bg-rose-600 scale-105"
+                )}
+              >
+                <Heart className={cn("size-4 transition-transform", hasSupported ? "fill-white text-white scale-125" : "fill-current text-white")} />
+                <span>{hasSupported ? "Supported!" : "Support Writer"}</span>
+                <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                  {supportCount}
+                </span>
+              </Button>
             </div>
           </div>
 
@@ -120,7 +168,7 @@ function WriterProfile() {
           <dl className="mt-10 grid max-w-2xl grid-cols-2 gap-6 border-t border-white/20 pt-7 sm:grid-cols-3">
             {[
               ["Stories", String(writer.total_stories || publishedStories.length)],
-              ["Followers", String(writer.total_followers || 0)],
+              ["Supporters", String(supportCount)],
               ["Total reads", String(writer.total_reads || 0)],
             ].map(([label, value]) => (
               <div key={label}>
@@ -168,14 +216,22 @@ function WriterProfile() {
 
         <aside className="space-y-6">
           <Panel className="paper-gradient p-6">
-            <h3 className="text-[1.05rem] font-display font-bold text-heading">Support this writer</h3>
+            <h3 className="text-[1.05rem] font-display font-bold text-heading">Support {name}</h3>
             <p className="mt-2 text-[0.9375rem] text-body">
-              Members fund the writers they read most. Every membership supports community authors.
+              Show your appreciation for {name}'s stories and essays on tossatale. 100% free and open to all readers.
             </p>
             <div className="mt-5">
-              <ButtonLink to="/auth" size="sm" className="w-full">
-                Become a member
-              </ButtonLink>
+              <Button
+                onClick={handleSupportWriter}
+                disabled={isSupporting}
+                className={cn(
+                  "w-full gap-2 py-2.5 font-bold transition-all",
+                  hasSupported && "bg-rose-500 hover:bg-rose-600 text-white"
+                )}
+              >
+                <Heart className={cn("size-4", hasSupported ? "fill-white" : "fill-current")} />
+                <span>{hasSupported ? "Supported!" : `Support Writer (${supportCount})`}</span>
+              </Button>
             </div>
           </Panel>
         </aside>

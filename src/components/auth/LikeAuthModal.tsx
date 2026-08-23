@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { X, Heart, Loader2, Mail, Lock } from "lucide-react";
+import React, { useEffect } from "react";
+import { X, Heart, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/AuthContext";
 import { api } from "@/lib/api";
-import { Button, Input } from "@/components/tossa/kit";
-import { cn } from "@/lib/utils";
 
 interface LikeAuthModalProps {
   isOpen: boolean;
@@ -21,11 +19,7 @@ export function LikeAuthModal({
   onClose,
   onLikeSuccess,
 }: LikeAuthModalProps) {
-  const { login, googleLogin } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const { googleLogin } = useAuth();
 
   const handleDismiss = () => {
     if (storyId) {
@@ -56,54 +50,41 @@ export function LikeAuthModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const googleClientId =
-      (import.meta.env as Record<string, string>)["VITE_GOOGLE_CLIENT_ID"] ||
-      "994213208335-fpqa9rm8h4pav9mcsaer73j2omr3quek.apps.googleusercontent.com";
-
     const initGoogle = () => {
-      if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
-        try {
-          (window as any).google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: async (response: { credential?: string }) => {
-              if (!response.credential) {
-                toast.error("Google authentication failed.");
-                return;
-              }
-              setIsSubmitting(true);
-              try {
-                const res = await googleLogin(response.credential);
-                const userObj = res.data?.user;
-                toast.success("Welcome!", {
-                  description: `Signed in as ${userObj?.email || "Reader"}.`,
-                });
-                await executePostLoginLike();
-                onClose();
-              } catch (err: any) {
-                toast.error("Google Sign-In Failed", {
-                  description: err.message || "Could not complete authentication.",
-                });
-              } finally {
-                setIsSubmitting(false);
-              }
-            },
-          });
+      import("@/lib/googleAuth").then(({ setupGoogleAuth, renderGoogleButton }) => {
+        const ready = setupGoogleAuth(async (response: { credential?: string }) => {
+          if (!response.credential) {
+            toast.error("Google authentication failed.");
+            return;
+          }
+          try {
+            const res = await googleLogin(response.credential);
+            const userObj = res.data?.user;
+            toast.success("Welcome!", {
+              description: `Signed in as ${userObj?.first_name || userObj?.email || "Reader"}.`,
+            });
+            await executePostLoginLike();
+            onClose();
+          } catch (err: any) {
+            toast.error("Google Sign-In Failed", {
+              description: err.message || "Could not complete authentication.",
+            });
+          }
+        });
 
+        if (ready) {
           const btnDiv = document.getElementById("google-modal-btn-container");
           if (btnDiv) {
-            btnDiv.innerHTML = "";
-            (window as any).google.accounts.id.renderButton(btnDiv, {
+            renderGoogleButton(btnDiv, {
               theme: "outline",
               size: "large",
-              width: 300,
-              text: "signin_with",
+              width: 320,
+              text: "continue_with",
               shape: "pill",
             });
           }
-        } catch (e) {
-          console.warn("Google modal initialization deferred:", e);
         }
-      }
+      });
     };
 
     const timer = setTimeout(initGoogle, 150);
@@ -112,34 +93,15 @@ export function LikeAuthModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !password.trim()) {
-      setErrorMsg("Please provide both email and password.");
-      return;
-    }
-    setIsSubmitting(true);
-    setErrorMsg("");
-
-    try {
-      await login({ email, password });
-      await executePostLoginLike();
-      onClose();
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to sign in. Check your credentials.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      onClick={handleDismiss}
     >
       <div
-        className="relative w-full max-w-md overflow-hidden rounded-3xl border border-border bg-surface p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-border/80 bg-surface p-7 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-center"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -152,92 +114,32 @@ export function LikeAuthModal({
           <X className="size-4" />
         </button>
 
-        {/* Icon & Title */}
-        <div className="flex flex-col items-center text-center">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive shadow-paper mb-4 animate-bounce duration-[2000ms]">
-            <Heart className="size-7 fill-destructive" />
+        {/* Floating Heart Icon */}
+        <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive shadow-paper mb-5">
+          <Heart className="size-8 fill-destructive" />
+        </div>
+
+        {/* Heading & Subtitle */}
+        <h3 className="font-display text-2xl font-bold text-heading tracking-tight">
+          Sign in to like this story
+        </h3>
+        <p className="mt-2 text-xs text-subtle leading-relaxed">
+          Sign in to appreciate <span className="font-semibold text-heading">"{storyTitle}"</span> and save it to your personal reading bookmarks.
+        </p>
+
+        {/* Google OAuth 1-Click Button */}
+        <div className="mt-7 flex flex-col items-center justify-center">
+          <div id="google-modal-btn-container" className="min-h-[44px] flex items-center justify-center" />
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-[0.7rem] text-subtle font-medium">
+            <Sparkles className="size-3 text-primary" />
+            <span>Instant reader access — no password needed</span>
           </div>
-          <h3 className="font-display text-xl font-bold text-heading">
-            Sign in to like this story
-          </h3>
-          <p className="mt-1.5 text-xs text-subtle leading-relaxed max-w-xs">
-            Join tossatale to appreciate <span className="font-semibold text-heading">"{storyTitle}"</span> and save it to your reading collection.
-          </p>
         </div>
 
-        {/* Google OAuth Quick Button */}
-        <div className="mt-6 flex flex-col items-center justify-center">
-          <div id="google-modal-btn-container" className="min-h-[40px] flex items-center justify-center" />
-          <p className="mt-1 text-[0.6875rem] text-subtle">
-            Quick 1-click Reader sign-in
-          </p>
-        </div>
-
-        <div className="my-4 flex items-center gap-3 text-subtle text-xs">
-          <span className="h-px flex-1 bg-border" /> or with email <span className="h-px flex-1 bg-border" />
-        </div>
-
-        {/* Inline Email / Password Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {errorMsg && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-2.5 text-xs text-destructive font-medium">
-              {errorMsg}
-            </div>
-          )}
-
-          <div>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-subtle" />
-              <Input
-                type="email"
-                placeholder="reader@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isSubmitting}
-                className="pl-9 text-xs h-9"
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-subtle" />
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isSubmitting}
-                className="pl-9 text-xs h-9"
-              />
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            className="w-full h-9 text-xs font-bold gap-2 mt-2"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="size-3.5 animate-spin" /> Signing In & Liking...
-              </>
-            ) : (
-              "Sign In & Like Story"
-            )}
-          </Button>
-        </form>
-
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="text-xs text-subtle hover:text-heading underline"
-          >
-            Not now, continue reading
-          </button>
-        </div>
+        {/* Footer Note */}
+        <p className="mt-6 text-[0.6875rem] text-subtle/70">
+          By signing in, you agree to our Terms of Service & Privacy Policy.
+        </p>
       </div>
     </div>
   );

@@ -218,7 +218,7 @@ function WriterProfileScreen() {
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Published Stories" value={String(profileData?.total_published_stories || profileData?.total_stories || 0)} hint="in tossatale library" />
         <StatCard label="Total Readers / Reads" value={String(profileData?.total_reads || "0")} hint="story views" />
-        <StatCard label="Total Likes" value={String(profileData?.total_likes || "0")} hint="reader appreciations" />
+        <StatCard label="Writer Supporters" value={String(profileData?.total_supports || profileData?.total_likes || "0")} hint="readers supporting your work" />
         <StatCard label="Verification Status" value={profileData?.is_verified ? "Verified Author" : "Standard"} hint="Editorial status" />
       </div>
 

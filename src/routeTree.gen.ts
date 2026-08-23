@@ -18,6 +18,7 @@ import { Route as ComingSoonRouteImport } from './routes/coming-soon'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeriesRouteImport } from './routes/series'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -46,6 +47,7 @@ import { Route as VideosSlugRouteImport } from './routes/videos.$slug'
 import { Route as WriterIndexRouteImport } from './routes/writer.index'
 import { Route as WriterAnalyticsRouteImport } from './routes/writer.analytics'
 import { Route as WriterProfileRouteImport } from './routes/writer.profile'
+import { Route as WriterRegisterRouteImport } from './routes/writer.register'
 import { Route as WriterSeriesRouteImport } from './routes/writer.series'
 import { Route as WriterStoriesRouteImport } from './routes/writer.stories'
 import { Route as WritersIndexRouteImport } from './routes/writers.index'
@@ -99,6 +101,11 @@ const FaqRoute = FaqRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -241,6 +248,11 @@ const WriterProfileRoute = WriterProfileRouteImport.update({
   path: '/writer/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WriterRegisterRoute = WriterRegisterRouteImport.update({
+  id: '/writer/register',
+  path: '/writer/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WriterSeriesRoute = WriterSeriesRouteImport.update({
   id: '/writer/series',
   path: '/writer/series',
@@ -297,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/privacy': typeof PrivacyRoute
+  '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
   '/terms': typeof TermsRoute
@@ -319,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
+  '/writer/register': typeof WriterRegisterRoute
   '/writer/series': typeof WriterSeriesRoute
   '/writer/stories': typeof WriterStoriesRoute
   '/writers/$slug': typeof WritersSlugRoute
@@ -344,6 +358,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/privacy': typeof PrivacyRoute
+  '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
   '/terms': typeof TermsRoute
@@ -364,6 +379,7 @@ export interface FileRoutesByTo {
   '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
+  '/writer/register': typeof WriterRegisterRoute
   '/writer/series': typeof WriterSeriesRoute
   '/writer/stories': typeof WriterStoriesRoute
   '/writers/$slug': typeof WritersSlugRoute
@@ -391,6 +407,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/privacy': typeof PrivacyRoute
+  '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
   '/terms': typeof TermsRoute
@@ -413,6 +430,7 @@ export interface FileRoutesById {
   '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
+  '/writer/register': typeof WriterRegisterRoute
   '/writer/series': typeof WriterSeriesRoute
   '/writer/stories': typeof WriterStoriesRoute
   '/writers/$slug': typeof WritersSlugRoute
@@ -441,6 +459,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/faq'
     | '/privacy'
+    | '/register'
     | '/search'
     | '/series'
     | '/terms'
@@ -463,6 +482,7 @@ export interface FileRouteTypes {
     | '/videos/$slug'
     | '/writer/analytics'
     | '/writer/profile'
+    | '/writer/register'
     | '/writer/series'
     | '/writer/stories'
     | '/writers/$slug'
@@ -488,6 +508,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/faq'
     | '/privacy'
+    | '/register'
     | '/search'
     | '/series'
     | '/terms'
@@ -508,6 +529,7 @@ export interface FileRouteTypes {
     | '/videos/$slug'
     | '/writer/analytics'
     | '/writer/profile'
+    | '/writer/register'
     | '/writer/series'
     | '/writer/stories'
     | '/writers/$slug'
@@ -534,6 +556,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/faq'
     | '/privacy'
+    | '/register'
     | '/search'
     | '/series'
     | '/terms'
@@ -556,6 +579,7 @@ export interface FileRouteTypes {
     | '/videos/$slug'
     | '/writer/analytics'
     | '/writer/profile'
+    | '/writer/register'
     | '/writer/series'
     | '/writer/stories'
     | '/writers/$slug'
@@ -583,6 +607,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   FaqRoute: typeof FaqRoute
   PrivacyRoute: typeof PrivacyRoute
+  RegisterRoute: typeof RegisterRoute
   SearchRoute: typeof SearchRoute
   SeriesRoute: typeof SeriesRoute
   TermsRoute: typeof TermsRoute
@@ -603,6 +628,7 @@ export interface RootRouteChildren {
   StoriesSlugRoute: typeof StoriesSlugRoute
   WriterAnalyticsRoute: typeof WriterAnalyticsRoute
   WriterProfileRoute: typeof WriterProfileRoute
+  WriterRegisterRoute: typeof WriterRegisterRoute
   WriterSeriesRoute: typeof WriterSeriesRoute
   WriterStoriesRoute: typeof WriterStoriesRoute
   WritersSlugRoute: typeof WritersSlugRoute
@@ -679,6 +705,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -877,6 +910,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WriterProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/writer/register': {
+      id: '/writer/register'
+      path: '/writer/register'
+      fullPath: '/writer/register'
+      preLoaderRoute: typeof WriterRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/writer/series': {
       id: '/writer/series'
       path: '/writer/series'
@@ -992,6 +1032,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   FaqRoute: FaqRoute,
   PrivacyRoute: PrivacyRoute,
+  RegisterRoute: RegisterRoute,
   SearchRoute: SearchRoute,
   SeriesRoute: SeriesRoute,
   TermsRoute: TermsRoute,
@@ -1012,6 +1053,7 @@ const rootRouteChildren: RootRouteChildren = {
   StoriesSlugRoute: StoriesSlugRoute,
   WriterAnalyticsRoute: WriterAnalyticsRoute,
   WriterProfileRoute: WriterProfileRoute,
+  WriterRegisterRoute: WriterRegisterRoute,
   WriterSeriesRoute: WriterSeriesRoute,
   WriterStoriesRoute: WriterStoriesRoute,
   WritersSlugRoute: WritersSlugRoute,

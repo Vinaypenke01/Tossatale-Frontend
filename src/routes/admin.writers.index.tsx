@@ -64,7 +64,7 @@ function AdminWriters() {
         userRole: w.role || "WRITER",
         location: "India",
         stories: typeof w.total_stories === "number" ? w.total_stories : 0,
-        followers: w.total_followers ? `${w.total_followers}` : "0",
+        supporters: typeof w.total_supports === "number" ? `${w.total_supports}` : w.total_likes ? `${w.total_likes}` : "0",
         reads: w.total_reads ? `${w.total_reads}` : "0",
       }))
     : [];
@@ -222,7 +222,7 @@ function AdminWriters() {
                     <strong className="font-sans text-heading">{w.stories}</strong> stories
                   </span>
                   <span>
-                    <strong className="font-sans text-heading">{w.followers}</strong> followers
+                    <strong className="font-sans text-heading">{w.supporters}</strong> supporters
                   </span>
                   <span className="hidden sm:inline">
                     <strong className="font-sans text-heading">{w.reads}</strong> reads

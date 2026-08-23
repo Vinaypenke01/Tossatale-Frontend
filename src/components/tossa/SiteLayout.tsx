@@ -27,7 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Avatar, Button, ButtonLink } from "@/components/tossa/kit";
-import logo from "@/assets/tossatale_offical_logo-removebg-preview.png";
+import logo from "@/assets/official_tossatale_logo.png";
 import { api } from "@/lib/api";
 import { categories, defaultAnnouncementSettings, defaultFooterSettings, type AnnouncementSettings, type SiteFooterSettings } from "@/lib/data";
 import { CookieConsentBanner } from "@/components/tossa/CookieConsentBanner";
@@ -599,12 +599,13 @@ const footerColumns = [
     ],
   },
   {
-    title: "Community",
+    title: "Community & Writers",
     links: [
+      { label: "Writer Registration", to: "/auth?mode=signup" },
+      { label: "Writers Directory", to: "/writers" },
       { label: "Newsletter", to: "/#newsletter" },
-      { label: "Writers", to: "/writers" },
       { label: "About Us", to: "/about" },
-      { label: "Contact", to: "/contact" },
+      { label: "Contact & Pitch", to: "/contact" },
       { label: "FAQ & Help", to: "/faq" },
     ],
   },

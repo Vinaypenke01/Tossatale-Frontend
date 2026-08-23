@@ -25,7 +25,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Avatar } from "@/components/tossa/kit";
-import logo from "@/assets/tossatale_redefine_logo.jpg";
+import logo from "@/assets/favicon-96x96.png";
 import { ThemeToggle } from "@/components/tossa/SiteLayout";
 import { useAuth } from "@/components/auth/AuthContext";
 import { cn } from "@/lib/utils";
@@ -122,8 +122,8 @@ export function AppShell({
     ? user.role === "ADMIN"
       ? "Administrator"
       : user.role === "WRITER"
-      ? "Storyteller"
-      : "Community Reader"
+        ? "Storyteller"
+        : "Community Reader"
     : person.role;
 
   const handleLogout = async () => {
@@ -144,6 +144,7 @@ export function AppShell({
         <div className="flex items-center gap-3">
           <button
             type="button"
+            suppressHydrationWarning
             onClick={() => setMobileNavOpen((prev) => !prev)}
             aria-label="Toggle navigation menu"
             className="grid size-10 place-items-center rounded-xl border border-border bg-surface text-heading transition-colors hover:bg-surface-hover"
@@ -206,6 +207,7 @@ export function AppShell({
             <ThemeToggle />
             <button
               type="button"
+              suppressHydrationWarning
               onClick={() => setMobileNavOpen(false)}
               className="grid size-9 place-items-center rounded-xl text-subtle hover:bg-surface-hover hover:text-heading lg:hidden"
             >
@@ -230,17 +232,18 @@ export function AppShell({
           ))}
         </nav>
 
-        <div className="mt-auto border-t border-border px-4 py-4 sm:px-5 shrink-0 bg-surface">
-          <div className="flex items-center gap-3">
+        <div suppressHydrationWarning className="mt-auto border-t border-border px-4 py-4 sm:px-5 shrink-0 bg-surface">
+          <div suppressHydrationWarning className="flex items-center gap-3">
             <Avatar initials={userInitials} size="sm" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-sans text-[0.875rem] font-bold text-heading">
+            <div suppressHydrationWarning className="min-w-0 flex-1">
+              <p suppressHydrationWarning className="truncate font-sans text-[0.875rem] font-bold text-heading">
                 {displayName}
               </p>
-              <p className="truncate text-[0.75rem] text-subtle">{userRoleLabel}</p>
+              <p suppressHydrationWarning className="truncate text-[0.75rem] text-subtle">{userRoleLabel}</p>
             </div>
             <button
               type="button"
+              suppressHydrationWarning
               onClick={handleLogout}
               aria-label="Log out"
               title="Log out"

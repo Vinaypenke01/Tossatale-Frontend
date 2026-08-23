@@ -123,9 +123,9 @@ function WriterStudio() {
           hint="across all published stories"
         />
         <StatCard
-          label="Total Likes"
-          value={isAnalyticsLoading ? "..." : String(summary.total_likes)}
-          hint="reader appreciations"
+          label="Writer Supporters"
+          value={isAnalyticsLoading ? "..." : String(profileData?.total_supports || profileData?.total_likes || summary.total_likes || 0)}
+          hint="readers who support your work"
         />
         <StatCard
           label="Published Stories"

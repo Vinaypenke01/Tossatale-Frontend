@@ -402,33 +402,36 @@ function LatestBlogs({ blogs }: { blogs?: any[] }) {
 function VideoLibrary({ videos }: { videos?: any[] }) {
   if (!videos || videos.length === 0) {
     return (
-      <section className="mx-auto max-w-[1240px] px-5 pt-28 lg:px-8">
-        <SectionHeading
-          eyebrow="Watch"
-          title="Latest Short Films"
-          blurb="From stories to screen."
-          action={{ label: "View all", to: "/videos" }}
-        />
-        <EmptySectionFallback
-          icon="video"
-          title="No Films in Video Library"
-          description="Documentaries and writer conversations are currently in production and will be published here."
-        />
+      <section className="mt-28 border-y border-border bg-surface-alt/80 py-20">
+        <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+          <SectionHeading
+            eyebrow="Watch"
+            title="Latest Short Films"
+            blurb="From stories to screen."
+            action={{ label: "View all", to: "/videos" }}
+          />
+          <EmptySectionFallback
+            icon="video"
+            title="No Films in Video Library"
+            description="Documentaries and writer conversations are currently in production and will be published here."
+          />
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="mx-auto max-w-[1240px] px-5 pt-28 lg:px-8">
-      <Reveal>
-        <SectionHeading
-          eyebrow="Watch"
-          title="Latest Short Films"
-          blurb="From stories to screen."
-          action={{ label: "View all", to: "/videos" }}
-        />
-      </Reveal>
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="mt-28 border-y border-border bg-surface-alt/80 py-20">
+      <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+        <Reveal>
+          <SectionHeading
+            eyebrow="Watch"
+            title="Latest Short Films"
+            blurb="From stories to screen."
+            action={{ label: "View all", to: "/videos" }}
+          />
+        </Reveal>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {videos.slice(0, 4).map((v, i) => (
           <Reveal key={v.slug || v.id || i} delay={i * 70}>
             <Link to="/videos/$slug" params={{ slug: v.slug || "video" }} className="group block">
@@ -460,6 +463,7 @@ function VideoLibrary({ videos }: { videos?: any[] }) {
             </Link>
           </Reveal>
         ))}
+        </div>
       </div>
     </section>
   );

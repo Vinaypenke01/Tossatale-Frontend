@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Mail } from "lucide-react";
 
 import heroArt from "@/assets/Hero_section_pic.jpeg";
-import logo from "@/assets/tossatale_redefine_logo.jpg";
+import logo from "@/assets/favicon-96x96.png";
 import { Button, ButtonLink, Input } from "@/components/tossa/kit";
 
 export const Route = createFileRoute("/coming-soon")({

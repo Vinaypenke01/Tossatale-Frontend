@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import favicon96 from "@/assets/favicon-96x96.png?url";
 import { reportTossataleError } from "../lib/error-reporting";
 
 function NotFoundComponent() {
@@ -98,7 +99,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,400..800;1,400..700&family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,400&display=swap",
       },
-      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "icon", type: "image/png", href: favicon96 },
+      { rel: "shortcut icon", type: "image/png", href: favicon96 },
+      { rel: "apple-touch-icon", href: favicon96 },
     ],
     scripts: [
       {
