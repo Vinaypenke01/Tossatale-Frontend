@@ -80,6 +80,7 @@ function WriterStudio() {
     title: s.title || "Untitled draft",
     subtitle: s.subtitle || "",
     status: s.status,
+    rejectionFeedback: s.rejection_feedback || "",
     category: s.category?.name || "General",
     readingTime: s.estimated_reading_time || 5,
     wordCount: s.word_count || (s.content ? s.content.trim().split(/\s+/).length : 0),
@@ -158,23 +159,17 @@ function WriterStudio() {
           {isStoriesLoading ? (
             <div className="mt-5 space-y-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="flex items-center gap-4 rounded-2xl border border-border p-4">
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-2/3" />
-                    <Skeleton className="h-3 w-1/3" />
-                  </div>
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                </div>
+                <Skeleton key={i} className="h-18 w-full rounded-2xl" />
               ))}
             </div>
           ) : drafts.length === 0 ? (
-            <div className="py-14 text-center">
-              <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary-light text-primary">
-                <PenLine className="size-6" />
+            <div className="py-12 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-surface-alt text-subtle">
+                <BookOpen className="size-6" />
               </div>
-              <h3 className="mt-4 text-base font-display font-bold text-heading">No stories written yet</h3>
-              <p className="mx-auto mt-1 max-w-sm text-xs text-subtle">
-                Bring your ideas to life. Start writing a longform story or serialized chapter today.
+              <h3 className="mt-4 font-display text-lg font-bold text-heading">No active drafts</h3>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-subtle">
+                Start writing a new longform story, essay or serialized chapter today.
               </p>
               <div className="mt-5">
                 <ButtonLink to="/writer/editor" variant="primary" size="sm">
@@ -188,18 +183,18 @@ function WriterStudio() {
                 const statusTone =
                   s.status === "DRAFT"
                     ? "warning"
-                    : s.status === "SUBMITTED"
+                    : s.status === "PENDING_REVIEW"
                     ? "info"
                     : s.status === "REJECTED"
                     ? "error"
-                    : "neutral";
+                    : "success";
                 const statusLabel =
                   s.status === "DRAFT"
                     ? "Draft"
-                    : s.status === "SUBMITTED"
+                    : s.status === "PENDING_REVIEW"
                     ? "In review"
                     : s.status === "REJECTED"
-                    ? "Needs revision"
+                    ? "Rejected"
                     : "Published";
 
                 return (
@@ -207,7 +202,7 @@ function WriterStudio() {
                     <Link
                       to="/writer/editor/$storyId"
                       params={{ storyId: s.id || s.slug }}
-                      className="flex items-center gap-4 rounded-2xl border border-border bg-surface-alt/40 p-4 transition-all hover:border-primary/40 hover:bg-primary-light/40 group"
+                      className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between rounded-2xl border border-border bg-surface-alt/40 p-4 transition-all hover:border-primary/40 hover:bg-primary-light/40 group"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-sans text-[0.9375rem] font-bold text-heading group-hover:text-primary transition-colors">
@@ -226,8 +221,17 @@ function WriterStudio() {
                             </>
                           )}
                         </div>
+
+                        {s.rejectionFeedback && (
+                          <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive flex items-center gap-1.5">
+                            <span className="font-bold">Editorial Note:</span>
+                            <span className="truncate text-body">{s.rejectionFeedback}</span>
+                          </div>
+                        )}
                       </div>
-                      <Badge tone={statusTone}>{statusLabel}</Badge>
+                      <div className="shrink-0 self-start sm:self-center">
+                        <Badge tone={statusTone}>{statusLabel}</Badge>
+                      </div>
                     </Link>
                   </li>
                 );

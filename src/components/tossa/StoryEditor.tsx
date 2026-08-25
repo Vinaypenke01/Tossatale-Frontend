@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Edit3, Eye, EyeOff, FileText, Folder, Plus, RefreshCw, Save, Send, Trash2 } from "lucide-react";
+import { AlertCircle, Edit3, Eye, EyeOff, FileText, Folder, Plus, RefreshCw, Save, Send, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -29,6 +29,9 @@ export function StoryEditor({
   const [selectedCategory, setSelectedCategory] = useState(story?.categorySlug ?? (story as any)?.category?.id ?? (story as any)?.category?.slug ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeEditingSlug, setActiveEditingSlug] = useState<string | null>(story?.slug ?? (story as any)?.id ?? null);
+  const [rejectionFeedback, setRejectionFeedback] = useState<string>((story as any)?.rejection_feedback || (story as any)?.feedback || "");
+  const initialRejectionReviews = (story as any)?.reviews ? (story as any).reviews.filter((r: any) => r.decision === "REJECTED") : [];
+  const [rejectionReviews, setRejectionReviews] = useState<any[]>(initialRejectionReviews);
 
   const initialTags = story?.tags ? (Array.isArray(story.tags) ? story.tags.map((t: any) => t.name || t).join(", ") : "") : "";
   const [tagsInput, setTagsInput] = useState(initialTags);
@@ -43,6 +46,9 @@ export function StoryEditor({
       setBody((story as any).content || (story as any).body?.join?.("\n\n") || "");
       setSelectedCategory(story.categorySlug || (story as any).category?.id || (story as any).category?.slug || "");
       setActiveEditingSlug(story.slug || (story as any).id || null);
+      setRejectionFeedback((story as any).rejection_feedback || (story as any).feedback || "");
+      const revs = (story as any).reviews ? (story as any).reviews.filter((r: any) => r.decision === "REJECTED") : [];
+      setRejectionReviews(revs);
       if (story.tags) {
         setTagsInput(Array.isArray(story.tags) ? story.tags.map((t: any) => t.name || t).join(", ") : "");
       }
@@ -136,9 +142,9 @@ export function StoryEditor({
       return;
     }
 
-    if (status !== "DRAFT" && (!body.trim() || body.trim().length < 20)) {
+    if (!body.trim() || body.trim().length < 100) {
       toast.error("Story body is too short", {
-        description: "Please write at least a few paragraphs (min 20 characters) before submitting for editorial review.",
+        description: "Story content must be at least 100 characters.",
       });
       return;
     }
@@ -194,6 +200,7 @@ export function StoryEditor({
     setDek(st.subtitle || st.seo_description || "");
     setBody(st.content || st.plain_text_content || "");
     setReadingTimeInput(String(st.estimated_reading_time || st.reading_time || 5));
+    setRejectionFeedback(st.rejection_feedback || st.feedback || "");
     if (st.category?.slug || st.category?.id) {
       setSelectedCategory(st.category.slug || st.category.id);
     }
@@ -218,6 +225,7 @@ export function StoryEditor({
     setBody("");
     setTagsInput("");
     setReadingTimeInput("5");
+    setRejectionFeedback("");
     toast.info("Cleared editor canvas to write new story.");
   };
 
@@ -336,6 +344,39 @@ export function StoryEditor({
               </Panel>
             ) : (
               <Panel className="p-6 lg:p-8 space-y-5">
+                {(rejectionFeedback || rejectionReviews.length > 0) && (
+                  <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-5 text-destructive space-y-3 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="size-5 shrink-0 mt-0.5" />
+                      <strong className="text-sm font-bold text-destructive block">
+                        Editorial Revisions Requested {rejectionReviews.length > 1 ? `(Rejected ${rejectionReviews.length} times)` : "(Story Rejected)"}
+                      </strong>
+                    </div>
+
+                    {rejectionReviews.length > 1 ? (
+                      <div className="space-y-2 mt-2">
+                        {rejectionReviews.map((rv: any, idx: number) => (
+                          <div key={rv.id || idx} className="rounded-xl bg-surface/90 p-3 border border-destructive/20 text-xs">
+                            <div className="flex items-center justify-between text-subtle font-semibold mb-1">
+                              <span className="text-destructive font-bold">Reason #{rejectionReviews.length - idx}</span>
+                              <span>{rv.reviewed_at ? new Date(rv.reviewed_at).toLocaleDateString() : "Editorial note"} · By {rv.reviewer_name || "Editor"}</span>
+                            </div>
+                            <p className="text-body font-normal leading-relaxed text-sm">{rv.feedback}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-sm text-body leading-relaxed font-sans">
+                        {rejectionFeedback || rejectionReviews[0]?.feedback}
+                      </p>
+                    )}
+
+                    <p className="text-xs text-subtle pt-1">
+                      Please update your story according to the feedback above and click <strong>"Submit for review"</strong> when ready to resubmit.
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between border-b border-border pb-3 text-xs text-subtle font-medium">
                   <div className="flex items-center gap-2">
                     <FileText className="size-4 text-primary" />

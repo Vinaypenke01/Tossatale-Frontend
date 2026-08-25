@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BookOpen, Check, Clock, Eye, MessageSquare, X } from "lucide-react";
+import { AlertCircle, BookOpen, Check, ChevronDown, ChevronUp, Clock, Eye, History, MessageSquare, X } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/admin/review-queue")({
   component: ReviewQueue,
 });
 
-const filters = ["All", "New", "In review", "Published", "Needs revision", "Scheduled"] as const;
+const filters = ["All", "In review", "Published", "Rejected"] as const;
 
 function ReviewQueue() {
   const [filter, setFilter] = useState<string>("All");
@@ -24,15 +24,20 @@ function ReviewQueue() {
   const [readingStory, setReadingStory] = useState<any | null>(null);
   const [rejectingStory, setRejectingStory] = useState<any | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
+  const [expandedHistories, setExpandedHistories] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
+
+  const toggleHistory = (storyId: string) => {
+    setExpandedHistories((prev) => ({ ...prev, [storyId]: !prev[storyId] }));
+  };
 
   const { data: apiQueue, isLoading } = useQuery({
     queryKey: ["admin-review-queue", filter],
     queryFn: async () => {
       let statusQuery = "";
       if (filter === "Published") statusQuery = "?status=PUBLISHED";
-      else if (filter === "New") statusQuery = "?status=PENDING_REVIEW";
-      else if (filter === "Needs revision") statusQuery = "?status=REJECTED";
+      else if (filter === "In review") statusQuery = "?status=PENDING_REVIEW";
+      else if (filter === "Rejected") statusQuery = "?status=REJECTED";
       else if (filter === "All") statusQuery = "?status=ALL";
 
       const res = await api.get(`/admin/reviews/queue/${statusQuery}`);
@@ -62,8 +67,8 @@ function ReviewQueue() {
       return await api.post(`/admin/reviews/${storyId}/reject/`, { rejection_feedback: feedback });
     },
     onSuccess: () => {
-      toast.success("Story sent back with feedback", {
-        description: "Feedback has been delivered to the writer's studio dashboard.",
+      toast.success("Story rejected & feedback sent", {
+        description: "Status changed to Rejected and feedback recorded in review history.",
       });
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
       setRejectingStory(null);
@@ -93,35 +98,49 @@ function ReviewQueue() {
   };
 
   const rows = (apiQueue && Array.isArray(apiQueue))
-    ? apiQueue.map((s: any) => ({
-        id: s.id,
-        title: s.title,
-        dek: s.subtitle || s.seo_description || "Submitted story",
-        subtitle: s.subtitle || "",
-        content: s.content || s.body || "No story content provided.",
-        coverImage: s.cover_image || s.featured_image || "",
-        writerName: s.writer?.name || s.writer?.user?.display_name || s.writer?.user?.first_name || s.writer?.user?.email?.split?.("@")?.[0] || "Writer",
-        writerGender: s.writer?.gender || "OTHER",
-        category: s.category?.name || "General",
-        date: s.published_at || s.submitted_at || s.created_at ? new Date(s.published_at || s.submitted_at || s.created_at).toLocaleDateString() : "Recently",
-        readingTime: s.estimated_reading_time || 5,
-        wordCount: s.word_count || (s.content ? s.content.trim().split(/\s+/).length : 0),
-        rawStatus: s.status,
-        status: s.status === "PUBLISHED" ? "Published" : s.status === "PENDING_REVIEW" ? "New" : s.status === "REJECTED" ? "Needs revision" : "In review",
-      })).filter((r: any) => r.title.toLowerCase().includes(query.toLowerCase()))
+    ? apiQueue.map((s: any) => {
+        const reviewsList = Array.isArray(s.reviews) ? s.reviews : [];
+        const rejectionReviews = reviewsList.filter((r: any) => r.decision === "REJECTED");
+        const rejectionCount = s.rejection_count ?? (rejectionReviews.length > 0 ? rejectionReviews.length : s.rejection_feedback ? 1 : 0);
+
+        return {
+          id: s.id,
+          title: s.title,
+          dek: s.subtitle || s.seo_description || "Submitted story",
+          subtitle: s.subtitle || "",
+          content: s.content || s.body || "No story content provided.",
+          coverImage: s.cover_image || s.featured_image || "",
+          writerName: s.writer?.name || s.writer?.user?.display_name || s.writer?.user?.first_name || s.writer?.user?.email?.split?.("@")?.[0] || "Writer",
+          writerGender: s.writer?.gender || "OTHER",
+          category: s.category?.name || "General",
+          date: s.published_at || s.submitted_at || s.created_at ? new Date(s.published_at || s.submitted_at || s.created_at).toLocaleDateString() : "Recently",
+          readingTime: s.estimated_reading_time || 5,
+          wordCount: s.word_count || (s.content ? s.content.trim().split(/\s+/).length : 0),
+          rawStatus: s.status,
+          rejectionFeedback: s.rejection_feedback || "",
+          rejectionCount: Number(rejectionCount),
+          reviews: reviewsList,
+          rejectionReviews: rejectionReviews,
+          status: s.status === "PUBLISHED" ? "Published" : s.status === "PENDING_REVIEW" ? "In review" : s.status === "REJECTED" ? "Rejected" : s.status === "DRAFT" ? "Draft" : "In review",
+        };
+      }).filter((r: any) => r.title.toLowerCase().includes(query.toLowerCase()))
     : [];
+
+  const inReviewCount = rows.filter((r) => r.rawStatus === "PENDING_REVIEW").length;
+  const rejectedCount = rows.filter((r) => r.rawStatus === "REJECTED").length;
+  const publishedCount = rows.filter((r) => r.rawStatus === "PUBLISHED").length;
 
   return (
     <AppShell
       role="admin"
       title="Review queue"
-      blurb="Every submission, in the order it arrived. Click any story to read, leave notes, and approve."
+      blurb="Every submission, in the order it arrived. Read, leave editorial feedback, approve or track rejection histories."
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="In queue" value={String(rows.length)} hint="pending review" />
-        <StatCard label="Median wait" value="0 days" hint="current queue" />
-        <StatCard label="Approved this week" value="0" />
-        <StatCard label="Sent back" value="0" hint="with notes" />
+        <StatCard label="In queue" value={String(inReviewCount)} hint="pending editorial review" />
+        <StatCard label="Rejected" value={String(rejectedCount)} hint="needs author revision" />
+        <StatCard label="Published" value={String(publishedCount)} hint="live in library" />
+        <StatCard label="Total Submissions" value={String(rows.length)} hint="all states" />
       </div>
 
       <Panel className="p-6">
@@ -134,7 +153,7 @@ function ReviewQueue() {
                 suppressHydrationWarning
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "rounded-full border px-3 py-1 font-sans text-[0.8125rem] font-bold transition-colors",
+                  "rounded-full border px-3.5 py-1.5 font-sans text-[0.8125rem] font-bold transition-colors",
                   filter === f
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-surface text-body hover:border-primary hover:text-primary",
@@ -148,8 +167,7 @@ function ReviewQueue() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Filter queue by title or writer…"
-            aria-label="Filter review queue"
-            className="h-9 text-[0.8125rem] md:max-w-xs"
+            className="w-full md:w-72 text-sm"
           />
         </div>
 
@@ -157,69 +175,152 @@ function ReviewQueue() {
           <div className="py-12 text-center text-subtle font-medium">Loading review queue...</div>
         ) : rows.length === 0 ? (
           <div className="py-12 text-center">
-            <h3 className="font-display text-lg font-bold text-heading">No stories found</h3>
+            <h3 className="font-display text-lg font-bold text-heading">Queue is empty</h3>
             <p className="mt-1 text-[0.875rem] text-subtle">
-              There are currently no stories matching the "{filter}" filter.
+              {filter === "All" ? "No stories found in the queue." : `No stories currently marked as '${filter}'.`}
             </p>
           </div>
         ) : (
           <ul className="mt-6 divide-y divide-border">
-            {rows.map((story: any) => (
-              <li
-                key={story.id}
-                className="group flex flex-col gap-4 py-5 sm:flex-row sm:items-center transition-colors hover:bg-surface-alt/30 px-3 rounded-2xl"
-              >
-                <div
-                  onClick={() => setReadingStory(story)}
-                  className="min-w-0 flex-1 cursor-pointer"
+            {rows.map((story) => {
+              const isExpanded = Boolean(expandedHistories[story.id]);
+              const rejections = story.rejectionReviews.length > 0
+                ? story.rejectionReviews
+                : story.rejectionFeedback
+                ? [{ id: "current", feedback: story.rejectionFeedback, reviewed_at: story.date, reviewer_name: "Editorial Team" }]
+                : [];
+
+              return (
+                <li
+                  key={story.id}
+                  className="flex flex-col gap-4 py-5 sm:flex-row sm:items-start group hover:bg-surface-alt/30 px-3 rounded-2xl transition-colors"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={story.status === "Published" ? "success" : story.status === "New" ? "warning" : "info"}>{story.status}</Badge>
-                    <span className="font-sans text-[0.75rem] font-bold text-subtle">{story.category}</span>
-                  </div>
-                  <h2 className="mt-2 text-[1.125rem] font-display font-bold leading-snug text-heading group-hover:text-primary transition-colors">
-                    {story.title}
-                  </h2>
-                  <p className="mt-1 line-clamp-1 text-[0.875rem] text-body">{story.dek}</p>
-                  <p className="mt-2 text-[0.8125rem] text-subtle">
-                    Submitted by <strong className="text-heading">{story.writerName}</strong> · {story.date} · {story.readingTime} min read · {story.wordCount} words
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  <Button
-                    variant="ghostOutline"
-                    size="sm"
+                  <div
                     onClick={() => setReadingStory(story)}
-                    className="gap-1.5"
+                    className="min-w-0 flex-1 cursor-pointer"
                   >
-                    <Eye className="size-4" /> Read
-                  </Button>
-                  {story.status === "Published" ? (
-                    <Badge tone="success" className="px-3.5 py-1.5 font-bold text-xs">Published Live</Badge>
-                  ) : (
-                    <>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        disabled={approveMutation.isPending}
-                        onClick={() => approveMutation.mutate(story.id)}
-                        className="gap-1.5"
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        tone={
+                          story.rawStatus === "PUBLISHED"
+                            ? "success"
+                            : story.rawStatus === "REJECTED"
+                            ? "error"
+                            : story.rawStatus === "PENDING_REVIEW"
+                            ? "info"
+                            : "warning"
+                        }
                       >
-                        <Check className="size-4" /> Approve
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleOpenReject(story)}
-                        className="gap-1.5"
+                        {story.rawStatus === "REJECTED" ? "Rejected" : story.status}
+                      </Badge>
+
+                      {/* Rejection Count Badge */}
+                      {story.rejectionCount > 0 && (
+                        <Badge tone="error" className="font-bold gap-1 bg-destructive/15 text-destructive border-destructive/30">
+                          <History className="size-3" />
+                          <span>{story.rejectionCount} {story.rejectionCount === 1 ? "Rejection" : "Rejections"}</span>
+                        </Badge>
+                      )}
+
+                      <span className="font-sans text-[0.75rem] font-bold text-subtle">{story.category}</span>
+                    </div>
+
+                    <h2 className="mt-2 text-[1.125rem] font-display font-bold leading-snug text-heading group-hover:text-primary transition-colors">
+                      {story.title}
+                    </h2>
+                    <p className="mt-1 line-clamp-2 text-[0.875rem] text-body">{story.dek}</p>
+
+                    {/* Rejection Reasons & History Accordion in Row */}
+                    {rejections.length > 0 && (
+                      <div
+                        className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive max-w-xl cursor-default"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <X className="size-4" /> Send back
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </li>
-            ))}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold">
+                            <AlertCircle className="size-4 shrink-0" />
+                            <span>
+                              Rejection History ({story.rejectionCount} {story.rejectionCount === 1 ? "time" : "times"})
+                            </span>
+                          </div>
+                          {rejections.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleHistory(story.id)}
+                              className="text-primary font-bold hover:underline inline-flex items-center gap-0.5"
+                            >
+                              {isExpanded ? "Collapse" : `View all (${rejections.length})`}
+                              {isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* If single or not expanded, show the latest rejection */}
+                        {!isExpanded && (
+                          <div className="mt-2 text-body">
+                            <span className="font-bold text-destructive">Latest Reason: </span>
+                            <span>{rejections[0]?.feedback || story.rejectionFeedback}</span>
+                          </div>
+                        )}
+
+                        {/* If expanded, show full chronological list of each rejection reason */}
+                        {isExpanded && (
+                          <div className="mt-3 space-y-2.5 border-t border-destructive/20 pt-2.5">
+                            {rejections.map((rv: any, idx: number) => (
+                              <div key={rv.id || idx} className="rounded-lg bg-surface/80 p-2.5 border border-destructive/20 text-xs">
+                                <div className="flex items-center justify-between text-[0.7rem] text-subtle font-semibold mb-1">
+                                  <span className="text-destructive font-bold">Rejection #{rejections.length - idx}</span>
+                                  <span>{rv.reviewed_at ? new Date(rv.reviewed_at).toLocaleString() : "Previous review"} · By {rv.reviewer_name || "Editor"}</span>
+                                </div>
+                                <p className="text-body font-normal leading-relaxed">{rv.feedback}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="mt-2.5 text-[0.8125rem] text-subtle">
+                      Submitted by <strong className="text-heading">{story.writerName}</strong> · {story.date} · {story.readingTime} min read · {story.wordCount} words
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 pt-1">
+                    <Button
+                      variant="ghostOutline"
+                      size="sm"
+                      onClick={() => setReadingStory(story)}
+                      className="gap-1.5"
+                    >
+                      <Eye className="size-4" /> Read
+                    </Button>
+                    {story.rawStatus === "PUBLISHED" ? (
+                      <Badge tone="success" className="px-3.5 py-1.5 font-bold text-xs">Published Live</Badge>
+                    ) : (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          disabled={approveMutation.isPending}
+                          onClick={() => approveMutation.mutate(story.id)}
+                          className="gap-1.5"
+                        >
+                          <Check className="size-4" /> {story.rawStatus === "REJECTED" ? "Approve Anyway" : "Approve"}
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleOpenReject(story)}
+                          className="gap-1.5"
+                        >
+                          <X className="size-4" /> {story.rawStatus === "REJECTED" ? "Reject Again" : "Reject Story"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Panel>
@@ -237,9 +338,25 @@ function ReviewQueue() {
             {/* Modal Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface/95 px-6 py-4 backdrop-blur-md">
               <div className="flex items-center gap-2">
-                <Badge tone={readingStory.status === "Published" ? "success" : readingStory.status === "New" ? "warning" : "info"}>
-                  {readingStory.status}
+                <Badge
+                  tone={
+                    readingStory.rawStatus === "PUBLISHED"
+                      ? "success"
+                      : readingStory.rawStatus === "REJECTED"
+                      ? "error"
+                      : "info"
+                  }
+                >
+                  {readingStory.rawStatus === "REJECTED" ? "Rejected" : readingStory.status}
                 </Badge>
+
+                {readingStory.rejectionCount > 0 && (
+                  <Badge tone="error" className="font-bold gap-1 bg-destructive/15 text-destructive border-destructive/30">
+                    <History className="size-3" />
+                    <span>Rejected {readingStory.rejectionCount}x</span>
+                  </Badge>
+                )}
+
                 <span className="text-xs font-bold text-subtle font-sans">{readingStory.category}</span>
               </div>
               <button
@@ -254,6 +371,31 @@ function ReviewQueue() {
 
             {/* Modal Body (Scrollable Full Story Content) */}
             <div className="overflow-y-auto p-6 sm:p-8 space-y-6">
+              {/* Full Rejection Breakdown in Modal */}
+              {readingStory.rejectionCount > 0 && (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-destructive space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <AlertCircle className="size-5 shrink-0" />
+                    <span>Rejection History ({readingStory.rejectionCount} {readingStory.rejectionCount === 1 ? "Rejection" : "Rejections"})</span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {(readingStory.rejectionReviews.length > 0
+                      ? readingStory.rejectionReviews
+                      : [{ id: "current", feedback: readingStory.rejectionFeedback, reviewed_at: readingStory.date, reviewer_name: "Editorial Team" }]
+                    ).map((rv: any, idx: number, arr: any[]) => (
+                      <div key={rv.id || idx} className="rounded-xl bg-surface p-3.5 border border-destructive/20 text-xs">
+                        <div className="flex items-center justify-between text-subtle font-semibold mb-1">
+                          <span className="text-destructive font-bold">Reason #{arr.length - idx}</span>
+                          <span>{rv.reviewed_at ? new Date(rv.reviewed_at).toLocaleString() : "Previous review"} · Reviewer: {rv.reviewer_name || "Editor"}</span>
+                        </div>
+                        <p className="text-body font-normal leading-relaxed text-sm mt-1">{rv.feedback}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {readingStory.coverImage && (
                 <img
                   src={readingStory.coverImage}
@@ -299,7 +441,7 @@ function ReviewQueue() {
                 Close Preview
               </Button>
               <div className="flex items-center gap-2">
-                {readingStory.status !== "Published" && (
+                {readingStory.rawStatus !== "PUBLISHED" && (
                   <>
                     <Button
                       variant="danger"
@@ -311,7 +453,7 @@ function ReviewQueue() {
                       }}
                       className="gap-1.5"
                     >
-                      <X className="size-4" /> Send back
+                      <X className="size-4" /> {readingStory.rawStatus === "REJECTED" ? "Reject Again" : "Reject Story"}
                     </Button>
                     <Button
                       variant="primary"
@@ -323,7 +465,7 @@ function ReviewQueue() {
                       }}
                       className="gap-1.5"
                     >
-                      <Check className="size-4" /> Approve Story
+                      <Check className="size-4" /> Approve & Publish
                     </Button>
                   </>
                 )}
@@ -345,36 +487,40 @@ function ReviewQueue() {
           >
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
-                <h3 className="font-display text-lg font-bold text-heading">Send Back for Revision</h3>
+                <h3 className="font-display text-lg font-bold text-heading">
+                  {rejectingStory.rejectionCount > 0
+                    ? `Reject Story (Rejection #${rejectingStory.rejectionCount + 1})`
+                    : "Reject Story & Provide Feedback"}
+                </h3>
                 <p className="text-xs text-subtle truncate max-w-sm mt-0.5">"{rejectingStory.title}"</p>
               </div>
               <button
                 type="button"
                 onClick={() => setRejectingStory(null)}
-                className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface-hover"
+                className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface-hover hover:text-heading"
               >
                 <X className="size-4" />
               </button>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-heading">
-                Editorial Feedback <span className="text-destructive">*</span>
-              </label>
-              <Textarea
-                rows={4}
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                placeholder="Explain what revisions are needed before this story can be approved..."
-                className="w-full text-sm"
-              />
-              <p className="text-[0.75rem] text-subtle">
-                This note will be sent directly to <strong>{rejectingStory.writerName}</strong> in their Studio dashboard.
-              </p>
-            </div>
+            <p className="text-xs text-body leading-relaxed">
+              Please enter the specific reason and editorial feedback for this rejection. Each rejection is logged with its timestamp and reason for author review.
+            </p>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
-              <Button variant="ghostOutline" size="sm" onClick={() => setRejectingStory(null)}>
+            <Textarea
+              rows={4}
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="e.g. Please expand on the character's backstory in chapter 2 and fix typographical issues before resubmitting."
+              className="text-sm"
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                variant="ghostOutline"
+                size="sm"
+                onClick={() => setRejectingStory(null)}
+              >
                 Cancel
               </Button>
               <Button
@@ -382,9 +528,9 @@ function ReviewQueue() {
                 size="sm"
                 disabled={rejectMutation.isPending || !feedbackText.trim()}
                 onClick={handleConfirmReject}
-                className="gap-1.5"
+                className="gap-1.5 font-bold"
               >
-                {rejectMutation.isPending ? "Sending..." : "Submit Feedback"}
+                <X className="size-4" /> {rejectMutation.isPending ? "Submitting..." : `Record Rejection ${rejectingStory.rejectionCount > 0 ? `#${rejectingStory.rejectionCount + 1}` : ""}`}
               </Button>
             </div>
           </div>

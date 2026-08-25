@@ -538,62 +538,26 @@ function NewsletterForm() {
 function Home() {
   const isUnderConstruction = import.meta.env.VITE_UNDER_CONSTRUCTION === "true";
 
+  // Single stitched endpoint loading all homepage content in 1 request
   const { data: homepageData } = useQuery({
     queryKey: ["public-homepage"],
     queryFn: async () => {
       const res = await api.get("/public/homepage/");
       return res.data || {};
     },
-  });
-
-  const { data: publicStories } = useQuery({
-    queryKey: ["public-stories-home"],
-    queryFn: async () => {
-      const res = await api.get("/public/stories/");
-      return res.data?.results || res.data || [];
-    },
-  });
-
-  const { data: publicCategories } = useQuery({
-    queryKey: ["public-categories-home"],
-    queryFn: async () => {
-      const res = await api.get("/public/categories/");
-      return res.data?.results || res.data || [];
-    },
-  });
-
-  const { data: publicBlogs } = useQuery({
-    queryKey: ["public-blogs-home"],
-    queryFn: async () => {
-      const res = await api.get("/public/blogs/");
-      return res.data?.results || res.data || [];
-    },
-  });
-
-  const { data: publicVideos } = useQuery({
-    queryKey: ["public-videos-home"],
-    queryFn: async () => {
-      const res = await api.get("/public/videos/");
-      return res.data?.results || res.data || [];
-    },
+    staleTime: 1000 * 60 * 5, // 5 minutes fresh in React Query cache
   });
 
   if (isUnderConstruction) {
     return <UnderConstruction />;
   }
 
-  const featuredStoriesData = (homepageData?.featured_stories && homepageData.featured_stories.length > 0)
-    ? homepageData.featured_stories
-    : (publicStories ? publicStories.slice(0, 2) : []);
-  const latestStoriesData = homepageData?.latest_stories || publicStories;
-  const trendingStoriesData = homepageData?.trending_stories || publicStories;
-  const categoriesData = homepageData?.categories || publicCategories;
-  const blogsData = (homepageData?.featured_blogs && homepageData.featured_blogs.length > 0)
-    ? homepageData.featured_blogs.slice(0, 4)
-    : (publicBlogs ? publicBlogs.slice(0, 4) : []);
-  const videosData = (homepageData?.latest_videos && homepageData.latest_videos.length > 0)
-    ? homepageData.latest_videos.slice(0, 4)
-    : (publicVideos ? publicVideos.slice(0, 4) : []);
+  const featuredStoriesData = homepageData?.featured_stories || [];
+  const latestStoriesData = homepageData?.latest_stories || [];
+  const trendingStoriesData = homepageData?.trending_stories || [];
+  const categoriesData = homepageData?.categories || [];
+  const blogsData = homepageData?.featured_blogs || [];
+  const videosData = homepageData?.latest_videos || [];
   const announcementData = homepageData?.announcement || undefined;
   const footerData = homepageData?.footer || undefined;
 

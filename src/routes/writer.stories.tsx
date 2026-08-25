@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, Check, Eye, Heart, PenLine, Send, Trash2, X, AlertCircle } from "lucide-react";
+import { BookOpen, Check, ChevronDown, ChevronUp, Eye, Heart, History, PenLine, Send, Trash2, X, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,12 +15,17 @@ export const Route = createFileRoute("/writer/stories")({
   component: MyStories,
 });
 
-const tabs = ["All", "Drafts", "In review", "Published"] as const;
+const tabs = ["All", "Drafts", "In review", "Rejected", "Published"] as const;
 
 function MyStories() {
   const [tab, setTab] = useState<string>("All");
   const [viewingStory, setViewingStory] = useState<any | null>(null);
+  const [expandedHistories, setExpandedHistories] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
+
+  const toggleHistory = (storyId: string) => {
+    setExpandedHistories((prev) => ({ ...prev, [storyId]: !prev[storyId] }));
+  };
 
   const { data: apiStories, isLoading } = useQuery({
     queryKey: ["writer-stories"],
@@ -65,36 +70,45 @@ function MyStories() {
   });
 
   const handleDeleteStory = (story: any) => {
-    if (window.confirm(`Are you sure you want to delete the draft "${story.title}"?`)) {
+    if (window.confirm(`Are you sure you want to delete "${story.title}"?`)) {
       deleteStoryMutation.mutate(story.slug || story.id);
     }
   };
 
   const rows = (apiStories && Array.isArray(apiStories))
-    ? apiStories.map((s: any) => ({
-        id: s.id,
-        slug: s.slug || s.id,
-        title: s.title,
-        subtitle: s.subtitle || "",
-        content: s.content || s.body || "No content written yet.",
-        coverImage: s.cover_image || s.featured_image || "",
-        category: s.category?.name || "General",
-        date: s.created_at ? new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recently",
-        readingTime: s.estimated_reading_time || 5,
-        wordCount: s.word_count || (s.content ? s.content.trim().split(/\s+/).length : 0),
-        views: s.views_count || 0,
-        likes: s.likes_count || 0,
-        rejectionFeedback: s.rejection_feedback || "",
-        status: s.status === "DRAFT" ? "Draft" : s.status === "PENDING_REVIEW" ? "In review" : s.status === "REJECTED" ? "Needs revision" : "Published",
-        rawStatus: s.status,
-      })).filter((r: any) => (tab === "All" ? true : r.status === (tab === "Drafts" ? "Draft" : tab)))
+    ? apiStories.map((s: any) => {
+        const reviewsList = Array.isArray(s.reviews) ? s.reviews : [];
+        const rejectionReviews = reviewsList.filter((r: any) => r.decision === "REJECTED");
+        const rejectionCount = s.rejection_count ?? (rejectionReviews.length > 0 ? rejectionReviews.length : s.rejection_feedback ? 1 : 0);
+
+        return {
+          id: s.id,
+          slug: s.slug || s.id,
+          title: s.title,
+          subtitle: s.subtitle || "",
+          content: s.content || s.body || "No content written yet.",
+          coverImage: s.cover_image || s.featured_image || "",
+          category: s.category?.name || "General",
+          date: s.created_at ? new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recently",
+          readingTime: s.estimated_reading_time || 5,
+          wordCount: s.word_count || (s.content ? s.content.trim().split(/\s+/).length : 0),
+          views: s.views_count || 0,
+          likes: s.likes_count || 0,
+          rejectionFeedback: s.rejection_feedback || "",
+          rejectionCount: Number(rejectionCount),
+          reviews: reviewsList,
+          rejectionReviews: rejectionReviews,
+          rawStatus: s.status,
+          status: s.status === "DRAFT" ? "Draft" : s.status === "PENDING_REVIEW" ? "In review" : s.status === "REJECTED" ? "Rejected" : "Published",
+        };
+      }).filter((r: any) => (tab === "All" ? true : r.status === (tab === "Drafts" ? "Draft" : tab === "Rejected" ? "Rejected" : tab)))
     : [];
 
   return (
     <AppShell
       role="writer"
       title="My stories"
-      blurb="Your drafts, submissions and published stories."
+      blurb="Your drafts, submissions, revisions and published stories."
       actions={
         <ButtonLink to="/writer/editor" variant="primary">
           <PenLine className="size-4" /> New story
@@ -131,73 +145,143 @@ function MyStories() {
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {rows.map((story: any) => (
-              <li key={story.id} className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center group hover:bg-surface-alt/30 px-3 rounded-2xl transition-colors">
-                <div
-                  onClick={() => setViewingStory(story)}
-                  className="min-w-0 flex-1 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge tone={story.status === "Draft" ? "warning" : story.status === "In review" ? "info" : story.status === "Needs revision" ? "error" : "success"}>
-                      {story.status}
-                    </Badge>
-                    <span className="font-sans text-[0.75rem] font-bold text-subtle">{story.category}</span>
-                  </div>
-                  <h2 className="mt-2 text-[1.125rem] leading-snug font-display font-bold text-heading group-hover:text-primary transition-colors">
-                    {story.title}
-                  </h2>
-                  <p className="mt-1 text-[0.8125rem] text-subtle">
-                    {story.date} · {story.readingTime} min read · {story.wordCount} words
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3 text-[0.8125rem] text-subtle">
-                  <Button
-                    variant="ghostOutline"
-                    size="sm"
+            {rows.map((story: any) => {
+              const isExpanded = Boolean(expandedHistories[story.id]);
+              const rejections = story.rejectionReviews.length > 0
+                ? story.rejectionReviews
+                : story.rejectionFeedback
+                ? [{ id: "current", feedback: story.rejectionFeedback, reviewed_at: story.date, reviewer_name: "Editorial Team" }]
+                : [];
+
+              return (
+                <li key={story.id} className="flex flex-col gap-4 py-5 sm:flex-row sm:items-start group hover:bg-surface-alt/30 px-3 rounded-2xl transition-colors">
+                  <div
                     onClick={() => setViewingStory(story)}
-                    className="gap-1.5"
+                    className="min-w-0 flex-1 cursor-pointer"
                   >
-                    <Eye className="size-3.5" /> View
-                  </Button>
-                  <span className="hidden sm:inline-flex items-center gap-1">
-                    <Eye className="size-3.5" /> {story.views}
-                  </span>
-                  <span className="hidden sm:inline-flex items-center gap-1">
-                    <Heart className="size-3.5" /> {story.likes}
-                  </span>
-                  {(story.rawStatus === "DRAFT" || story.rawStatus === "REJECTED") && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={story.rawStatus === "DRAFT" ? "warning" : story.rawStatus === "PENDING_REVIEW" ? "info" : story.rawStatus === "REJECTED" ? "error" : "success"}>
+                        {story.rawStatus === "REJECTED" ? "Rejected (Needs Revision)" : story.status}
+                      </Badge>
+
+                      {story.rejectionCount > 0 && (
+                        <Badge tone="error" className="font-bold gap-1 bg-destructive/15 text-destructive border-destructive/30">
+                          <History className="size-3" />
+                          <span>{story.rejectionCount} {story.rejectionCount === 1 ? "Rejection" : "Rejections"}</span>
+                        </Badge>
+                      )}
+
+                      <span className="font-sans text-[0.75rem] font-bold text-subtle">{story.category}</span>
+                    </div>
+
+                    <h2 className="mt-2 text-[1.125rem] leading-snug font-display font-bold text-heading group-hover:text-primary transition-colors">
+                      {story.title}
+                    </h2>
+
+                    {/* Rejection History & Reasons Box in Row */}
+                    {rejections.length > 0 && (
+                      <div
+                        className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive max-w-xl cursor-default"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold">
+                            <AlertCircle className="size-4 shrink-0" />
+                            <span>
+                              Editorial Rejection Feedback ({story.rejectionCount} {story.rejectionCount === 1 ? "time" : "times"})
+                            </span>
+                          </div>
+                          {rejections.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleHistory(story.id)}
+                              className="text-primary font-bold hover:underline inline-flex items-center gap-0.5"
+                            >
+                              {isExpanded ? "Collapse" : `View all reasons (${rejections.length})`}
+                              {isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* If single or not expanded, show the latest rejection */}
+                        {!isExpanded && (
+                          <div className="mt-2 text-body">
+                            <span className="font-bold text-destructive">Latest Reason: </span>
+                            <span>{rejections[0]?.feedback || story.rejectionFeedback}</span>
+                          </div>
+                        )}
+
+                        {/* If expanded, show full chronological list of each rejection reason */}
+                        {isExpanded && (
+                          <div className="mt-3 space-y-2.5 border-t border-destructive/20 pt-2.5">
+                            {rejections.map((rv: any, idx: number) => (
+                              <div key={rv.id || idx} className="rounded-lg bg-surface/80 p-2.5 border border-destructive/20 text-xs">
+                                <div className="flex items-center justify-between text-[0.7rem] text-subtle font-semibold mb-1">
+                                  <span className="text-destructive font-bold">Rejection #{rejections.length - idx}</span>
+                                  <span>{rv.reviewed_at ? new Date(rv.reviewed_at).toLocaleDateString() : "Editorial Team"}</span>
+                                </div>
+                                <p className="text-body font-normal leading-relaxed">{rv.feedback}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="mt-2.5 text-[0.8125rem] text-subtle">
+                      {story.date} · {story.readingTime} min read · {story.wordCount} words
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3 text-[0.8125rem] text-subtle pt-1">
                     <Button
-                      variant="soft"
+                      variant="ghostOutline"
                       size="sm"
-                      disabled={submitMutation.isPending}
-                      onClick={() => submitMutation.mutate(story.id)}
+                      onClick={() => setViewingStory(story)}
                       className="gap-1.5"
                     >
-                      <Send className="size-3.5" /> Submit
+                      <Eye className="size-3.5" /> View
                     </Button>
-                  )}
-                  {story.rawStatus === "DRAFT" && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      disabled={deleteStoryMutation.isPending}
-                      onClick={() => handleDeleteStory(story)}
-                      className="h-8 px-2 text-xs"
-                      title="Delete Draft"
+                    <span className="hidden sm:inline-flex items-center gap-1">
+                      <Eye className="size-3.5" /> {story.views}
+                    </span>
+                    <span className="hidden sm:inline-flex items-center gap-1">
+                      <Heart className="size-3.5" /> {story.likes}
+                    </span>
+                    {(story.rawStatus === "DRAFT" || story.rawStatus === "REJECTED") && (
+                      <Button
+                        variant="soft"
+                        size="sm"
+                        disabled={submitMutation.isPending}
+                        onClick={() => submitMutation.mutate(story.id)}
+                        className="gap-1.5 font-bold"
+                      >
+                        <Send className="size-3.5" /> {story.rawStatus === "REJECTED" ? "Resubmit" : "Submit"}
+                      </Button>
+                    )}
+                    {story.rawStatus === "DRAFT" && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={deleteStoryMutation.isPending}
+                        onClick={() => handleDeleteStory(story)}
+                        className="h-8 px-2 text-xs"
+                        title="Delete Draft"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    )}
+                    <Link
+                      to="/writer/editor/$storyId"
+                      params={{ storyId: story.slug }}
+                      className="font-sans font-bold text-primary hover:underline ml-1"
                     >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  )}
-                  <Link
-                    to="/writer/editor/$storyId"
-                    params={{ storyId: story.slug }}
-                    className="font-sans font-bold text-primary hover:underline"
-                  >
-                    Edit
-                  </Link>
-                </div>
-              </li>
-            ))}
+                      {story.rawStatus === "REJECTED" ? "Edit & Fix" : "Edit"}
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Panel>
@@ -215,9 +299,17 @@ function MyStories() {
             {/* Modal Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface/95 px-6 py-4 backdrop-blur-md">
               <div className="flex items-center gap-2">
-                <Badge tone={viewingStory.status === "Draft" ? "warning" : viewingStory.status === "In review" ? "info" : viewingStory.status === "Needs revision" ? "error" : "success"}>
-                  {viewingStory.status}
+                <Badge tone={viewingStory.rawStatus === "DRAFT" ? "warning" : viewingStory.rawStatus === "PENDING_REVIEW" ? "info" : viewingStory.rawStatus === "REJECTED" ? "error" : "success"}>
+                  {viewingStory.rawStatus === "REJECTED" ? "Rejected (Needs Revision)" : viewingStory.status}
                 </Badge>
+
+                {viewingStory.rejectionCount > 0 && (
+                  <Badge tone="error" className="font-bold gap-1 bg-destructive/15 text-destructive border-destructive/30">
+                    <History className="size-3" />
+                    <span>Rejected {viewingStory.rejectionCount}x</span>
+                  </Badge>
+                )}
+
                 <span className="text-xs font-bold text-subtle font-sans">{viewingStory.category}</span>
               </div>
               <button
@@ -232,12 +324,27 @@ function MyStories() {
 
             {/* Modal Body (Scrollable Story Content) */}
             <div className="overflow-y-auto p-6 sm:p-8 space-y-6">
-              {viewingStory.rejectionFeedback && (
-                <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-[0.875rem] text-destructive flex items-start gap-3">
-                  <AlertCircle className="size-5 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-bold">Editorial Feedback:</strong>
-                    <p className="mt-1 leading-relaxed">{viewingStory.rejectionFeedback}</p>
+              {/* Full Rejection Breakdown in Modal */}
+              {viewingStory.rejectionCount > 0 && (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-destructive space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <AlertCircle className="size-5 shrink-0" />
+                    <span>Rejection History ({viewingStory.rejectionCount} {viewingStory.rejectionCount === 1 ? "Rejection" : "Rejections"})</span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {(viewingStory.rejectionReviews?.length > 0
+                      ? viewingStory.rejectionReviews
+                      : [{ id: "current", feedback: viewingStory.rejectionFeedback, reviewed_at: viewingStory.date, reviewer_name: "Editorial Team" }]
+                    ).map((rv: any, idx: number, arr: any[]) => (
+                      <div key={rv.id || idx} className="rounded-xl bg-surface p-3.5 border border-destructive/20 text-xs">
+                        <div className="flex items-center justify-between text-subtle font-semibold mb-1">
+                          <span className="text-destructive font-bold">Reason #{arr.length - idx}</span>
+                          <span>{rv.reviewed_at ? new Date(rv.reviewed_at).toLocaleDateString() : "Editorial Note"} · By {rv.reviewer_name || "Editorial Team"}</span>
+                        </div>
+                        <p className="text-body font-normal leading-relaxed text-sm mt-1">{rv.feedback}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -296,7 +403,7 @@ function MyStories() {
                   size="sm"
                   className="gap-1.5"
                 >
-                  <PenLine className="size-4" /> Edit Story
+                  <PenLine className="size-4" /> {viewingStory.rawStatus === "REJECTED" ? "Edit & Fix Revision" : "Edit Story"}
                 </ButtonLink>
                 {(viewingStory.rawStatus === "DRAFT" || viewingStory.rawStatus === "REJECTED") && (
                   <Button
