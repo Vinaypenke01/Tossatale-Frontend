@@ -418,8 +418,12 @@ function StoryDetail() {
       </div>
 
       <article>
-        <header className="border-b border-border paper-gradient">
-          <div className="mx-auto max-w-[920px] px-5 pt-5 pb-5">
+        <header className="relative overflow-hidden border-b border-primary/20 bg-gradient-to-b from-primary/15 via-primary/[0.08] to-primary/[0.03] dark:from-primary/20 dark:via-primary/10 dark:to-zinc-950/40 dark:border-primary/25 shadow-xs">
+          {/* Brand primary atmospheric glow in both light & dark mode */}
+          <div className="pointer-events-none absolute inset-0 bg-radial from-primary/20 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 size-[650px] rounded-full bg-primary/15 blur-3xl" />
+
+          <div className="relative z-10 mx-auto max-w-[920px] px-5 pt-6 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-subtle">
                 <Link to="/" className="hover:text-primary">
