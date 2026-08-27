@@ -220,6 +220,16 @@ function WriterStudio() {
                               <span>{s.wordCount} words</span>
                             </>
                           )}
+                          <span>·</span>
+                          <span className="inline-flex items-center gap-1 font-semibold text-heading">
+                            <Eye className="size-3.5 text-blue-500" />
+                            {Number(s.views || 0).toLocaleString()}
+                          </span>
+                          <span>·</span>
+                          <span className="inline-flex items-center gap-1 font-semibold text-heading">
+                            <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
+                            {Number(s.likes || 0).toLocaleString()}
+                          </span>
                         </div>
 
                         {s.rejectionFeedback && (

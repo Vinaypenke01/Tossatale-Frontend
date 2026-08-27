@@ -624,8 +624,20 @@ function AdminWriterDetail() {
                 <h4 className="text-xs font-black tracking-wider uppercase text-subtle mb-3">
                   Story Content
                 </h4>
-                <div className="prose prose-sm dark:prose-invert max-w-none font-serif text-[1rem] leading-relaxed text-body whitespace-pre-wrap">
-                  {selectedStory.plain_text_content || selectedStory.content || "No content body available for this draft."}
+                <div className="prose prose-sm dark:prose-invert max-w-none font-serif text-[1rem] leading-relaxed text-body space-y-4">
+                  {(selectedStory.plain_text_content || selectedStory.content) ? (
+                    (selectedStory.plain_text_content || selectedStory.content)
+                      .split(/\n{2,}|\r\n\r\n/)
+                      .map((p: string) => p.trim())
+                      .filter(Boolean)
+                      .map((p: string, idx: number) => (
+                        <p key={idx} className="whitespace-pre-line leading-relaxed font-serif">
+                          {p}
+                        </p>
+                      ))
+                  ) : (
+                    <p className="text-subtle italic">No content body available for this draft.</p>
+                  )}
                 </div>
               </div>
             </div>

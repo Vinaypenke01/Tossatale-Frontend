@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Eye, Heart } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -48,6 +49,8 @@ function BlogsPage() {
         tag: b.category?.name || "Editorial",
         date: b.published_at ? new Date(b.published_at).toLocaleDateString() : "Recent",
         readingTime: b.reading_time || 4,
+        views: b.views_count ?? b.views ?? 0,
+        likes: b.likes_count ?? b.likes ?? 0,
         cover: b.cover_image || covers.terrace,
       }))
     : [];
@@ -100,8 +103,18 @@ function BlogsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="px-5 pb-5 pt-3 border-t border-border/40 text-[0.8125rem] text-subtle">
-                      {b.date} · {b.readingTime} min read
+                    <div className="px-5 pb-5 pt-3 border-t border-border/40 flex items-center justify-between text-[0.8125rem] text-subtle">
+                      <span>{b.date} · {b.readingTime} min</span>
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center gap-1 font-semibold text-heading">
+                          <Eye className="size-3.5 text-blue-500" />
+                          {Number(b.views).toLocaleString()}
+                        </span>
+                        <span className="inline-flex items-center gap-1 font-semibold text-heading">
+                          <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
+                          {Number(b.likes).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </Panel>
                 </Link>

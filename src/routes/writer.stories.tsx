@@ -228,8 +228,22 @@ function MyStories() {
                       </div>
                     )}
 
-                    <p className="mt-2.5 text-[0.8125rem] text-subtle">
-                      {story.date} · {story.readingTime} min read · {story.wordCount} words
+                    <p className="mt-2.5 flex flex-wrap items-center gap-2 text-[0.8125rem] text-subtle">
+                      <span>{story.date}</span>
+                      <span>·</span>
+                      <span>{story.readingTime} min read</span>
+                      <span>·</span>
+                      <span>{story.wordCount} words</span>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-heading" title="Total Views">
+                        <Eye className="size-3.5 text-blue-500" />
+                        {Number(story.views || 0).toLocaleString()} views
+                      </span>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-heading" title="Likes">
+                        <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
+                        {Number(story.likes || 0).toLocaleString()} likes
+                      </span>
                     </p>
                   </div>
 
@@ -374,8 +388,20 @@ function MyStories() {
               </div>
 
               {/* Story Content Typography */}
-              <div className="prose prose-stone dark:prose-invert max-w-none text-[1.0625rem] leading-relaxed font-serif whitespace-pre-line text-body border-t border-border pt-4">
-                {viewingStory.content}
+              <div className="prose prose-stone dark:prose-invert max-w-none text-[1.0625rem] leading-relaxed font-serif text-body border-t border-border pt-4 space-y-4 min-w-0 break-words [overflow-wrap:anywhere]">
+                {viewingStory.content ? (
+                  viewingStory.content
+                    .split(/\n{2,}|\r\n\r\n/)
+                    .map((p: string) => p.trim())
+                    .filter(Boolean)
+                    .map((p: string, idx: number) => (
+                      <p key={idx} className="whitespace-pre-line leading-relaxed font-serif break-words [overflow-wrap:anywhere]">
+                        {p}
+                      </p>
+                    ))
+                ) : (
+                  <p className="text-subtle italic">No story content available.</p>
+                )}
               </div>
             </div>
 

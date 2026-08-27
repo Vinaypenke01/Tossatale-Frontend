@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { AlertCircle, Edit3, Eye, EyeOff, FileText, Folder, Plus, RefreshCw, Save, Send, Trash2 } from "lucide-react";
+import { AlertCircle, Bookmark, Clock, Edit3, Eye, EyeOff, FileText, Folder, Heart, PenLine, Plus, RefreshCw, Save, Send, Share2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ export function StoryEditor({
 }) {
   const isAdmin = role === "admin";
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"editor" | "library">("editor");
+  const [activeTab, setActiveTab] = useState<"editor" | "library" | "drafts">("editor");
 
   const [title, setTitle] = useState(story?.title ?? "");
   const [dek, setDek] = useState(story?.dek ?? (story as any)?.subtitle ?? "");
@@ -83,6 +83,9 @@ export function StoryEditor({
   });
 
   const userStoriesList = (userStoriesData && Array.isArray(userStoriesData)) ? userStoriesData : [];
+  const draftStoriesList = useMemo(() => {
+    return userStoriesList.filter((s: any) => s.status === "DRAFT" || s.status === "REJECTED");
+  }, [userStoriesList]);
 
   const deleteStoryMutation = useMutation({
     mutationFn: async (storySlugOrId: string) => {
@@ -226,21 +229,26 @@ export function StoryEditor({
     setTagsInput("");
     setReadingTimeInput("5");
     setRejectionFeedback("");
+    setRejectionReviews([]);
     toast.info("Cleared editor canvas to write new story.");
   };
 
   return (
     <AppShell
       role={role}
-      title={activeEditingSlug ? "Edit story" : story ? "Edit story" : isAdmin ? "Write a story" : "New story"}
+      title={isAdmin ? "Write a story" : "Writer studio"}
       blurb={
-        activeEditingSlug
-          ? "Editing active publication. Save changes or publish revisions."
-          : story
-            ? "Revise, then resubmit. Editors see a diff of what changed."
-            : isAdmin
-              ? "Editorial desk drafting — publish straight to the library or submit for review."
-              : "Start with a sentence you'd read twice. Everything saves as you type."
+        activeTab === "library"
+          ? "Manage authored stories, review performance, or make live edits."
+          : activeTab === "drafts"
+            ? "Your unfinished drafts and revision requests — continue writing anytime."
+            : activeEditingSlug
+              ? "Editing active publication. Save changes or publish revisions."
+              : story
+                ? "Revise, then resubmit. Editors see a diff of what changed."
+                : isAdmin
+                  ? "Editorial desk drafting — publish straight to the library or submit for review."
+                  : "Start with a sentence you'd read twice. Everything saves as you type."
       }
       actions={
         activeTab === "editor" ? (
@@ -274,7 +282,7 @@ export function StoryEditor({
             </Button>
           </>
         ) : (
-          <Button variant="primary" size="sm" onClick={() => setActiveTab("editor")} className="gap-1.5">
+          <Button variant="primary" size="sm" onClick={() => { handleClearEditor(); setActiveTab("editor"); }} className="gap-1.5">
             <Plus className="size-4" /> Write New Story
           </Button>
         )
@@ -282,7 +290,7 @@ export function StoryEditor({
     >
       {/* Top Workspace Navigation Tabs */}
       <div className="mb-6 flex items-center justify-between border-b border-border pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab("editor")}
@@ -313,9 +321,31 @@ export function StoryEditor({
               {userStoriesList.length}
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("drafts")}
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-4 py-2 font-sans text-[0.875rem] font-bold transition-all",
+              activeTab === "drafts"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-surface text-body hover:bg-surface-hover border border-border"
+            )}
+          >
+            <PenLine className="size-4" /> Drafts
+            <span className={cn(
+              "ml-1 rounded-full px-2 py-0.5 text-[0.75rem]",
+              activeTab === "drafts"
+                ? "bg-primary-foreground/20 text-primary-foreground"
+                : draftStoriesList.length > 0
+                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold"
+                  : "bg-surface-alt text-subtle"
+            )}>
+              {draftStoriesList.length}
+            </span>
+          </button>
         </div>
 
-        {activeEditingSlug && (
+        {activeEditingSlug && activeTab === "editor" && (
           <Button variant="ghostOutline" size="sm" onClick={handleClearEditor} className="text-xs text-primary font-bold">
             + Clear Editor
           </Button>
@@ -328,15 +358,19 @@ export function StoryEditor({
           {/* Main Writing Workspace */}
           <div className="min-w-0">
             {preview ? (
-              <Panel className="prose dark:prose-invert max-w-none p-6 lg:p-8">
+              <Panel className="prose dark:prose-invert max-w-none p-6 lg:p-8 min-w-0 break-words [overflow-wrap:anywhere]">
                 <span className="font-sans text-[0.8125rem] font-bold uppercase tracking-wider text-primary">
                   Preview Mode
                 </span>
-                <h1 className="mt-2 text-3xl font-display font-bold text-heading sm:text-4xl">{title || "Untitled story"}</h1>
-                {dek && <p className="mt-2 text-lg text-subtle italic">{dek}</p>}
-                <div className="mt-6 space-y-4 text-body font-serif leading-relaxed text-[1.0625rem]">
+                <h1 className="mt-2 text-3xl font-display font-bold text-heading sm:text-4xl break-words [overflow-wrap:anywhere]">{title || "Untitled story"}</h1>
+                {dek && <p className="mt-2 text-lg text-subtle italic break-words [overflow-wrap:anywhere]">{dek}</p>}
+                <div className="mt-6 space-y-4 text-body font-serif leading-relaxed text-[1.0625rem] min-w-0 break-words [overflow-wrap:anywhere]">
                   {paragraphs.length > 0 ? (
-                    paragraphs.map((p: string, i: number) => <p key={i}>{p}</p>)
+                    paragraphs.map((p: string, i: number) => (
+                      <p key={i} className="break-words [overflow-wrap:anywhere] whitespace-pre-line">
+                        {p}
+                      </p>
+                    ))
                   ) : (
                     <p className="text-subtle italic">No story content written yet...</p>
                   )}
@@ -554,51 +588,210 @@ export function StoryEditor({
             </div>
           ) : (
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {userStoriesList.map((st: any) => (
-                <div
-                  key={st.id}
-                  className="flex flex-col justify-between rounded-2xl border border-border bg-surface p-5 transition-all hover:border-primary/40 hover:shadow-md"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Badge tone={st.status === "PUBLISHED" ? "success" : st.status === "PENDING_REVIEW" ? "warning" : "info"}>
-                        {st.status}
-                      </Badge>
-                      <span className="font-sans text-[0.75rem] font-bold text-subtle truncate">
-                        {st.category?.name || "General"}
-                      </span>
-                    </div>
-                    <h3 className="mt-3 font-display text-[1.0625rem] font-bold text-heading line-clamp-2 leading-snug">
-                      {st.title}
-                    </h3>
-                    <p className="mt-1 text-[0.8125rem] text-subtle line-clamp-2">
-                      {st.subtitle || "No subtitle provided..."}
-                    </p>
-                  </div>
+              {userStoriesList.map((st: any) => {
+                const viewsCount = st.views_count ?? st.views ?? 0;
+                const likesCount = st.likes_count ?? st.likes ?? 0;
+                const bookmarksCount = st.bookmarks_count ?? st.bookmarks ?? 0;
+                const readingTime = st.estimated_reading_time || st.reading_time || 5;
 
-                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[0.75rem] text-subtle">
-                    <span>{st.created_at ? new Date(st.created_at).toLocaleDateString() : "Recently"}</span>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="ghostOutline"
-                        size="sm"
-                        onClick={() => handleEditStory(st)}
-                        className="h-8 px-2.5 text-xs gap-1"
-                      >
-                        <Edit3 className="size-3" /> Edit
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDeleteStory(st)}
-                        className="h-8 px-2.5 text-xs gap-1"
-                      >
-                        <Trash2 className="size-3" /> Delete
-                      </Button>
+                return (
+                  <div
+                    key={st.id}
+                    className="flex flex-col justify-between rounded-2xl border border-border bg-surface p-5 transition-all hover:border-primary/40 hover:shadow-md"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge tone={st.status === "PUBLISHED" ? "success" : st.status === "PENDING_REVIEW" ? "warning" : st.status === "REJECTED" ? "error" : "info"}>
+                          {st.status === "PENDING_REVIEW" ? "In Review" : st.status}
+                        </Badge>
+                        <span className="font-sans text-[0.75rem] font-bold text-subtle truncate">
+                          {st.category?.name || "General"}
+                        </span>
+                      </div>
+                      <h3 className="mt-3 font-display text-[1.0625rem] font-bold text-heading line-clamp-2 leading-snug">
+                        {st.title}
+                      </h3>
+                      <p className="mt-1 text-[0.8125rem] text-subtle line-clamp-2">
+                        {st.subtitle || "No subtitle provided..."}
+                      </p>
+
+                      {/* Live Story Analytics Badges */}
+                      <div className="mt-3.5 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-surface-alt/60 p-2.5 text-[0.75rem]">
+                        <div className="flex items-center gap-1 font-semibold text-heading" title="Total Views / Reads">
+                          <Eye className="size-3.5 text-blue-500" />
+                          <span>{Number(viewsCount).toLocaleString()}</span>
+                          <span className="text-[0.6875rem] text-subtle font-normal">views</span>
+                        </div>
+                        <div className="flex items-center gap-1 font-semibold text-heading" title="Registered Likes">
+                          <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
+                          <span>{Number(likesCount).toLocaleString()}</span>
+                          <span className="text-[0.6875rem] text-subtle font-normal">likes</span>
+                        </div>
+                        <div className="flex items-center gap-1 font-semibold text-heading" title="Saved Bookmarks">
+                          <Bookmark className="size-3.5 text-amber-500 fill-amber-500/20" />
+                          <span>{Number(bookmarksCount).toLocaleString()}</span>
+                        </div>
+                        <div className="ml-auto flex items-center gap-1 text-[0.6875rem] text-subtle font-medium" title="Estimated Reading Time">
+                          <Clock className="size-3" />
+                          <span>{readingTime}m</span>
+                        </div>
+                      </div>
+
+                      {st.rejection_feedback && (
+                        <div className="mt-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-[0.75rem] text-destructive flex items-center gap-1.5">
+                          <AlertCircle className="size-3.5 shrink-0" />
+                          <span className="truncate">{st.rejection_feedback}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[0.75rem] text-subtle">
+                      <span>{st.created_at ? new Date(st.created_at).toLocaleDateString() : "Recently"}</span>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="ghostOutline"
+                          size="sm"
+                          onClick={() => handleEditStory(st)}
+                          className="h-8 px-2.5 text-xs gap-1"
+                        >
+                          <Edit3 className="size-3" /> Edit
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeleteStory(st)}
+                          className="h-8 px-2.5 text-xs gap-1"
+                        >
+                          <Trash2 className="size-3" /> Delete
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+          )}
+        </Panel>
+      )}
+
+      {/* View 3: Drafts / In-Progress Stories Tab */}
+      {activeTab === "drafts" && (
+        <Panel className="p-6 lg:p-8">
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <div>
+              <h2 className="text-xl font-display font-bold text-heading">
+                Draft Stories
+              </h2>
+              <p className="mt-0.5 text-[0.875rem] text-subtle">
+                Unfinished drafts and stories awaiting your revisions — click "Continue" to resume writing in the editor.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                handleClearEditor();
+                setActiveTab("editor");
+              }}
+              className="gap-1.5"
+            >
+              <Plus className="size-4" /> Start New Draft
+            </Button>
+          </div>
+
+          {draftStoriesList.length === 0 ? (
+            <div className="mt-6 py-16 text-center text-subtle font-medium border border-dashed border-border rounded-2xl">
+              <PenLine className="size-8 mx-auto mb-2 text-primary/60" />
+              <p className="font-bold text-heading text-base">No drafts currently saved</p>
+              <p className="text-xs text-subtle mt-1 max-w-sm mx-auto">
+                All your written stories have been submitted or published. Start drafting a new story anytime!
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  handleClearEditor();
+                  setActiveTab("editor");
+                }}
+                className="mt-4 gap-1.5"
+              >
+                <Plus className="size-4" /> Write New Story
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {draftStoriesList.map((st: any) => {
+                const wordsCount = st.word_count || (st.content ? st.content.trim().split(/\s+/).filter(Boolean).length : 0);
+                const readingTime = st.estimated_reading_time || st.reading_time || 5;
+
+                return (
+                  <div
+                    key={st.id || st.slug}
+                    className="flex flex-col justify-between rounded-2xl border border-border bg-surface p-5 transition-all hover:border-primary/40 hover:shadow-md"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge tone={st.status === "REJECTED" ? "error" : "warning"}>
+                          {st.status === "REJECTED" ? "Needs Revision" : "Draft"}
+                        </Badge>
+                        <span className="font-sans text-[0.75rem] font-bold text-subtle truncate">
+                          {st.category?.name || "General"}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-3 font-display text-[1.0625rem] font-bold text-heading line-clamp-2 leading-snug">
+                        {st.title || "Untitled Draft"}
+                      </h3>
+                      <p className="mt-1 text-[0.8125rem] text-subtle line-clamp-2">
+                        {st.subtitle || "No subtitle provided..."}
+                      </p>
+
+                      {/* Draft Meta Details */}
+                      <div className="mt-3.5 flex items-center justify-between rounded-xl bg-surface-alt/60 px-3 py-2 text-[0.75rem] text-subtle border border-border/40">
+                        <span className="inline-flex items-center gap-1 font-medium text-heading">
+                          <Clock className="size-3 text-primary" />
+                          <span>{readingTime} min read</span>
+                        </span>
+                        <span className="text-subtle">
+                          {wordsCount} words
+                        </span>
+                      </div>
+
+                      {st.rejection_feedback && (
+                        <div className="mt-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-[0.75rem] text-destructive flex items-center gap-1.5">
+                          <AlertCircle className="size-3.5 shrink-0" />
+                          <span className="truncate">{st.rejection_feedback}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[0.75rem] text-subtle">
+                      <span>
+                        Saved {st.updated_at ? new Date(st.updated_at).toLocaleDateString() : (st.created_at ? new Date(st.created_at).toLocaleDateString() : "Recently")}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleEditStory(st)}
+                          className="h-8 px-3 text-xs gap-1 font-bold"
+                        >
+                          <Edit3 className="size-3" /> Continue
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeleteStory(st)}
+                          className="h-8 px-2 text-xs"
+                          title="Delete Draft"
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </Panel>

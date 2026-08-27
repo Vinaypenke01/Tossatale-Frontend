@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Edit3, Eye, EyeOff, FileText, Folder, ImagePlus, Plus, Send, Trash2 } from "lucide-react";
+import { Bookmark, Clock, Edit3, Eye, EyeOff, FileText, Folder, Heart, ImagePlus, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -429,62 +429,92 @@ function AdminBlogs() {
             </div>
           ) : (
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {blogsList.map((post: any) => (
-                <div
-                  key={post.id || post.slug}
-                  className="flex flex-col justify-between rounded-2xl border border-border bg-surface p-5 transition-all hover:border-primary/40 hover:shadow-md"
-                >
-                  <div>
-                    {(post.cover_image || post.cover) && (
-                      <img
-                        src={post.cover_image || post.cover}
-                        alt={post.title}
-                        className="h-32 w-full rounded-xl object-cover mb-3"
-                      />
-                    )}
-                    <div className="flex items-center justify-between gap-2">
-                      <Badge tone={post.status === "PUBLISHED" ? "success" : "info"}>
-                        {post.status || "Live"}
-                      </Badge>
-                      <span className="font-sans text-[0.75rem] font-bold text-subtle truncate">
-                        {post.category?.name || post.tag || "General"}
-                      </span>
-                    </div>
-                    <h3 className="mt-2.5 font-display text-[1.0625rem] font-bold text-heading line-clamp-2 leading-snug">
-                      {post.title}
-                    </h3>
-                    <p className="mt-1 text-[0.8125rem] text-subtle line-clamp-2">
-                      {post.subtitle || post.excerpt || post.plain_text_content || "No summary provided..."}
-                    </p>
-                  </div>
+              {blogsList.map((post: any) => {
+                const viewsCount = post.views_count ?? post.views ?? 0;
+                const likesCount = post.likes_count ?? post.likes ?? 0;
+                const readingTime = post.reading_time || post.readingTime || 3;
 
-                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[0.75rem] text-subtle">
-                    <span>
-                      {post.created_at
-                        ? new Date(post.created_at).toLocaleDateString()
-                        : post.date || "Recently"} · {post.reading_time || post.readingTime || 1} min
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="ghostOutline"
-                        size="sm"
-                        onClick={() => handleEditBlog(post)}
-                        className="h-8 px-2.5 text-xs gap-1"
-                      >
-                        <Edit3 className="size-3" /> Edit
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDeleteBlog(post)}
-                        className="h-8 px-2.5 text-xs gap-1"
-                      >
-                        <Trash2 className="size-3" /> Delete
-                      </Button>
+                return (
+                  <div
+                    key={post.id || post.slug}
+                    className="flex flex-col justify-between rounded-2xl border border-border bg-surface p-5 transition-all hover:border-primary/40 hover:shadow-md"
+                  >
+                    <div>
+                      {(post.cover_image || post.cover) && (
+                        <img
+                          src={post.cover_image || post.cover}
+                          alt={post.title}
+                          className="h-32 w-full rounded-xl object-cover mb-3"
+                        />
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge tone={post.status === "PUBLISHED" ? "success" : "info"}>
+                          {post.status || "Live"}
+                        </Badge>
+                        <span className="font-sans text-[0.75rem] font-bold text-subtle truncate">
+                          {post.category?.name || post.tag || "General"}
+                        </span>
+                      </div>
+                      <h3 className="mt-2.5 font-display text-[1.0625rem] font-bold text-heading line-clamp-2 leading-snug">
+                        {post.title}
+                      </h3>
+                      <p className="mt-1 text-[0.8125rem] text-subtle line-clamp-2">
+                        {post.subtitle || post.excerpt || post.plain_text_content || "No summary provided..."}
+                      </p>
+
+                      {/* Live Blog Analytics Badges */}
+                      <div className="mt-3.5 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-surface-alt/60 p-2.5 text-[0.75rem]">
+                        <div className="flex items-center gap-1 font-semibold text-heading" title="Total Views / Reads">
+                          <Eye className="size-3.5 text-blue-500" />
+                          <span>{Number(viewsCount).toLocaleString()}</span>
+                          <span className="text-[0.6875rem] text-subtle font-normal">views</span>
+                        </div>
+                        <div className="flex items-center gap-1 font-semibold text-heading" title="Registered Likes">
+                          <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
+                          <span>{Number(likesCount).toLocaleString()}</span>
+                          <span className="text-[0.6875rem] text-subtle font-normal">likes</span>
+                        </div>
+                        {post.is_featured && (
+                          <div className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400" title="Featured on Homepage">
+                            <Sparkles className="size-3.5 text-amber-500 fill-amber-500/20" />
+                            <span className="text-[0.6875rem]">Featured</span>
+                          </div>
+                        )}
+                        <div className="ml-auto flex items-center gap-1 text-[0.6875rem] text-subtle font-medium" title="Estimated Reading Time">
+                          <Clock className="size-3" />
+                          <span>{readingTime}m</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[0.75rem] text-subtle">
+                      <span>
+                        {post.created_at
+                          ? new Date(post.created_at).toLocaleDateString()
+                          : post.date || "Recently"}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="ghostOutline"
+                          size="sm"
+                          onClick={() => handleEditBlog(post)}
+                          className="h-8 px-2.5 text-xs gap-1"
+                        >
+                          <Edit3 className="size-3" /> Edit
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeleteBlog(post)}
+                          className="h-8 px-2.5 text-xs gap-1"
+                        >
+                          <Trash2 className="size-3" /> Delete
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Panel>

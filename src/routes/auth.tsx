@@ -51,7 +51,7 @@ interface FormErrors {
   newPassword?: string;
 }
 
-type AuthMode = "signin" | "signup" | "forgot";
+type AuthMode = "signin" | "signup" | "forgot" | "verify-otp";
 
 function AuthPage() {
   const getInitialMode = (): AuthMode => {
@@ -59,6 +59,7 @@ function AuthPage() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("mode") === "signup") return "signup";
       if (params.get("mode") === "forgot") return "forgot";
+      if (params.get("mode") === "verify-otp") return "verify-otp";
     }
     return "signin";
   };
@@ -112,11 +113,12 @@ function AuthPage() {
 
   const isMaintenance = Boolean(siteSettings?.maintenance_mode);
 
-  const { login, googleLogin, register } = useAuth();
+  const { login, googleLogin, register, verifyRegistrationOtp, resendRegistrationOtp } = useAuth();
   const navigate = useNavigate();
 
   const isSignup = mode === "signup";
   const isForgot = mode === "forgot";
+  const isVerifyOtp = mode === "verify-otp";
 
   // Google Auth Button Rendering
   useEffect(() => {
@@ -183,7 +185,7 @@ function AuthPage() {
     }
   };
 
-  // Step 1: Send OTP to Email
+  // Step 1: Send OTP to Email (Forgot Password)
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -215,7 +217,7 @@ function AuthPage() {
     }
   };
 
-  // Step 2: Validate OTP Only
+  // Step 2: Validate OTP Only (Forgot Password)
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpCode.trim()) {
@@ -251,7 +253,7 @@ function AuthPage() {
     }
   };
 
-  // Step 3: Set & Save New Password
+  // Step 3: Set & Save New Password (Forgot Password)
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: FormErrors = {};
@@ -299,6 +301,47 @@ function AuthPage() {
       toast.error("Update Failed", { description: msg });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Writer Registration OTP Verification handler
+  const handleVerifyRegistrationOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim() || otpCode.trim().length < 6) {
+      setErrors({ otp: "Please enter the full 6-digit verification code" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
+      const res = await verifyRegistrationOtp(email.trim(), otpCode.trim());
+      const userObj = res.data?.user;
+      toast.success("Writer Account Activated! 🎉", {
+        description: `Welcome to Tossatale, ${userObj?.first_name || "Storyteller"}!`,
+      });
+      navigate({ to: "/writer" });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Invalid or expired verification code.";
+      setErrors({ otp: msg });
+      toast.error("Activation Failed", { description: msg });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Writer Registration Resend OTP handler
+  const handleResendRegistrationOtp = async () => {
+    if (otpCountdown > 0) return;
+    try {
+      await resendRegistrationOtp(email.trim());
+      setOtpCountdown(60);
+      toast.success("New Verification Code Sent!", {
+        description: `A fresh 6-digit code has been sent to ${email.trim()}.`,
+      });
+    } catch (err: any) {
+      toast.error("Could not resend code", { description: err.message });
     }
   };
 
@@ -374,7 +417,7 @@ function AuthPage() {
         const firstName = nameParts[0] || "Writer";
         const lastName = nameParts.slice(1).join(" ") || "";
 
-        await register({
+        const regRes = await register({
           email: email.trim(),
           password,
           first_name: firstName,
@@ -383,6 +426,16 @@ function AuthPage() {
           bio: portfolioUrl.trim() ? `Portfolio: ${portfolioUrl.trim()}` : undefined,
           website_url: portfolioUrl.trim() || undefined,
         });
+
+        if (regRes.data?.requires_otp) {
+          setMode("verify-otp");
+          setOtpCountdown(60);
+          setOtpCode("");
+          toast.success("Activation Code Sent!", {
+            description: `We have sent a 6-digit verification code to ${email.trim()}. Please enter it below to activate your writer account.`,
+          });
+          return;
+        }
 
         toast.success("Writer Account Created!", {
           description: "Welcome to Tossatale! Navigating to your Writer Studio...",
@@ -394,6 +447,24 @@ function AuthPage() {
       const serverErrors: FormErrors = {};
       let mainTitle = "Authentication failed";
       let detailDesc = "An error occurred while processing your request. Please try again.";
+
+      // Handle unverified writer login check
+      const isUnverified =
+        err?.error_code === "EMAIL_NOT_VERIFIED" ||
+        err?.errors?.error_code === "EMAIL_NOT_VERIFIED" ||
+        err?.response?.data?.error_code === "EMAIL_NOT_VERIFIED" ||
+        err?.message?.toLowerCase()?.includes("verification") ||
+        err?.message?.toLowerCase()?.includes("verify your email");
+
+      if (isUnverified) {
+        setMode("verify-otp");
+        setOtpCountdown(60);
+        setOtpCode("");
+        toast.info("Email Verification Required", {
+          description: `Your writer account is pending activation. A fresh 6-digit verification code has been sent to ${email.trim()}.`,
+        });
+        return;
+      }
 
       if (err instanceof ApiError || err?.status) {
         if (err.status === 401) {
@@ -443,36 +514,40 @@ function AuthPage() {
           <h1
             className={cn(
               "font-display font-bold leading-tight text-heading transition-all",
-              isSignup || isForgot ? "text-[clamp(1.4rem,2.2vw,1.85rem)]" : "text-[clamp(1.75rem,2.8vw,2.2rem)]",
+              isSignup || isForgot || isVerifyOtp ? "text-[clamp(1.4rem,2.2vw,1.85rem)]" : "text-[clamp(1.75rem,2.8vw,2.2rem)]",
             )}
           >
-            {isForgot
-              ? forgotStep === 1
-                ? "Reset Your Password"
-                : forgotStep === 2
-                  ? "Verify 6-Digit Code"
-                  : "Set New Password"
-              : isSignup
-                ? "Become a Contributing Writer."
-                : "Sign In to tossatale."}
+            {isVerifyOtp
+              ? "Activate Writer Account"
+              : isForgot
+                ? forgotStep === 1
+                  ? "Reset Your Password"
+                  : forgotStep === 2
+                    ? "Verify 6-Digit Code"
+                    : "Set New Password"
+                : isSignup
+                  ? "Become a Contributing Writer."
+                  : "Sign In to tossatale."}
           </h1>
 
           {/* Subtitle */}
           <p
             className={cn(
               "text-body leading-snug transition-all",
-              isSignup || isForgot ? "mt-1 text-[0.84rem]" : "mt-2 text-[0.9375rem]",
+              isSignup || isForgot || isVerifyOtp ? "mt-1 text-[0.84rem]" : "mt-2 text-[0.9375rem]",
             )}
           >
-            {isForgot
-              ? forgotStep === 1
-                ? "Enter your account email to receive a 6-digit verification code."
-                : forgotStep === 2
-                  ? `Enter the 6-digit verification code sent to ${email}.`
-                  : "Choose a secure new password for your account."
-              : isSignup
-                ? "Join our storyteller collective to write and publish longform stories, series and essays."
-                : "Readers sign in with Google. Writers and Editors access studios with email."}
+            {isVerifyOtp
+              ? `Enter the 6-digit verification code sent to ${email || "your email"} to activate your writer studio.`
+              : isForgot
+                ? forgotStep === 1
+                  ? "Enter your account email to receive a 6-digit verification code."
+                  : forgotStep === 2
+                    ? `Enter the 6-digit verification code sent to ${email}.`
+                    : "Choose a secure new password for your account."
+                : isSignup
+                  ? "Join our storyteller collective to write and publish longform stories, series and essays."
+                  : "Readers sign in with Google. Writers and Editors access studios with email."}
           </p>
 
           {/* Maintenance Notice */}
@@ -489,7 +564,7 @@ function AuthPage() {
           )}
 
           {/* Mode Switcher Tabs (Sign In / Writer Registration) */}
-          {!isMaintenance && !isForgot && (
+          {!isMaintenance && !isForgot && !isVerifyOtp && (
             <div
               className={cn(
                 "flex rounded-full border border-border bg-surface p-1 transition-all",
@@ -540,8 +615,88 @@ function AuthPage() {
             </div>
           )}
 
-          {/* ─── 3-STEP FORGOT PASSWORD FLOW ─── */}
-          {isForgot ? (
+          {/* ─── WRITER REGISTRATION OTP VERIFICATION FLOW ─── */}
+          {isVerifyOtp ? (
+            <div className="mt-4 space-y-4">
+              <form onSubmit={handleVerifyRegistrationOtp} className="space-y-3.5 animate-fade-up">
+                <div className="rounded-xl border border-primary/30 bg-primary/10 p-3.5 text-xs text-primary dark:text-primary flex items-start gap-2.5 shadow-sm">
+                  <ShieldCheck className="size-4 shrink-0 text-primary mt-0.5" />
+                  <div>
+                    <span className="font-bold block text-heading">
+                      Account Activation Required
+                    </span>
+                    A 6-digit verification code was sent to <strong className="text-heading font-medium">{email}</strong>.
+                  </div>
+                </div>
+
+                <Field label="6-Digit Verification Code">
+                  <Input
+                    type="text"
+                    maxLength={6}
+                    placeholder="123456"
+                    disabled={isSubmitting}
+                    value={otpCode}
+                    onChange={(e) => {
+                      setOtpCode(e.target.value.replace(/\D/g, ""));
+                      if (errors.otp) setErrors((prev) => ({ ...prev, otp: "" }));
+                    }}
+                    className={cn(
+                      "h-11 text-center tracking-[0.35em] font-mono text-lg font-bold",
+                      errors.otp && "border-destructive focus:border-destructive focus:ring-destructive/20",
+                    )}
+                  />
+                  {errors.otp && (
+                    <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive text-center">
+                      {errors.otp}
+                    </span>
+                  )}
+                </Field>
+
+                {/* Resend OTP button */}
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <span className="text-subtle">Didn't receive code?</span>
+                  {otpCountdown > 0 ? (
+                    <span className="font-bold text-subtle">Resend in {otpCountdown}s</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendRegistrationOtp}
+                      className="inline-flex items-center gap-1 text-primary font-bold hover:underline"
+                    >
+                      <RefreshCw className="size-3" /> Resend Code
+                    </button>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  size="md"
+                  disabled={isSubmitting || otpCode.length < 6}
+                  className="w-full h-10 text-[0.875rem] mt-2 font-bold gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin text-primary-foreground" />
+                      <span>Activating Account...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="size-4" />
+                      <span>Verify & Enter Writer Studio</span>
+                    </>
+                  )}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("signin")}
+                  className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1"
+                >
+                  <ArrowLeft className="size-3.5" /> Back to Sign In
+                </button>
+              </form>
+            </div>
+          ) : isForgot ? (
             <div className="mt-4 space-y-4">
               {/* STEP 1: Enter Email & Send OTP */}
               {forgotStep === 1 && (

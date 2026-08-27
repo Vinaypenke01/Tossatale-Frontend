@@ -21,6 +21,8 @@ interface AuthContextType {
   login: (credentials: any) => Promise<any>;
   googleLogin: (idToken: string) => Promise<any>;
   register: (data: any) => Promise<any>;
+  verifyRegistrationOtp: (email: string, otp: string) => Promise<any>;
+  resendRegistrationOtp: (email: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -76,7 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await api.post("/auth/login/", credentials);
     if (res.success && res.data) {
       const { access, refresh, user: userData } = res.data;
-      setAuthTokens(access, refresh);
+      if (access && refresh) {
+        setAuthTokens(access, refresh);
+      }
       let currentUser = userData;
       if (!currentUser) {
         try {
@@ -131,15 +135,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (data: any) => {
     const res = await api.post("/auth/register/", data);
     if (res.success && res.data) {
-      const { access, refresh, user: userData } = res.data;
-      setAuthTokens(access, refresh);
-      setUser(userData);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("tossatale_user_data", JSON.stringify(userData));
-        localStorage.setItem("tossatale_user_role", userData.role.toLowerCase());
+      const { access, refresh, user: userData, requires_otp } = res.data;
+      if (!requires_otp && access && refresh) {
+        setAuthTokens(access, refresh);
+        if (userData) {
+          setUser(userData);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("tossatale_user_data", JSON.stringify(userData));
+            localStorage.setItem("tossatale_user_role", userData.role.toLowerCase());
+          }
+        }
       }
     }
     return res;
+  };
+
+  const verifyRegistrationOtp = async (email: string, otp: string) => {
+    const res = await api.post("/auth/register/verify-otp/", { email, otp });
+    if (res.success && res.data) {
+      const { access, refresh, user: userData } = res.data;
+      if (access && refresh) {
+        setAuthTokens(access, refresh);
+      }
+      if (userData) {
+        setUser(userData);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("tossatale_user_data", JSON.stringify(userData));
+          localStorage.setItem("tossatale_user_role", userData.role.toLowerCase());
+        }
+      }
+    }
+    return res;
+  };
+
+  const resendRegistrationOtp = async (email: string) => {
+    return await api.post("/auth/register/resend-otp/", { email });
   };
 
   const logout = async () => {
@@ -171,6 +201,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         googleLogin,
         register,
+        verifyRegistrationOtp,
+        resendRegistrationOtp,
         logout,
         refreshUser,
       }}

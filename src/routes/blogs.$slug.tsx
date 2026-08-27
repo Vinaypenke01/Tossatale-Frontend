@@ -1,14 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
+  Check,
   Clock,
+  Copy,
+  Facebook,
   Heart,
   Link2,
+  Linkedin,
+  Mail,
+  MessageCircle,
+  Send,
   Share2,
-  Twitter,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal, useScrollProgress } from "@/components/tossa/Reveal";
@@ -22,7 +30,7 @@ import {
 } from "@/components/tossa/kit";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
-import { covers } from "@/lib/data";
+import { covers, defaultCover } from "@/lib/data";
 
 export const Route = createFileRoute("/blogs/$slug")({
   loader: async ({ params }) => {
@@ -74,73 +82,231 @@ function BlogNotFound() {
   );
 }
 
-function FloatingShare() {
+function ShareModal({
+  isOpen,
+  onClose,
+  title,
+  url,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  url?: string;
+}) {
   const [copied, setCopied] = useState(false);
+
+  const getShareUrl = () => {
+    if (url) return url;
+    if (typeof window !== "undefined") return window.location.href;
+    return "";
+  };
+
+  const currentUrl = getShareUrl();
+  const shareTitle = title || "Blog post on tossatale";
+
+  const handleCopyLink = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentUrl);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = currentUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      toast.success("Link copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const shareLinks = [
+    {
+      name: "WhatsApp",
+      color: "bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border-[#25D366]/30",
+      href: `https://api.whatsapp.com/send?text=${encodeURIComponent(shareTitle + " — " + currentUrl)}`,
+      icon: MessageCircle,
+    },
+    {
+      name: "LinkedIn",
+      color: "bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2]/20 border-[#0A66C2]/30",
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`,
+      icon: Linkedin,
+    },
+    {
+      name: "Facebook",
+      color: "bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border-[#1877F2]/30",
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`,
+      icon: Facebook,
+    },
+    {
+      name: "Telegram",
+      color: "bg-[#229ED9]/10 text-[#229ED9] hover:bg-[#229ED9]/20 border-[#229ED9]/30",
+      href: `https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(shareTitle)}`,
+      icon: Send,
+    },
+    {
+      name: "Email",
+      color: "bg-surface-alt text-subtle hover:text-heading border-border",
+      href: `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent("Read this blog on tossatale:\n" + currentUrl)}`,
+      icon: Mail,
+    },
+  ];
+
+  if (!isOpen) return null;
+
   return (
-    <div className="sticky top-32 hidden flex-col items-center gap-2 lg:flex">
-      <span className="mb-1 text-[0.625rem] font-black tracking-[0.18em] text-subtle uppercase">
-        Share
-      </span>
-      {[
-        { icon: Twitter, label: "Share on X" },
-        { icon: Share2, label: "Share" },
-        {
-          icon: Link2,
-          label: "Copy link",
-          onClick: () => {
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1600);
-          },
-        },
-      ].map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          aria-label={item.label}
-          onClick={item.onClick}
-          className="grid size-11 place-items-center rounded-full border border-border bg-surface text-subtle shadow-paper transition-all hover:-translate-y-0.5 hover:border-primary hover:text-primary"
-        >
-          <item.icon className="size-4" />
-        </button>
-      ))}
-      {copied && <span className="text-[0.6875rem] text-primary">Copied</span>}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="flex w-full max-w-md flex-col rounded-3xl border border-border bg-surface shadow-2xl overflow-hidden animate-scale-in">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-surface-alt/40">
+          <div className="flex items-center gap-2">
+            <Share2 className="size-4 text-primary" />
+            <h3 className="font-display text-base font-bold text-heading">Share this post</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface hover:text-heading transition-colors"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="p-6 space-y-6">
+          <div>
+            <p className="text-xs text-subtle">Post Title</p>
+            <h4 className="mt-0.5 font-display text-sm font-bold text-heading line-clamp-2">
+              {shareTitle}
+            </h4>
+          </div>
+
+          {/* Copy Link Field with dedicated copy button */}
+          <div>
+            <label className="text-xs font-bold text-subtle block mb-1.5">
+              Post Link
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={currentUrl}
+                className="h-10 flex-1 rounded-xl border border-border bg-surface-alt px-3.5 text-xs text-body font-mono select-all focus:outline-hidden"
+              />
+              <Button
+                type="button"
+                variant={copied ? "primary" : "soft"}
+                size="sm"
+                onClick={handleCopyLink}
+                className="h-10 px-4 text-xs font-bold gap-1.5 shrink-0"
+              >
+                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Social Channels */}
+          <div>
+            <label className="text-xs font-bold text-subtle block mb-2.5">
+              Share via
+            </label>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {shareLinks.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition-all hover:scale-[1.02]",
+                    item.color
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  <span>{item.name}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="border-t border-border px-6 py-3.5 bg-surface-alt/30 flex justify-end">
+          <Button
+            variant="ghostOutline"
+            size="sm"
+            onClick={onClose}
+            className="text-xs"
+          >
+            Done
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
-
 function BlogDetail() {
   const loaderData = Route.useLoaderData();
   const blog = loaderData?.blog;
   const progress = useScrollProgress();
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(Boolean(blog?.is_liked));
+  const [likesCount, setLikesCount] = useState<number>(blog?.likes_count || blog?.likes || 0);
+  const [showShareModal, setShowShareModal] = useState(false);
 
-  const categoryParam = blog?.category?.slug || blog?.category?.id;
+  // Trigger 1-view tracking on mount
+  useEffect(() => {
+    if (blog?.slug || blog?.id) {
+      api.post(`/public/blogs/${blog.slug || blog.id}/view/`).catch(() => {});
+    }
+  }, [blog?.slug, blog?.id]);
+
+  useEffect(() => {
+    if (blog) {
+      if (typeof blog.likes_count === "number") {
+        setLikesCount(blog.likes_count);
+      }
+      if (typeof blog.is_liked === "boolean") {
+        setLiked(blog.is_liked);
+      }
+    }
+  }, [blog]);
+
+  const handleLike = async () => {
+    if (!blog) return;
+    try {
+      if (!liked) {
+        const res = await api.post(`/public/blogs/${blog.slug || blog.id}/like/`);
+        const newLikes = res.data?.data?.likes_count ?? res.data?.likes_count;
+        setLiked(true);
+        setLikesCount((prev) => (typeof newLikes === "number" ? newLikes : prev + 1));
+        toast.success("Blog Post Liked!", {
+          description: `You appreciated "${blog.title}".`,
+        });
+      } else {
+        const res = await api.delete(`/public/blogs/${blog.slug || blog.id}/like/`);
+        const newLikes = res.data?.data?.likes_count ?? res.data?.likes_count;
+        setLiked(false);
+        setLikesCount((prev) => (typeof newLikes === "number" ? newLikes : Math.max(0, prev - 1)));
+        toast.success("Like Removed");
+      }
+    } catch (err: any) {
+      toast.error("Like Action Failed", { description: err.message });
+    }
+  };
 
   const { data: relatedBlogs } = useQuery({
-    queryKey: ["public-blogs-related", blog?.id, categoryParam],
+    queryKey: ["public-blogs-related", blog?.id, blog?.category?.slug],
     queryFn: async () => {
-      let endpoint = "/public/blogs/";
-      if (categoryParam) {
-        endpoint += `?category=${categoryParam}`;
-      }
-      const res = await api.get(endpoint);
-      let items = res.data?.results || res.data || [];
-
-      // Exclude active blog
-      items = items.filter((item: any) => item.slug !== blog?.slug && item.id !== blog?.id);
-
-      // Fallback if fewer than 3 items found
-      if (items.length < 3) {
-        const fallbackRes = await api.get("/public/blogs/");
-        const fallbackItems = fallbackRes.data?.results || fallbackRes.data || [];
-        for (const fbItem of fallbackItems) {
-          if (fbItem.slug !== blog?.slug && fbItem.id !== blog?.id && !items.some((it: any) => it.id === fbItem.id)) {
-            items.push(fbItem);
-            if (items.length >= 3) break;
-          }
-        }
-      }
-      return items;
+      const res = await api.get("/public/blogs/");
+      const items = res.data?.results || res.data || [];
+      return items.filter((item: any) => item.slug !== blog?.slug && item.id !== blog?.id);
     },
     enabled: !!blog,
   });
@@ -149,12 +315,17 @@ function BlogDetail() {
     return <BlogNotFound />;
   }
 
-  const authorName = blog.author?.full_name || blog.author?.name || "tossatale Editorial";
+  const authorName = blog.author?.name || blog.author?.user?.full_name || "tossatale Editorial Team";
   const authorInitials = authorName.substring(0, 2).toUpperCase();
-  const bgCover = blog.cover_image || covers.terrace;
 
   return (
     <SiteLayout>
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={blog.title}
+      />
+
       <div className="fixed top-0 left-0 z-[60] h-0.5 w-full bg-transparent">
         <div
           className="h-full bg-primary transition-[width] duration-150"
@@ -163,40 +334,39 @@ function BlogDetail() {
       </div>
 
       <article>
-        {/* Full-Bleed Hero Section with Cover Image Background */}
-        <header className="relative min-h-[480px] w-full overflow-hidden  flex flex-col justify-end text-white border-b border-border">
-          {/* Background Cover Image */}
-          <img
-            src={bgCover}
-            alt={blog.title}
-            className="absolute inset-0 size-full object-cover  filter  scale-105"
-          />
+        {/* Full Dark/Featured Hero Section */}
+        <header className="relative overflow-hidden bg-stone-900 py-20 text-white dark:bg-black">
+          <div className="absolute inset-0 z-0 opacity-20">
+            <img
+              src={blog.cover_image || covers.terrace || defaultCover}
+              alt=""
+              className="h-full w-full object-cover blur-sm"
+            />
+          </div>
 
-          {/* Dark Overlay Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-zinc-950/20" />
+          <div className="relative z-10 mx-auto max-w-[820px] px-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-white/70">
+                <Link to="/" className="hover:text-white">
+                  Home
+                </Link>
+                <span className="px-2">/</span>
+                <Link to="/blogs" className="hover:text-white">
+                  Blog
+                </Link>
+                <span className="px-2">/</span>
+                <span className="text-white">{blog.category?.name || "General"}</span>
+              </nav>
 
-          {/* Hero Content Overlay */}
-          <div className="relative z-10 mx-auto w-full max-w-[920px] px-5 pt-24 pb-14 lg:px-8">
-            <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-white/70">
-              <Link to="/" className="hover:text-white transition-colors">
-                Home
-              </Link>
-              <span className="px-2">/</span>
-              <Link to="/blogs" className="hover:text-white transition-colors">
-                Blogs
-              </Link>
-              <span className="px-2">/</span>
-              <span className="text-white/90">{blog.category?.name || "Editorial"}</span>
-            </nav>
-
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <CategoryPill tone="onImage">{blog.category?.name || "Editorial"}</CategoryPill>
-              <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-white/80">
-                <Clock className="size-3.5" /> {blog.reading_time || 4} min read
-              </span>
+              <div className="flex items-center gap-3">
+                <CategoryPill tone="onImage">{blog.category?.name || "General"}</CategoryPill>
+                <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-white/80 font-medium">
+                  <Clock className="size-3.5" /> {blog.estimated_reading_time || blog.reading_time || 5} min read
+                </span>
+              </div>
             </div>
 
-            <h1 className="mt-4 font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-bold leading-[1.1] text-white shadow-sm">
+            <h1 className="mt-4 text-[clamp(2.1rem,4.2vw,3.6rem)] leading-[1.1] font-display font-bold text-white">
               {blog.title}
             </h1>
 
@@ -220,34 +390,51 @@ function BlogDetail() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant={liked ? "primary" : "inkOnDark"}
                   size="sm"
-                  onClick={() => setLiked((v) => !v)}
-                  className="gap-1.5"
+                  onClick={handleLike}
+                  className="gap-1.5 font-semibold"
                 >
                   <Heart className={cn("size-4", liked && "fill-current")} />
-                  {liked ? "Liked" : "Like"}
+                  {liked ? "Liked" : "Like"} ({likesCount})
+                </Button>
+                <Button
+                  variant="inkOnDark"
+                  size="sm"
+                  onClick={() => setShowShareModal(true)}
+                  className="gap-1.5 font-semibold"
+                  title="Share this post"
+                >
+                  <Share2 className="size-4" />
+                  Share
+                </Button>
+                <Button
+                  variant="inkOnDark"
+                  size="sm"
+                  onClick={() => setShowShareModal(true)}
+                  className="gap-1.5 font-semibold"
+                  title="Copy link"
+                >
+                  <Link2 className="size-4" />
+                  Link
                 </Button>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Prose Article Content Below Hero */}
-        <div className="mx-auto max-w-[1040px] px-5 py-14 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-[1fr_56px]">
-            <div className="prose prose-lg dark:prose-invert max-w-none text-body font-sans leading-relaxed space-y-6">
-              {blog.content ? (
-                <div dangerouslySetInnerHTML={{ __html: blog.content }} />
-              ) : (
-                <p className="text-lg leading-relaxed text-body">
-                  {blog.subtitle || blog.excerpt || "Full blog post content."}
-                </p>
-              )}
-            </div>
-            <FloatingShare />
+        {/* Centered Prose Article Content Below Hero */}
+        <div className="mx-auto max-w-[800px] px-5 py-14 lg:px-8">
+          <div className="min-w-0 prose prose-lg dark:prose-invert max-w-none text-body font-sans leading-relaxed space-y-6 break-words [overflow-wrap:anywhere]">
+            {blog.content ? (
+              <div dangerouslySetInnerHTML={{ __html: blog.content }} className="break-words [overflow-wrap:anywhere]" />
+            ) : (
+              <p className="text-lg leading-relaxed text-body break-words [overflow-wrap:anywhere]">
+                {blog.subtitle || blog.excerpt || "Full blog post content."}
+              </p>
+            )}
           </div>
         </div>
       </article>

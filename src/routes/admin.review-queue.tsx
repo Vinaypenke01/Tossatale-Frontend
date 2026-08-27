@@ -430,8 +430,20 @@ function ReviewQueue() {
               </div>
 
               {/* Story Content Typography */}
-              <div className="prose prose-stone dark:prose-invert max-w-none text-[1.0625rem] leading-relaxed font-serif whitespace-pre-line text-body border-t border-border pt-4">
-                {readingStory.content}
+              <div className="prose prose-stone dark:prose-invert max-w-none text-[1.0625rem] leading-relaxed font-serif text-body border-t border-border pt-4 space-y-4 min-w-0 break-words [overflow-wrap:anywhere]">
+                {readingStory.content ? (
+                  readingStory.content
+                    .split(/\n{2,}|\r\n\r\n/)
+                    .map((p: string) => p.trim())
+                    .filter(Boolean)
+                    .map((p: string, idx: number) => (
+                      <p key={idx} className="whitespace-pre-line leading-relaxed font-serif break-words [overflow-wrap:anywhere]">
+                        {p}
+                      </p>
+                    ))
+                ) : (
+                  <p className="text-subtle italic">No story content available.</p>
+                )}
               </div>
             </div>
 

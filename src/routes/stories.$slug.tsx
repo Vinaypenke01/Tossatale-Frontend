@@ -2,13 +2,19 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import {
   ArrowRight,
   Bookmark,
+  Check,
   Clock,
+  Copy,
+  Facebook,
   Heart,
   Layers,
   Link2,
+  Linkedin,
+  Mail,
   MessageCircle,
+  Send,
   Share2,
-  Twitter,
+  X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -40,23 +46,22 @@ export const Route = createFileRoute("/stories/$slug")({
         return { story: res.data };
       }
     } catch {
-      // Fallback if detail view throws
+      // Fallback
     }
     return { story: null };
   },
   head: ({ loaderData }) => {
     if (!loaderData?.story) {
-      return {
-        meta: [{ title: "Story not found — tossatale" }, { name: "robots", content: "noindex" }],
-      };
+      return { meta: [{ title: "Story not found — tossatale" }, { name: "robots", content: "noindex" }] };
     }
     const { story } = loaderData;
+    const desc = story.dek || story.subtitle || "A longform story on tossatale";
     return {
       meta: [
         { title: `${story.title} — tossatale` },
-        { name: "description", content: story.subtitle || story.seo_description || "Read story on tossatale" },
-        { property: "og:title", content: `${story.title} — tossatale` },
-        { property: "og:description", content: story.subtitle || story.seo_description || "Read story on tossatale" },
+        { name: "description", content: desc },
+        { property: "og:title", content: story.title },
+        { property: "og:description", content: desc },
         { property: "og:type", content: "article" },
       ],
     };
@@ -68,49 +73,184 @@ export const Route = createFileRoute("/stories/$slug")({
 function StoryNotFound() {
   return (
     <SiteLayout>
-      <div className="mx-auto max-w-xl px-5 py-32 text-center">
+      <div className="mx-auto max-w-lg px-5 py-32 text-center">
         <h1 className="text-4xl font-display font-bold text-heading">Story not found</h1>
-        <p className="mt-4 text-body">
-          The story you are looking for is unavailable or may have been unpublished.
-        </p>
+        <p className="mt-4 text-body">The story you are looking for does not exist or has been removed.</p>
         <div className="mt-8">
-          <ButtonLink to="/stories">Browse the library</ButtonLink>
+          <ButtonLink to="/stories">Browse stories</ButtonLink>
         </div>
       </div>
     </SiteLayout>
   );
 }
 
-function FloatingShare() {
+function ShareModal({
+  isOpen,
+  onClose,
+  title,
+  url,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  url?: string;
+}) {
   const [copied, setCopied] = useState(false);
+
+  const getShareUrl = () => {
+    if (url) return url;
+    if (typeof window !== "undefined") return window.location.href;
+    return "";
+  };
+
+  const currentUrl = getShareUrl();
+  const shareTitle = title || "Story on tossatale";
+
+  const handleCopyLink = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentUrl);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = currentUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      toast.success("Link copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const shareLinks = [
+    {
+      name: "WhatsApp",
+      color: "bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border-[#25D366]/30",
+      href: `https://api.whatsapp.com/send?text=${encodeURIComponent(shareTitle + " — " + currentUrl)}`,
+      icon: MessageCircle,
+    },
+    {
+      name: "LinkedIn",
+      color: "bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2]/20 border-[#0A66C2]/30",
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`,
+      icon: Linkedin,
+    },
+    {
+      name: "Facebook",
+      color: "bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border-[#1877F2]/30",
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`,
+      icon: Facebook,
+    },
+    {
+      name: "Telegram",
+      color: "bg-[#229ED9]/10 text-[#229ED9] hover:bg-[#229ED9]/20 border-[#229ED9]/30",
+      href: `https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(shareTitle)}`,
+      icon: Send,
+    },
+    {
+      name: "Email",
+      color: "bg-surface-alt text-subtle hover:text-heading border-border",
+      href: `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent("Read this story on tossatale:\n" + currentUrl)}`,
+      icon: Mail,
+    },
+  ];
+
+  if (!isOpen) return null;
+
   return (
-    <div className="sticky top-32 hidden flex-col items-center gap-2 lg:flex">
-      <span className="mb-1 text-[0.625rem] font-black tracking-[0.18em] text-subtle uppercase">
-        Share
-      </span>
-      {[
-        { icon: Twitter, label: "Share on X" },
-        { icon: Share2, label: "Share" },
-        {
-          icon: Link2,
-          label: "Copy link",
-          onClick: () => {
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1600);
-          },
-        },
-      ].map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          aria-label={item.label}
-          onClick={item.onClick}
-          className="grid size-11 place-items-center rounded-full border border-border bg-surface text-subtle shadow-paper transition-all hover:-translate-y-0.5 hover:border-primary hover:text-primary"
-        >
-          <item.icon className="size-4" />
-        </button>
-      ))}
-      {copied && <span className="text-[0.6875rem] text-primary">Copied</span>}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="flex w-full max-w-md flex-col rounded-3xl border border-border bg-surface shadow-2xl overflow-hidden animate-scale-in">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-surface-alt/40">
+          <div className="flex items-center gap-2">
+            <Share2 className="size-4 text-primary" />
+            <h3 className="font-display text-base font-bold text-heading">Share this story</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface hover:text-heading transition-colors"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="p-6 space-y-6">
+          <div>
+            <p className="text-xs text-subtle">Story Title</p>
+            <h4 className="mt-0.5 font-display text-sm font-bold text-heading line-clamp-2">
+              {shareTitle}
+            </h4>
+          </div>
+
+          {/* Copy Link Field with dedicated copy button */}
+          <div>
+            <label className="text-xs font-bold text-subtle block mb-1.5">
+              Story Link
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={currentUrl}
+                className="h-10 flex-1 rounded-xl border border-border bg-surface-alt px-3.5 text-xs text-body font-mono select-all focus:outline-hidden"
+              />
+              <Button
+                type="button"
+                variant={copied ? "primary" : "soft"}
+                size="sm"
+                onClick={handleCopyLink}
+                className="h-10 px-4 text-xs font-bold gap-1.5 shrink-0"
+              >
+                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Social Channels */}
+          <div>
+            <label className="text-xs font-bold text-subtle block mb-2.5">
+              Share via
+            </label>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {shareLinks.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition-all hover:scale-[1.02]",
+                    item.color
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  <span>{item.name}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="border-t border-border px-6 py-3.5 bg-surface-alt/30 flex justify-end">
+          <Button
+            variant="ghostOutline"
+            size="sm"
+            onClick={onClose}
+            className="text-xs"
+          >
+            Done
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -124,13 +264,14 @@ function StoryDetail() {
   const [likesCount, setLikesCount] = useState<number>(story?.likes_count || story?.likes || 0);
   const [saved, setSaved] = useState(Boolean(story?.is_bookmarked));
   const [showLikeModal, setShowLikeModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Trigger 1-view-per-user-per-day tracking
   useEffect(() => {
     if (story?.id) {
       api.post(`/public/stories/${story.id}/view/`, {
         referrer: typeof document !== "undefined" ? document.referrer : "",
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [story?.id]);
 
@@ -146,46 +287,39 @@ function StoryDetail() {
         setLikesCount(story.likes_count);
       }
     }
-  }, [story?.id, story?.is_liked, story?.is_bookmarked, story?.likes_count]);
+  }, [story]);
 
   const handleLikeClick = async () => {
+    if (!story) return;
+
     if (!isAuthenticated) {
       setShowLikeModal(true);
       return;
     }
+
     try {
       if (!liked) {
-        const res = await api.post(`/public/stories/${story.id}/like/`, {});
+        const res = await api.post(`/public/stories/${story.slug || story.id}/like/`);
+        const newLikes = res.data?.data?.likes_count ?? res.data?.likes_count;
         setLiked(true);
-        if (typeof res.data?.likes_count === "number") {
-          setLikesCount(res.data.likes_count);
-        } else {
-          setLikesCount((c) => c + 1);
-        }
+        setLikesCount((prev) => (typeof newLikes === "number" ? newLikes : prev + 1));
         toast.success("Story Liked!", {
-          description: `Added "${story.title}" to your reading collection.`,
+          description: `You gave love to "${story.title}".`,
         });
       } else {
-        const res = await api.delete(`/public/stories/${story.id}/like/`);
+        const res = await api.delete(`/public/stories/${story.slug || story.id}/like/`);
+        const newLikes = res.data?.data?.likes_count ?? res.data?.likes_count;
         setLiked(false);
-        if (typeof res.data?.likes_count === "number") {
-          setLikesCount(res.data.likes_count);
-        } else {
-          setLikesCount((c) => Math.max(0, c - 1));
-        }
-        toast.success("Removed like");
+        setLikesCount((prev) => (typeof newLikes === "number" ? newLikes : Math.max(0, prev - 1)));
+        toast.success("Like Removed");
       }
     } catch (err: any) {
-      if (err.message?.toLowerCase()?.includes("already liked")) {
-        setLiked(true);
-        toast.success("Story is already in your liked collection.");
-      } else {
-        toast.error("Like Action Failed", { description: err.message });
-      }
+      toast.error("Like Action Failed", { description: err.message });
     }
   };
 
   const handleBookmarkClick = async () => {
+    if (!story) return;
     if (!isAuthenticated) {
       setShowLikeModal(true);
       return;
@@ -270,6 +404,12 @@ function StoryDetail() {
         }}
       />
 
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={story.title}
+      />
+
       <div className="fixed top-0 left-0 z-[60] h-0.5 w-full bg-transparent">
         <div
           className="h-full bg-primary transition-[width] duration-150"
@@ -279,34 +419,36 @@ function StoryDetail() {
 
       <article>
         <header className="border-b border-border paper-gradient">
-          <div className="mx-auto max-w-[820px] px-5 pt-16 pb-12">
-            <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-subtle">
-              <Link to="/" className="hover:text-primary">
-                Home
-              </Link>
-              <span className="px-2">/</span>
-              <Link to="/stories" className="hover:text-primary">
-                Stories
-              </Link>
-              <span className="px-2">/</span>
-              <span className="text-body">{story.category?.name || "General"}</span>
-            </nav>
+          <div className="mx-auto max-w-[920px] px-5 pt-5 pb-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-subtle">
+                <Link to="/" className="hover:text-primary">
+                  Home
+                </Link>
+                <span className="px-2">/</span>
+                <Link to="/stories" className="hover:text-primary">
+                  Stories
+                </Link>
+                <span className="px-2">/</span>
+                <span className="text-body">{story.category?.name || "General"}</span>
+              </nav>
 
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <CategoryPill>{story.category?.name || "General"}</CategoryPill>
-              <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle">
-                <Clock className="size-3.5" /> {story.estimated_reading_time || 5} min read
-              </span>
+              <div className="flex items-center gap-3">
+                <CategoryPill>{story.category?.name || "General"}</CategoryPill>
+                <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle font-medium">
+                  <Clock className="size-3.5" /> {story.estimated_reading_time || 5} min read
+                </span>
+              </div>
             </div>
 
-            <h1 className="mt-4 text-[clamp(2.1rem,4.2vw,3.6rem)] leading-[1.1] font-display font-bold text-heading">
+            <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-heading sm:text-5xl lg:text-[3.25rem] leading-[1.12]">
               {story.title}
             </h1>
-            <p className="mt-4 text-[1.125rem] leading-relaxed text-body">
+            <p className="mt-2 font-display text-lg text-body sm:text-xl italic leading-relaxed">
               {story.subtitle || "A quiet piece of prose written for thoughtful readers."}
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-border/80 pt-6">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-4 border-t border-border/80 pt-4">
               <Link
                 to="/writers/$slug"
                 params={{ slug: story.writer?.slug || "writer" }}
@@ -328,7 +470,7 @@ function StoryDetail() {
                 </div>
               </Link>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant={liked ? "primary" : "ghostOutline"}
                   size="sm"
@@ -353,21 +495,51 @@ function StoryDetail() {
                   <Bookmark className={cn("size-4 transition-transform", saved ? "fill-current text-white animate-pop" : "text-subtle")} />
                   {saved ? "Saved" : "Save"}
                 </Button>
+                <Button
+                  variant="ghostOutline"
+                  size="sm"
+                  onClick={() => setShowShareModal(true)}
+                  className="gap-1.5"
+                  title="Share this story"
+                >
+                  <Share2 className="size-4 text-subtle" />
+                  Share
+                </Button>
+                <Button
+                  variant="ghostOutline"
+                  size="sm"
+                  onClick={() => setShowShareModal(true)}
+                  className="gap-1.5"
+                  title="Copy link"
+                >
+                  <Link2 className="size-4 text-subtle" />
+                  Link
+                </Button>
               </div>
             </div>
           </div>
         </header>
 
-        <div className="mx-auto max-w-[1040px] px-5 py-14 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-[1fr_56px]">
-            <div className="prose prose-lg max-w-none text-body font-sans leading-relaxed space-y-6">
-              {story.content ? (
-                <div dangerouslySetInnerHTML={{ __html: story.content }} />
+        {/* Centered Story Content */}
+        <div className="mx-auto max-w-[900px] px-5 py-14 lg:px-8">
+          <div className="min-w-0 prose prose-lg max-w-none text-body font-serif leading-relaxed text-[1.125rem] space-y-6 break-words [overflow-wrap:anywhere]">
+            {story.content ? (
+              story.content.includes("<p>") || story.content.includes("<br") || story.content.includes("<div") ? (
+                <div dangerouslySetInnerHTML={{ __html: story.content }} className="break-words [overflow-wrap:anywhere]" />
               ) : (
-                <p>{story.subtitle || "Full story text content."}</p>
-              )}
-            </div>
-            <FloatingShare />
+                story.content
+                  .split(/\n{2,}|\r\n\r\n/)
+                  .map((paragraph: string) => paragraph.trim())
+                  .filter(Boolean)
+                  .map((paragraph: string, idx: number) => (
+                    <p key={idx} className="whitespace-pre-line leading-relaxed mb-6 font-serif text-[1.125rem] text-body break-words [overflow-wrap:anywhere]">
+                      {paragraph}
+                    </p>
+                  ))
+              )
+            ) : (
+              <p className="text-lg leading-relaxed text-body break-words [overflow-wrap:anywhere]">{story.subtitle || "Full story text content."}</p>
+            )}
           </div>
         </div>
       </article>
