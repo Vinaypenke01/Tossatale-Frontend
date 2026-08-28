@@ -319,12 +319,12 @@ function StoriesDropdown() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex items-center gap-1 rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold transition-colors",
-          open ? "bg-primary-light text-primary-hover" : "text-body hover:bg-primary-light hover:text-primary-hover",
+          "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-sans text-[0.875rem] font-semibold transition-all cursor-pointer",
+          open ? "bg-primary-light text-primary-hover" : "text-heading/85 hover:bg-primary-light hover:text-primary-hover",
         )}
       >
         <span>Stories</span>
-        <ChevronDown className={cn("size-3 text-subtle transition-transform duration-200", open && "rotate-180")} />
+        <ChevronDown className={cn("size-3.5 text-subtle transition-transform duration-200", open && "rotate-180")} />
       </button>
 
       {open && (
@@ -438,8 +438,8 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           <Link
             to="/"
             activeOptions={{ exact: true }}
-            activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
-            className="rounded-full px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+            activeProps={{ className: "bg-primary-light text-primary-hover font-bold shadow-xs" }}
+            className="rounded-full px-3.5 py-1.5 font-sans text-[0.875rem] font-semibold text-heading/85 transition-all hover:bg-primary-light hover:text-primary-hover shrink-0"
           >
             Home
           </Link>
@@ -450,8 +450,8 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
             <Link
               key={l.to}
               to={l.to as any}
-              activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
-              className="rounded-full px-3 py-1.5 font-sans text-[0.8125rem] font-medium text-body transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+              activeProps={{ className: "bg-primary-light text-primary-hover font-bold shadow-xs" }}
+              className="rounded-full px-3.5 py-1.5 font-sans text-[0.875rem] font-semibold text-heading/85 transition-all hover:bg-primary-light hover:text-primary-hover shrink-0"
             >
               {l.label}
             </Link>
@@ -464,8 +464,8 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
                 <Link
                   key={rl.to}
                   to={rl.to}
-                  activeProps={{ className: "bg-primary-light text-primary-hover" }}
-                  className="rounded-full px-2.5 py-1.5 font-sans text-[0.8125rem] font-bold text-primary transition-colors hover:bg-primary-light hover:text-primary-hover shrink-0"
+                  activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
+                  className="rounded-full px-3 py-1.5 font-sans text-[0.875rem] font-semibold text-primary transition-all hover:bg-primary-light hover:text-primary-hover shrink-0"
                 >
                   {rl.label}
                 </Link>

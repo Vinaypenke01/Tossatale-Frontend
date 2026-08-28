@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { Avatar } from "@/components/tossa/kit";
 import logo from "@/assets/favicon-96x96.png";
 import { ThemeToggle } from "@/components/tossa/SiteLayout";
+import { NotificationDropdown } from "@/components/tossa/NotificationDropdown";
 import { useAuth } from "@/components/auth/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -64,10 +65,10 @@ const navs: Record<Role, NavItem[]> = {
   ],
 };
 
-const personas: Record<Role, { name: string; initials: string; role: string }> = {
-  admin: { name: "Devika Rao", initials: "DR", role: "Managing editor" },
-  writer: { name: "Meera Raghavan", initials: "MR", role: "Writer · verified" },
-  reader: { name: "Aniket Bose", initials: "AB", role: "Member since 2024" },
+const roleLabels: Record<Role, { defaultName: string; defaultInitials: string; roleLabel: string }> = {
+  admin: { defaultName: "Administrator", defaultInitials: "AD", roleLabel: "Managing Editor" },
+  writer: { defaultName: "Storyteller", defaultInitials: "WR", roleLabel: "Writer" },
+  reader: { defaultName: "Reader", defaultInitials: "RD", roleLabel: "Community Reader" },
 };
 
 export function StatCard({
@@ -108,23 +109,26 @@ export function AppShell({
   children: ReactNode;
 }) {
   const items = navs[role];
-  const person = personas[role];
+  const defaultInfo = roleLabels[role] || roleLabels.admin;
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const routerState = useRouterState();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const displayName = user?.full_name || (user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "") || user?.email || person.name;
+  const rawName = user?.display_name || user?.full_name || (user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "") || user?.email;
+  const displayName = rawName || defaultInfo.defaultName;
+
   const userInitials = user?.first_name
-    ? user.first_name.substring(0, 2).toUpperCase()
-    : displayName.substring(0, 2).toUpperCase() || person.initials;
+    ? `${user.first_name[0] || ""}${user.last_name ? user.last_name[0] : ""}`.toUpperCase()
+    : displayName.substring(0, 2).toUpperCase() || defaultInfo.defaultInitials;
+
   const userRoleLabel = user?.role
     ? user.role === "ADMIN"
       ? "Administrator"
       : user.role === "WRITER"
         ? "Storyteller"
         : "Community Reader"
-    : person.role;
+    : defaultInfo.roleLabel;
 
   const handleLogout = async () => {
     await logout();
@@ -167,7 +171,10 @@ export function AppShell({
             </span>
           </div>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <NotificationDropdown />
+          <ThemeToggle />
+        </div>
       </header>
 
       {/* Mobile Nav Overlay (< lg) */}
@@ -263,7 +270,12 @@ export function AppShell({
               <h1 className="text-[clamp(1.5rem,3.2vw,2.5rem)] leading-[1.1] font-display font-bold text-heading">{title}</h1>
               {blurb && <p className="mt-2.5 text-[0.9375rem] sm:text-[1.0625rem] text-body">{blurb}</p>}
             </div>
-            {actions && <div className="flex shrink-0 flex-wrap gap-3">{actions}</div>}
+            <div className="flex shrink-0 items-center flex-wrap gap-3">
+              {actions}
+              <div className={cn("hidden lg:flex items-center", actions && "pl-2 border-l border-border")}>
+                <NotificationDropdown />
+              </div>
+            </div>
           </header>
           <div className="mt-8 sm:mt-10 space-y-8 sm:space-y-10">{children}</div>
         </div>

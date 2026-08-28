@@ -7,6 +7,7 @@ export interface User {
   first_name: string;
   last_name: string;
   full_name: string;
+  display_name?: string;
   role: "READER" | "WRITER" | "ADMIN";
   avatar_url?: string;
   bio?: string;

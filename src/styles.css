@@ -6,7 +6,7 @@
 
 /*
  * Tossatale design system.
- * Editorial, warm, premium. Playfair Display headings + Lato body.
+ * Editorial, warm, premium. Sora / Playfair Display headings + Lato / Plus Jakarta Sans body.
  * All colors are oklch tokens mapped to Tailwind utilities in @theme inline.
  */
 
@@ -19,8 +19,8 @@
   --radius-3xl: calc(var(--radius) + 16px);
   --radius-4xl: calc(var(--radius) + 24px);
 
-  --font-display: "Sora", sans-serif;
-  --font-sans: "Lato", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

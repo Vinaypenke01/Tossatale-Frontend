@@ -41,6 +41,21 @@ function AdminOverview() {
     },
   });
 
+  // Fetch live Platform Analytics Overview
+  const { data: analyticsData } = useQuery({
+    queryKey: ["admin-overview-analytics"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/admin/analytics/overview/");
+        return res.data?.data || res.data || {};
+      } catch {
+        return {};
+      }
+    },
+  });
+
+  const platformSummary = analyticsData?.platform_summary || {};
+
   // Fetch site settings (Maintenance / Under Construction mode)
   const { data: settingsData, isLoading: isSettingsLoading } = useQuery({
     queryKey: ["admin-site-settings"],
@@ -174,9 +189,9 @@ function AdminOverview() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Awaiting review" value={String(storiesList.length)} hint="pending review" />
-        <StatCard label="Published this week" value="0" hint="on target" />
-        <StatCard label="Active writers" value="0" hint="registered" />
-        <StatCard label="Avg. read depth" value="100%" hint="completion rate" />
+        <StatCard label="Published Stories" value={String(platformSummary.total_published_stories ?? 0)} hint="live in library" />
+        <StatCard label="Total Platform Views" value={platformSummary.total_views ? Number(platformSummary.total_views).toLocaleString() : "0"} hint="all-time reads" />
+        <StatCard label="Active Writers" value={String(platformSummary.total_writers ?? 0)} hint="registered authors" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
@@ -218,16 +233,16 @@ function AdminOverview() {
 
         <div className="space-y-6">
           <Panel className="p-6">
-            <h2 className="text-xl font-display font-bold text-heading">Needs a decision</h2>
+            <h2 className="text-xl font-display font-bold text-heading">Editorial Snapshot</h2>
             <ul className="mt-4 space-y-3 text-[0.9375rem] text-body">
               <li className="flex items-center gap-3">
-                <FileCheck2 className="size-4 text-primary" /> {storiesList.length} stories in review
+                <FileCheck2 className="size-4 text-primary" /> {storiesList.length} submissions in review queue
               </li>
               <li className="flex items-center gap-3">
-                <Flag className="size-4 text-warning" /> 0 flagged comments
+                <Sparkles className="size-4 text-primary" /> {platformSummary.total_published_stories ?? 0} published stories in library
               </li>
               <li className="flex items-center gap-3">
-                <Sparkles className="size-4 text-primary" /> 0 empty feature slots
+                <Flag className="size-4 text-warning" /> {platformSummary.total_writers ?? 0} registered authors on platform
               </li>
             </ul>
           </Panel>
