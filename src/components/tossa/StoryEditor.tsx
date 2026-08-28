@@ -23,7 +23,7 @@ export function StoryEditor({
 
   const [title, setTitle] = useState(story?.title ?? "");
   const [dek, setDek] = useState(story?.dek ?? (story as any)?.subtitle ?? "");
-  const initialBody = (story as any)?.content || (story as any)?.body?.join?.("\n\n") || "";
+  const initialBody = (story as any)?.content || (story as any)?.plain_text_content || (Array.isArray((story as any)?.body) ? (story as any).body.join("\n\n") : (story as any)?.body) || "";
   const [body, setBody] = useState(initialBody);
   const [preview, setPreview] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(story?.categorySlug ?? (story as any)?.category?.id ?? (story as any)?.category?.slug ?? "");
@@ -43,7 +43,8 @@ export function StoryEditor({
     if (story) {
       setTitle(story.title || "");
       setDek(story.dek || (story as any).subtitle || "");
-      setBody((story as any).content || (story as any).body?.join?.("\n\n") || "");
+      const resolvedBody = (story as any).content || (story as any).plain_text_content || (Array.isArray((story as any).body) ? (story as any).body.join("\n\n") : (story as any).body) || "";
+      setBody(resolvedBody);
       setSelectedCategory(story.categorySlug || (story as any).category?.id || (story as any).category?.slug || "");
       setActiveEditingSlug(story.slug || (story as any).id || null);
       setRejectionFeedback((story as any).rejection_feedback || (story as any).feedback || "");
@@ -145,9 +146,9 @@ export function StoryEditor({
       return;
     }
 
-    if (!body.trim() || body.trim().length < 100) {
-      toast.error("Story body is too short", {
-        description: "Story content must be at least 100 characters.",
+    if (status !== "DRAFT" && (!body.trim() || body.trim().length < 100)) {
+      toast.error("Story body is too short for submission", {
+        description: "Story content must be at least 100 characters to submit for review.",
       });
       return;
     }
@@ -168,22 +169,34 @@ export function StoryEditor({
 
       const targetSlug = activeEditingSlug || story?.slug;
       if (targetSlug) {
-        await api.patch(`${endpoint}${targetSlug}/`, payload);
-        toast.success("Story Updated!", { description: `"${title}" has been updated successfully.` });
+        const res = await api.patch(`${endpoint}${targetSlug}/`, payload);
+        const updatedStory = res.data?.data || res.data;
+        if (updatedStory?.slug || updatedStory?.id) {
+          setActiveEditingSlug(updatedStory.slug || updatedStory.id);
+        }
+        toast.success(status === "DRAFT" ? "Draft Updated!" : "Story Updated!", {
+          description: `"${title}" has been saved successfully.`,
+        });
       } else {
-        await api.post(endpoint, payload);
+        const res = await api.post(endpoint, payload);
+        const createdStory = res.data?.data || res.data;
+        if (createdStory?.slug || createdStory?.id) {
+          setActiveEditingSlug(createdStory.slug || createdStory.id);
+        }
         toast.success(status === "DRAFT" ? "Draft Saved!" : "Story Submitted!", {
-          description: status === "DRAFT" ? `"${title}" saved as draft.` : `"${title}" submitted for editorial review.`,
+          description: status === "DRAFT" ? `"${title}" saved as draft. You can continue writing.` : `"${title}" submitted for editorial review.`,
         });
       }
 
-      // Clear story form fields after successful save / submission
-      setActiveEditingSlug(null);
-      setTitle("");
-      setDek("");
-      setBody("");
-      setTagsInput("");
-      setReadingTimeInput("5");
+      // If submitted for review or published, clear and refresh
+      if (status !== "DRAFT") {
+        setActiveEditingSlug(null);
+        setTitle("");
+        setDek("");
+        setBody("");
+        setTagsInput("");
+        setReadingTimeInput("5");
+      }
 
       queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
@@ -197,11 +210,13 @@ export function StoryEditor({
     }
   };
 
-  const handleEditStory = (st: any) => {
-    setActiveEditingSlug(st.slug || st.id);
+  const handleEditStory = async (st: any) => {
+    const slugOrId = st.slug || st.id;
+    setActiveEditingSlug(slugOrId);
     setTitle(st.title || "");
     setDek(st.subtitle || st.seo_description || "");
-    setBody(st.content || st.plain_text_content || "");
+    const initialContent = st.content || st.plain_text_content || (Array.isArray(st.body) ? st.body.join("\n\n") : st.body) || "";
+    setBody(initialContent);
     setReadingTimeInput(String(st.estimated_reading_time || st.reading_time || 5));
     setRejectionFeedback(st.rejection_feedback || st.feedback || "");
     if (st.category?.slug || st.category?.id) {
@@ -213,6 +228,26 @@ export function StoryEditor({
     setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast.info(`Loaded "${st.title}" into editor.`);
+
+    // Fetch full story details asynchronously to guarantee rich content is retrieved
+    try {
+      const endpoint = isAdmin ? `/admin/stories/${slugOrId}/` : `/writer/stories/${slugOrId}/`;
+      const res = await api.get(endpoint);
+      const fullStory = res.data?.data || res.data;
+      if (fullStory) {
+        if (fullStory.content) setBody(fullStory.content);
+        if (fullStory.title) setTitle(fullStory.title);
+        if (fullStory.subtitle || fullStory.dek) setDek(fullStory.subtitle || fullStory.dek);
+        if (fullStory.category?.slug || fullStory.category?.id) {
+          setSelectedCategory(fullStory.category.slug || fullStory.category.id);
+        }
+        if (fullStory.tags && Array.isArray(fullStory.tags)) {
+          setTagsInput(fullStory.tags.map((t: any) => t.name || t).join(", "));
+        }
+      }
+    } catch {
+      // Keep existing populated data
+    }
   };
 
   const handleDeleteStory = (st: any) => {
