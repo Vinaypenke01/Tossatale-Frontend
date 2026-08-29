@@ -47,7 +47,6 @@ interface FormErrors {
   password?: string;
   fullName?: string;
   confirmPassword?: string;
-  portfolioUrl?: string;
   otp?: string;
   newPassword?: string;
   consent?: string;
@@ -71,7 +70,6 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [portfolioUrl, setPortfolioUrl] = useState("");
   const [consentGiven, setConsentGiven] = useState(false);
 
   // Forgot Password 3-Step Flow:
@@ -376,10 +374,6 @@ function AuthPage() {
         newErrors.confirmPassword = "Passwords do not match";
       }
 
-      if (portfolioUrl.trim() && !/^https?:\/\/.+/i.test(portfolioUrl.trim())) {
-        newErrors.portfolioUrl = "Please enter a valid URL starting with http:// or https://";
-      }
-
       if (!consentGiven) {
         newErrors.consent = "You must agree to the Terms of service and Privacy policy to register.";
       }
@@ -430,8 +424,6 @@ function AuthPage() {
           first_name: firstName,
           last_name: lastName,
           role: "WRITER",
-          bio: portfolioUrl.trim() ? `Portfolio: ${portfolioUrl.trim()}` : undefined,
-          website_url: portfolioUrl.trim() || undefined,
           consent: consentGiven,
           terms_accepted: consentGiven,
         });
@@ -488,9 +480,7 @@ function AuthPage() {
               const camelField =
                 field === "first_name" || field === "last_name"
                   ? "fullName"
-                  : field === "portfolio_url"
-                    ? "portfolioUrl"
-                    : field;
+                  : field;
               (serverErrors as any)[camelField] = messages[0];
             }
           });
@@ -511,9 +501,28 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen w-full bg-white dark:bg-zinc-950 flex flex-col justify-between items-center px-4 py-8 sm:py-12 relative overflow-x-hidden">
+      {/* Top Left Back Navigation Button */}
+      <button
+        type="button"
+        suppressHydrationWarning
+        onClick={() => {
+          if (typeof window !== "undefined" && window.history.length > 1) {
+            window.history.back();
+          } else {
+            navigate({ to: "/" });
+          }
+        }}
+        className="absolute top-6 left-6 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:text-black dark:hover:text-white font-sans text-xs font-bold transition-all shadow-xs hover:shadow-sm z-20 cursor-pointer"
+        aria-label="Go Back"
+      >
+        <ArrowLeft className="size-4" />
+        <span>Back</span>
+      </button>
+
       {/* Top right "X" mark to return to Home page */}
       <Link
         to="/"
+        suppressHydrationWarning
         className="absolute top-6 right-6 size-10 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-black dark:hover:text-white flex items-center justify-center transition-colors z-20"
         aria-label="Back to Home"
       >
@@ -737,6 +746,7 @@ function AuthPage() {
 
                   <button
                     type="button"
+                    suppressHydrationWarning
                     onClick={() => handleModeSwitch("signin")}
                     className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1 cursor-pointer"
                   >
@@ -747,13 +757,14 @@ function AuthPage() {
 
               {/* STEP 2: Verify OTP Only */}
               {forgotStep === 2 && (
-                <form onSubmit={handleVerifyOtp} className="space-y-3.5">
+                <form onSubmit={handleVerifyOtp} className="space-y-3.5" suppressHydrationWarning>
                   <div className="flex items-center justify-between rounded-xl bg-surface-alt px-3 py-2 border border-border text-xs">
                     <span className="text-subtle truncate max-w-[220px]">
                       Code sent to: <strong className="text-heading font-medium">{email}</strong>
                     </span>
                     <button
                       type="button"
+                      suppressHydrationWarning
                       onClick={() => setForgotStep(1)}
                       className="text-primary font-bold hover:underline shrink-0 ml-2 cursor-pointer"
                     >
@@ -820,6 +831,7 @@ function AuthPage() {
 
                   <button
                     type="button"
+                    suppressHydrationWarning
                     onClick={() => handleModeSwitch("signin")}
                     className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1 cursor-pointer"
                   >
@@ -928,49 +940,26 @@ function AuthPage() {
           ) : (
             <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
               {isSignup && (
-                <>
-                  <Field label="Full name">
-                    <Input
-                      placeholder="e.g. Maya Sen"
-                      disabled={isSubmitting}
-                      value={fullName}
-                      onChange={(e) => {
-                        setFullName(e.target.value);
-                        if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: "" }));
-                      }}
-                      className={cn(
-                        "h-10 text-[0.875rem]",
-                        errors.fullName && "border-destructive focus:border-destructive focus:ring-destructive/20",
-                      )}
-                    />
-                    {errors.fullName && (
-                      <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive">
-                        {errors.fullName}
-                      </span>
+                <Field label="Full name">
+                  <Input
+                    placeholder="e.g. Maya Sen"
+                    disabled={isSubmitting}
+                    value={fullName}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: "" }));
+                    }}
+                    className={cn(
+                      "h-10 text-[0.875rem]",
+                      errors.fullName && "border-destructive focus:border-destructive focus:ring-destructive/20",
                     )}
-                  </Field>
-
-                  <Field label="Portfolio / Writing sample URL (Optional)">
-                    <Input
-                      placeholder="https://medium.com/@username or personal site"
-                      disabled={isSubmitting}
-                      value={portfolioUrl}
-                      onChange={(e) => {
-                        setPortfolioUrl(e.target.value);
-                        if (errors.portfolioUrl) setErrors((prev) => ({ ...prev, portfolioUrl: "" }));
-                      }}
-                      className={cn(
-                        "h-10 text-[0.875rem]",
-                        errors.portfolioUrl && "border-destructive focus:border-destructive focus:ring-destructive/20",
-                      )}
-                    />
-                    {errors.portfolioUrl && (
-                      <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive">
-                        {errors.portfolioUrl}
-                      </span>
-                    )}
-                  </Field>
-                </>
+                  />
+                  {errors.fullName && (
+                    <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive">
+                      {errors.fullName}
+                    </span>
+                  )}
+                </Field>
               )}
 
               <Field label="Email address">
@@ -1033,6 +1022,7 @@ function AuthPage() {
                 <div className="flex justify-end pt-0.5">
                   <button
                     type="button"
+                    suppressHydrationWarning
                     onClick={() => handleModeSwitch("forgot")}
                     className="text-xs font-bold text-[#2B638C] hover:underline cursor-pointer"
                   >
@@ -1082,6 +1072,7 @@ function AuthPage() {
                   <label className="flex items-start gap-2.5 cursor-pointer select-none text-left">
                     <input
                       type="checkbox"
+                      suppressHydrationWarning
                       checked={consentGiven}
                       onChange={(e) => {
                         setConsentGiven(e.target.checked);
