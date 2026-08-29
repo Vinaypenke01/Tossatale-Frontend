@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookMarked, Clock, Eye, Heart, Mail, Play, Quote } from "lucide-react";
+import { ArrowRight, Clock, Eye, Heart, Mail, Play } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -16,7 +16,6 @@ import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import {
   Avatar,
   Button,
-  ButtonLink,
   CategoryPill,
   Input,
   Panel,
@@ -48,34 +47,34 @@ export const Route = createFileRoute("/")({
 function Hero() {
   return (
     <section className="relative overflow-hidden bg-heading">
-      <div className="relative w-full min-h-[350px] lg:min-h-0">
+      <div className="relative w-full">
+        {/* Full Image in total natural aspect ratio without cropping top or bottom */}
         <img
           src={heroArt}
           alt="Illustrated river ghats at dusk with temples, boats and figures on the steps"
           width={1920}
           height={1080}
-          className="w-full h-auto block min-h-[350px] object-cover lg:object-fill"
+          className="w-full h-auto block object-contain"
         />
         <div className="absolute inset-0 bg-black/45" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/30 to-black/60" />
 
-        <div className="absolute inset-0 z-10 flex items-center">
-          <div className="mx-auto w-full max-w-[1240px] px-5 py-6 sm:py-12 lg:px-8 lg:py-20">
-            <div className="animate-fade-up max-w-3xl">
-              <span className="font-sans text-[0.6875rem] sm:text-[0.75rem] font-extrabold tracking-[0.2em] text-white/90 uppercase">
-                NEW STORIES. MORE OFTEN.
-              </span>
-              <h1 className="mt-2 sm:mt-4 text-[clamp(1.35rem,4.2vw,4.4rem)] leading-[1.08] text-white font-display font-bold">
-                We are Storytellers,<br />Always.
-              </h1>
-              <p className="mt-2.5 sm:mt-4 max-w-xl text-[0.8125rem] sm:text-[1.05rem] leading-relaxed text-white/90 font-sans">
-                We write. We share stories. We welcome yours. Let’s celebrate the stories that connect us all.
-              </p>
-              <div className="mt-4 sm:mt-8 flex items-center gap-3">
-                <ButtonLink to="/stories" size="md" className="bg-white text-primary hover:bg-white/95 hover:text-primary-hover font-bold shadow-lift border-none sm:h-12 sm:px-6 sm:text-base">
-                  Read Stories
-                </ButtonLink>
-              </div>
+        <div className="absolute inset-0 z-10 flex items-center justify-center p-4 sm:p-6 lg:p-10 text-center">
+          <div className="animate-fade-up max-w-4xl mx-auto flex flex-col items-center">
+            <span className="font-sans text-[0.6875rem] sm:text-[0.8125rem] font-extrabold tracking-[0.25em] text-white/90 uppercase">
+              NEW STORIES. MORE OFTEN.
+            </span>
+            <h1 className="mt-2 sm:mt-4 text-[clamp(1.5rem,4.5vw,4.8rem)] leading-tight text-white font-display font-bold whitespace-nowrap">
+              We are Storytellers, always.
+            </h1>
+            <div className="mt-4 sm:mt-8">
+              <Link
+                to="/stories"
+                className="group inline-flex items-center gap-1 font-sans text-sm sm:text-lg font-bold text-white transition-colors hover:text-[#FF6B35] relative pb-1"
+              >
+                <span>Read Stories</span>
+                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white transition-colors group-hover:bg-[#FF6B35]" />
+              </Link>
             </div>
           </div>
         </div>
@@ -92,58 +91,68 @@ function FeaturedStories({ stories }: { stories?: any[] }) {
   if (displayList.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-[1240px] px-5 pt-12 lg:px-8">
-      <div className="grid gap-6 md:grid-cols-2">
-        {displayList.map((story, i) => (
-          <Reveal key={story.slug || i} delay={i * 70}>
-            <Panel className="grain overflow-hidden p-7 lg:p-9 border-primary/20 flex flex-col justify-between h-full">
-              <div>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-                    FEATURED STORY
-                  </span>
-                  <CategoryPill>{story.category?.name || story.category || "Featured"}</CategoryPill>
+    <section className="bg-white dark:bg-zinc-950 py-16 sm:py-20 lg:py-24">
+      <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+        <Reveal>
+          <SectionHeading
+            eyebrow="Featured"
+            title="Featured Stories"
+            blurb="Selected longform narratives handpicked by our editorial desk."
+          />
+        </Reveal>
+        <div className="mt-10 grid gap-8 md:grid-cols-2">
+          {displayList.map((story, i) => (
+            <Reveal key={story.slug || i} delay={i * 70}>
+              <div className="group flex flex-col justify-between h-full rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 p-7 lg:p-9 border-none">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <CategoryPill>{story.category?.name || story.category || "Featured"}</CategoryPill>
+                  </div>
+
+                  <Link to="/stories/$slug" params={{ slug: story.slug }} className="block mt-4">
+                    <h2 className="line-clamp-1 truncate text-[clamp(1.35rem,2vw,1.75rem)] leading-snug text-heading font-display font-bold transition-colors group-hover:text-primary">
+                      {story.title}
+                    </h2>
+                  </Link>
+                  <p className="mt-3.5 line-clamp-5 text-[0.9375rem] leading-relaxed text-body">
+                    {story.subtitle || story.seo_description || "A longform story selected by our editorial team."}
+                  </p>
                 </div>
 
-                <h2 className="mt-5 text-[clamp(1.4rem,2.2vw,1.9rem)] leading-[1.12] text-heading font-display font-bold">
-                  {story.title}
-                </h2>
-                <p className="mt-3.5 line-clamp-3 text-[0.9375rem] leading-relaxed text-body">
-                  {story.subtitle || story.seo_description || "A longform story selected by our editorial team."}
-                </p>
-              </div>
-
-              <div>
-                <div className="mt-6 flex items-center gap-3 border-t border-divider pt-4">
-                  <Avatar
-                    initials={(story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2).toUpperCase()}
-                    gender={story.writer?.gender}
-                    src={story.writer?.profile_photo}
-                  />
-                  <div>
-                    <p className="flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-heading">
-                      {story.writer?.name || story.writer?.user?.full_name || "Author"} {story.writer?.is_verified && <VerifiedBadge />}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2.5 text-[0.75rem] text-subtle mt-0.5">
-                      <span>{story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent"}</span>
-                      <span>·</span>
-                      <span className="inline-flex items-center gap-1"><Clock className="size-3" /> {story.estimated_reading_time || 5} min read</span>
-                      <span>·</span>
-                      <span className="inline-flex items-center gap-1"><Eye className="size-3" /> {story.views_count || 0}</span>
-                      <span>·</span>
-                      <span className="inline-flex items-center gap-1 text-destructive"><Heart className="size-3 fill-current" /> {story.likes_count || 0}</span>
+                <div className="mt-8 border-t border-divider pt-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="size-9 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.8125rem] grid place-items-center shrink-0">
+                        {((story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2)).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-heading truncate">
+                          {story.writer?.name || story.writer?.user?.full_name || "Author"} {story.writer?.is_verified && <VerifiedBadge />}
+                        </p>
+                        <div className="flex items-center gap-2 text-[0.75rem] text-subtle mt-0.5">
+                          <span>{story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent"}</span>
+                          <span>·</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="size-3" /> {story.estimated_reading_time || 5} min read
+                          </span>
+                        </div>
+                      </div>
                     </div>
+
+                    <Link
+                      to="/stories/$slug"
+                      params={{ slug: story.slug }}
+                      className="group/read shrink-0 font-sans text-[0.875rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
+                    >
+                      <span>Read here</span>
+                      <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
+                    </Link>
                   </div>
                 </div>
-                <div className="mt-6 flex flex-wrap gap-2.5">
-                  <ButtonLink to="/stories/$slug" params={{ slug: story.slug }} size="md">
-                    Read story <ArrowRight className="size-4" />
-                  </ButtonLink>
-                </div>
               </div>
-            </Panel>
-          </Reveal>
-        ))}
+            </Reveal>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -152,71 +161,18 @@ function FeaturedStories({ stories }: { stories?: any[] }) {
 function LatestStories({ stories }: { stories?: any[] }) {
   if (!stories || stories.length === 0) {
     return (
-      <section className="mx-auto max-w-[1240px] px-5 pt-24 lg:px-8">
-        <SectionHeading
-          eyebrow="Newly added"
-          title="Latest stories"
-          blurb="From quick reads to stories in chapters."
-          action={{ label: "All stories", to: "/stories" }}
-        />
-        <EmptySectionFallback
-          icon="write"
-          title="No Published Stories Yet"
-          description="Authors are currently working on new pieces. Once approved by editors, new stories will appear here."
-        />
-      </section>
-    );
-  }
-
-  return (
-    <section className="mx-auto max-w-[1240px] px-5 pt-24 lg:px-8">
-      <Reveal>
-        <SectionHeading
-          eyebrow="Newly added"
-          title="Latest stories"
-          blurb="From quick reads to stories in chapters."
-          action={{ label: "All stories", to: "/stories" }}
-        />
-      </Reveal>
-      <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {stories.slice(0, 3).map((story, i) => (
-          <Reveal key={story.slug} delay={i * 70}>
-            <StoryCard story={{
-              id: story.id,
-              slug: story.slug,
-              title: story.title,
-              dek: story.subtitle || story.seo_description || "A longform story.",
-              writer: story.writer?.slug || "writer",
-              writerName: story.writer?.name || story.writer?.user?.full_name || "Author",
-              writerGender: story.writer?.gender || "OTHER",
-              writerPhoto: story.writer?.profile_photo || "",
-              category: story.category?.name || "General",
-              date: story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent",
-              readingTime: story.estimated_reading_time || 5,
-              cover: story.cover_image || coverLane,
-              views: story.views_count || 0,
-              likes: story.likes_count || 0,
-              likes_count: story.likes_count || 0,
-              is_liked: Boolean(story.is_liked),
-              is_bookmarked: Boolean(story.is_bookmarked),
-            } as any} />
-          </Reveal>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Trending({ stories }: { stories?: any[] }) {
-  if (!stories || stories.length === 0) {
-    return (
-      <section className="mt-28 border-y border-border bg-surface-alt/70 py-20">
+      <section className="bg-slate-50 dark:bg-zinc-900/50 py-16 lg:py-20 border-y border-border/30">
         <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
-          <SectionHeading eyebrow="Reader Favorites" title="Trending Stories" />
+          <SectionHeading
+            eyebrow="Newly added"
+            title="Latest stories"
+            blurb="From quick reads to stories in chapters."
+            action={{ label: "All stories", to: "/stories" }}
+          />
           <EmptySectionFallback
-            icon="sparkles"
-            title="No Trending Stories Yet"
-            description="As community readers explore and bookmark stories, top trending longform pieces will display here."
+            icon="write"
+            title="No Published Stories Yet"
+            description="Authors are currently working on new pieces. Once approved by editors, new stories will appear here."
           />
         </div>
       </section>
@@ -224,14 +180,19 @@ function Trending({ stories }: { stories?: any[] }) {
   }
 
   return (
-    <section className="mt-28 border-y border-border bg-surface-alt/70 py-20">
+    <section className="bg-slate-50 dark:bg-zinc-900/50 py-16 lg:py-20 border-y border-border/30">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
-          <SectionHeading eyebrow="Reader Favorites" title="Trending Stories" />
+          <SectionHeading
+            eyebrow="Newly added"
+            title="Latest stories"
+            blurb="From quick reads to stories in chapters."
+            action={{ label: "All stories", to: "/stories" }}
+          />
         </Reveal>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {stories.slice(0, 3).map((story, i) => (
-            <Reveal key={story.slug} delay={i * 60}>
+            <Reveal key={story.slug} delay={i * 70}>
               <StoryCard story={{
                 id: story.id,
                 slug: story.slug,
@@ -239,7 +200,6 @@ function Trending({ stories }: { stories?: any[] }) {
                 dek: story.subtitle || story.seo_description || "A longform story.",
                 writer: story.writer?.slug || "writer",
                 writerName: story.writer?.name || story.writer?.user?.full_name || "Author",
-                writerGender: story.writer?.gender || "OTHER",
                 writerPhoto: story.writer?.profile_photo || "",
                 category: story.category?.name || "General",
                 date: story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent",
@@ -259,31 +219,85 @@ function Trending({ stories }: { stories?: any[] }) {
   );
 }
 
-function ReadingJourney() {
-  const steps = [
-    { n: "01", title: "Find a voice", blurb: "Follow writers, not algorithms. Your shelf stays yours." },
-    { n: "02", title: "Read at your pace", blurb: "No rush. No rules. Just stories waiting for you." },
-    { n: "03", title: "Keep what moved you", blurb: "Bookmarks, highlights and collections you actually revisit." },
-    { n: "04", title: "Short enough to finish", blurb: "Good enough to remember." },
-  ];
+function Trending({ stories }: { stories?: any[] }) {
+  if (!stories || stories.length === 0) {
+    return (
+      <section className="bg-white dark:bg-zinc-950 py-16 lg:py-20 border-y border-border/30">
+        <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+          <h2 className="font-display text-[1.5rem] sm:text-[1.75rem] font-bold text-heading">
+            Trending stories
+          </h2>
+          <EmptySectionFallback
+            icon="sparkles"
+            title="No Trending Stories Yet"
+            description="As community readers explore and bookmark stories, top trending longform pieces will display here."
+          />
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="mt-28 border-y border-border paper-gradient py-20">
+    <section className="bg-white dark:bg-zinc-950 py-16 lg:py-20 border-y border-border/30">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
-          <SectionHeading
-            eyebrow="Your reading journey"
-            title="Built for people who finish things"
-            align="center"
-          />
+          <h2 className="font-display text-[1.5rem] sm:text-[1.75rem] font-bold text-heading">
+            Trending stories
+          </h2>
         </Reveal>
-        <div className="mt-14 grid gap-8 md:grid-cols-4">
-          {steps.map((s, i) => (
-            <Reveal key={s.n} delay={i * 90}>
-              <div className="relative">
-                <span className="font-display text-[2.6rem] leading-none text-primary/25">{s.n}</span>
-                <h3 className="mt-3 text-[1.2rem] font-display font-bold">{s.title}</h3>
-                <p className="mt-2 text-[0.9375rem] text-body">{s.blurb}</p>
+
+        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+          {stories.slice(0, 6).map((story, i) => (
+            <Reveal key={story.slug || i} delay={i * 50}>
+              <div className="group flex items-start gap-4">
+                {/* Big Number (01, 02, ...) */}
+                <span className="font-sans text-[2.1rem] font-black leading-none text-slate-300 dark:text-zinc-700 shrink-0 select-none w-10">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  {/* Author Avatar & Name */}
+                  <Link
+                    to="/writers/$slug"
+                    params={{ slug: story.writer?.slug || "writer" }}
+                    className="flex items-center gap-2 group/author w-max max-w-full"
+                  >
+                    <div className="size-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.625rem] grid place-items-center shrink-0">
+                      {((story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2)).toUpperCase()}
+                    </div>
+                    <span className="font-sans text-[0.8125rem] font-bold text-heading truncate group-hover/author:text-primary transition-colors">
+                      {story.writer?.name || story.writer?.user?.full_name || "Author"}
+                    </span>
+                  </Link>
+
+                  {/* Story Title */}
+                  <Link to="/stories/$slug" params={{ slug: story.slug }} className="block mt-1.5">
+                    <h3 className="line-clamp-1 truncate font-display text-[1.1875rem] font-bold text-heading group-hover:text-primary transition-colors">
+                      {story.title}
+                    </h3>
+                  </Link>
+
+                  {/* Metadata & Read here */}
+                  <div className="mt-1.5 flex items-center gap-2 text-[0.75rem] text-subtle">
+                    <span>{story.estimated_reading_time || 5} min read</span>
+                    {story.rating && (
+                      <>
+                        <span>·</span>
+                        <span>Rating: {story.rating}</span>
+                      </>
+                    )}
+                    <span>·</span>
+                    <Link
+                      to="/stories/$slug"
+                      params={{ slug: story.slug }}
+                      className="group/read font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
+                    >
+                      <span>Read here</span>
+                      <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
+                    </Link>
+                  </div>
+                </div>
               </div>
             </Reveal>
           ))}
@@ -293,107 +307,78 @@ function ReadingJourney() {
   );
 }
 
-function CategoryCarousel({ categories }: { categories?: any[] }) {
-  if (!categories || categories.length === 0) {
+function LatestBlogs({ blogs }: { blogs?: any[] }) {
+  if (!blogs || blogs.length === 0) {
     return (
-      <section className="mt-28 overflow-hidden border-y border-border bg-surface py-16">
+      <section className="bg-white dark:bg-zinc-950 py-16 lg:py-20 border-y border-border/30">
         <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
-          <SectionHeading eyebrow="Explore your way" title="Browse by category" align="center" />
+          <SectionHeading
+            eyebrow="More to discover"
+            title="From the blogs"
+            action={{ label: "View all", to: "/blogs" }}
+          />
           <EmptySectionFallback
-            icon="category"
-            title="No Categories Configured"
-            description="Explore our complete story catalog directly from the main stories library."
-            actionText="View All Stories"
-            onAction={() => window.location.href = "/stories"}
+            icon="blog"
+            title="No Editorial Blogs Yet"
+            description="Craft essays, author interviews and behind-the-scenes posts will appear here."
           />
         </div>
       </section>
     );
   }
 
-  const row = [...categories, ...categories];
-
   return (
-    <section className="mt-28 overflow-hidden border-y border-border bg-surface py-16">
+    <section className="bg-white dark:bg-zinc-950 py-16 lg:py-20 border-y border-border/30">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
-          <SectionHeading eyebrow="Explore your way" title="Browse by category" align="center" />
+          <SectionHeading
+            eyebrow="More to discover"
+            title="From the blogs"
+            action={{ label: "View all", to: "/blogs" }}
+          />
         </Reveal>
-      </div>
-      <div className="mt-10 flex w-max animate-marquee gap-4 px-5 hover:[animation-play-state:paused]">
-        {row.map((c, i) => (
-          <Link
-            key={`${c.slug}-${i}`}
-            to="/stories"
-            search={{ category: c.slug }}
-            className="group flex w-64 shrink-0 flex-col rounded-2xl border border-border bg-background p-6 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-lift"
-          >
-            <span className="font-display text-[1.25rem] text-heading group-hover:text-primary-hover font-bold">
-              {c.name}
-            </span>
-            <span className="mt-1 text-[0.875rem] text-body">{c.description || "Longform collection."}</span>
-            <span className="mt-4 text-[0.75rem] tracking-[0.14em] text-subtle uppercase">
-              {c.stories_count || 0} stories
-            </span>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          {blogs.slice(0, 4).map((b, i) => (
+            <Reveal key={b.slug} delay={i * 70}>
+              <Link to="/blogs" className="block h-full">
+                <div className="group flex h-full flex-col sm:flex-row items-center gap-5 p-5 rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1">
+                  <img
+                    src={b.cover_image || "/assets/cover-terrace.jpg"}
+                    alt=""
+                    loading="lazy"
+                    width={1200}
+                    height={800}
+                    className="h-36 w-full sm:w-44 sm:h-36 shrink-0 rounded-xl object-cover"
+                  />
+                  <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+                    <div>
+                      <h3 className="text-[1.125rem] leading-snug font-display font-bold text-heading group-hover:text-primary transition-colors line-clamp-2">
+                        {b.title}
+                      </h3>
+                      <p className="mt-2 line-clamp-2 text-[0.875rem] text-body leading-relaxed">
+                        {b.excerpt || b.seo_description || "Blog article."}
+                      </p>
+                    </div>
 
-function LatestBlogs({ blogs }: { blogs?: any[] }) {
-  if (!blogs || blogs.length === 0) {
-    return (
-      <section className="mx-auto max-w-[1240px] px-5 pt-28 lg:px-8">
-        <SectionHeading
-          eyebrow="More to discover"
-          title="From The Blog"
-          action={{ label: "View all", to: "/blogs" }}
-        />
-        <EmptySectionFallback
-          icon="blog"
-          title="No Editorial Blogs Yet"
-          description="Craft essays, author interviews and behind-the-scenes posts will appear here."
-        />
-      </section>
-    );
-  }
+                    <div className="mt-4 flex items-center justify-between pt-2 border-t border-divider">
+                      <p className="text-[0.75rem] text-subtle flex items-center gap-1.5">
+                        <span>{b.published_at ? new Date(b.published_at).toLocaleDateString() : "Recent"}</span>
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="size-3" /> {b.reading_time || 4} min
+                        </span>
+                      </p>
 
-  return (
-    <section className="mx-auto max-w-[1240px] px-5 pt-28 lg:px-8">
-      <Reveal>
-        <SectionHeading
-          eyebrow="More to discover"
-          title="From The Blog"
-          action={{ label: "View all", to: "/blogs" }}
-        />
-      </Reveal>
-      <div className="mt-10 grid gap-6 md:grid-cols-2">
-        {blogs.slice(0, 4).map((b, i) => (
-          <Reveal key={b.slug} delay={i * 70}>
-            <Link to="/blogs" className="block h-full">
-              <Panel hover className="flex h-full items-center gap-5 p-5">
-                <img
-                  src={b.cover_image || "/assets/cover-terrace.jpg"}
-                  alt=""
-                  loading="lazy"
-                  width={1200}
-                  height={800}
-                  className="hidden h-28 w-36 shrink-0 rounded-xl object-cover sm:block"
-                />
-                <div>
-                  <CategoryPill>{b.category?.name || "Editorial"}</CategoryPill>
-                  <h3 className="mt-3 text-[1.15rem] leading-snug font-display font-bold">{b.title}</h3>
-                  <p className="mt-2 line-clamp-2 text-[0.9375rem] text-body">{b.excerpt || b.seo_description || "Blog article."}</p>
-                  <p className="mt-3 text-[0.8125rem] text-subtle">
-                    {b.published_at ? new Date(b.published_at).toLocaleDateString() : "Recent"} · {b.reading_time || 4} min
-                  </p>
+                      <span className="font-sans text-[0.8125rem] font-bold text-heading group-hover:text-[#FF6B35] transition-colors relative pb-0.5">
+                        Read here
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </Panel>
-            </Link>
-          </Reveal>
-        ))}
+              </Link>
+            </Reveal>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -402,18 +387,18 @@ function LatestBlogs({ blogs }: { blogs?: any[] }) {
 function VideoLibrary({ videos }: { videos?: any[] }) {
   if (!videos || videos.length === 0) {
     return (
-      <section className="mt-28 border-y border-border bg-surface-alt/80 py-20">
+      <section className="bg-slate-50 dark:bg-zinc-900/50 py-16 lg:py-20">
         <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
           <SectionHeading
             eyebrow="Watch"
-            title="Latest Short Films"
+            title="Latest short films"
             blurb="From stories to screen."
             action={{ label: "View all", to: "/videos" }}
           />
           <EmptySectionFallback
             icon="video"
             title="No Films in Video Library"
-            description="Documentaries and writer conversations are currently in production and will be published here."
+            description="Short films and writer conversations are currently in production and will be published here."
           />
         </div>
       </section>
@@ -421,48 +406,49 @@ function VideoLibrary({ videos }: { videos?: any[] }) {
   }
 
   return (
-    <section className="mt-28 border-y border-border bg-surface-alt/80 py-20">
+    <section className="bg-slate-50 dark:bg-zinc-900/50 py-16 lg:py-20">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
           <SectionHeading
             eyebrow="Watch"
-            title="Latest Short Films"
+            title="Latest short films"
             blurb="From stories to screen."
             action={{ label: "View all", to: "/videos" }}
           />
         </Reveal>
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {videos.slice(0, 4).map((v, i) => (
-          <Reveal key={v.slug || v.id || i} delay={i * 70}>
-            <Link to="/videos/$slug" params={{ slug: v.slug || "video" }} className="group block">
-              <div className="relative overflow-hidden rounded-2xl border border-border shadow-paper">
-                <img
-                  src={v.thumbnail_url || coverBoat}
-                  alt={v.title}
-                  loading="lazy"
-                  width={1200}
-                  height={800}
-                  className="aspect-video w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105"
-                />
-                <span className="absolute inset-0 grid place-items-center bg-primary-hover/20 opacity-0 transition-opacity group-hover:opacity-100">
-                  <span className="grid size-14 place-items-center rounded-full bg-surface text-primary shadow-lift">
-                    <Play className="size-5 translate-x-px fill-primary" />
-                  </span>
-                </span>
-                <span className="absolute right-3 bottom-3 rounded-full bg-heading/80 px-2.5 py-0.5 text-[0.75rem] font-bold text-white backdrop-blur">
-                  {v.duration || "12:00"}
-                </span>
-              </div>
-              <p className="mt-4 text-[0.6875rem] font-black tracking-[0.16em] text-primary uppercase">
-                {v.series_name || v.category?.name || "Documentary"}
-              </p>
-              <h3 className="mt-1.5 text-[1.0625rem] leading-snug font-display font-bold group-hover:text-primary-hover">
-                {v.title}
-              </h3>
-              <p className="mt-1.5 text-[0.8125rem] text-subtle">{v.views_count || 0} views</p>
-            </Link>
-          </Reveal>
-        ))}
+        <div className="mt-10 grid gap-8 md:grid-cols-2">
+          {videos.slice(0, 2).map((v, i) => (
+            <Reveal key={v.slug || v.id || i} delay={i * 70}>
+              <Link to="/videos/$slug" params={{ slug: v.slug || "video" }} className="group block h-full">
+                <div className="flex flex-col h-full rounded-2xl bg-surface p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1">
+                  <div className="relative overflow-hidden rounded-xl aspect-video w-full">
+                    <img
+                      src={v.thumbnail_url || coverBoat}
+                      alt={v.title}
+                      loading="lazy"
+                      width={1200}
+                      height={800}
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute inset-0 grid place-items-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="grid size-14 place-items-center rounded-full bg-white text-primary shadow-lift">
+                        <Play className="size-6 translate-x-0.5 fill-primary" />
+                      </span>
+                    </span>
+                    <span className="absolute right-3 bottom-3 rounded-full bg-heading/80 px-2.5 py-0.5 text-[0.75rem] font-bold text-white backdrop-blur">
+                      {v.duration || "12:00"}
+                    </span>
+                  </div>
+
+                  <div className="mt-5 text-center flex-1 flex flex-col justify-between">
+                    <h3 className="text-[1.25rem] leading-snug font-display font-bold text-heading group-hover:text-primary transition-colors">
+                      {v.title}
+                    </h3>
+                  </div>
+                </div>
+              </Link>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>
@@ -471,24 +457,20 @@ function VideoLibrary({ videos }: { videos?: any[] }) {
 
 function Newsletter() {
   return (
-    <section id="newsletter" className="mx-auto max-w-3xl px-5 pt-16 lg:px-8 pb-16">
-      <Reveal>
-        <Panel className="grain relative overflow-hidden ink-gradient p-7 sm:p-9 text-center">
-          <span className="pointer-events-none absolute -top-16 -left-10 size-48 animate-drift rounded-full bg-white/10 blur-2xl" />
-          <span className="pointer-events-none absolute -right-10 -bottom-20 size-48 animate-drift rounded-full bg-white/10 blur-2xl" />
-          <Quote className="mx-auto size-6 text-white/50" />
-          <h2 className="mx-auto mt-4 max-w-xl text-[clamp(1.35rem,2.2vw,1.85rem)] leading-snug font-display font-bold text-white">
-            Keep reading. Keep watching.
-          </h2>
-          <p className="mx-auto mt-2.5 max-w-md text-[0.9375rem] leading-relaxed text-white/80">
-            Get updates on new stories, short films, and upcoming releases.
-          </p>
-          <NewsletterForm />
-          <p className="mt-3 text-[0.75rem] text-white/60">
-            No spam, no partner offers. Unsubscribe in one click.
-          </p>
-        </Panel>
-      </Reveal>
+    <section id="newsletter" className="bg-white dark:bg-zinc-950 py-16 sm:py-20 border-t border-border/30">
+      <div className="mx-auto max-w-3xl px-5 lg:px-8 text-center">
+        <Reveal>
+          <div className="rounded-3xl bg-slate-50 dark:bg-zinc-900 p-8 sm:p-12 shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
+            <h2 className="mx-auto text-[clamp(1.5rem,2.5vw,2.2rem)] leading-tight font-display font-bold text-heading">
+              Keep reading. Keep watching.
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-[0.9375rem] leading-relaxed text-body">
+              Get updates on new stories, short films, and upcoming releases directly in your inbox.
+            </p>
+            <NewsletterForm />
+          </div>
+        </Reveal>
+      </div>
     </section>
   );
 }
@@ -515,22 +497,28 @@ function NewsletterForm() {
   };
 
   return (
-    <form className="mx-auto mt-6 flex max-w-sm flex-col gap-2 sm:flex-row" onSubmit={handleSubmit}>
+    <form className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row" onSubmit={handleSubmit} suppressHydrationWarning>
       <label className="sr-only" htmlFor="newsletter-email">
         Email address
       </label>
       <Input
         id="newsletter-email"
         type="email"
-        placeholder="you@example.com"
+        placeholder="Enter your email address"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
-        className="h-10 border-white/25 bg-white/12 text-white placeholder:text-white/60 focus:ring-white/25 text-[0.875rem]"
+        suppressHydrationWarning
+        className="h-11 bg-white dark:bg-zinc-800 border-border text-heading placeholder:text-subtle text-[0.875rem] rounded-xl flex-1"
       />
-      <Button variant="inkOnDark" size="sm" disabled={isSubmitting} className="h-10 shrink-0">
-        <Mail className="size-3.5" /> {isSubmitting ? "Submitting..." : "Subscribe"}
-      </Button>
+      <button
+        type="submit"
+        suppressHydrationWarning
+        disabled={isSubmitting}
+        className="h-11 shrink-0 rounded-xl bg-[#FF6B35] hover:bg-[#e85b27] text-white font-bold px-6 text-[0.875rem] shadow-xs transition-all hover:shadow-md cursor-pointer inline-flex items-center justify-center gap-2"
+      >
+        <Mail className="size-4" /> {isSubmitting ? "Submitting..." : "Subscribe"}
+      </button>
     </form>
   );
 }
@@ -555,7 +543,6 @@ function Home() {
   const featuredStoriesData = homepageData?.featured_stories || [];
   const latestStoriesData = homepageData?.latest_stories || [];
   const trendingStoriesData = homepageData?.trending_stories || [];
-  const categoriesData = homepageData?.categories || [];
   const blogsData = homepageData?.featured_blogs || [];
   const videosData = homepageData?.latest_videos || [];
   const announcementData = homepageData?.announcement || undefined;
@@ -567,8 +554,6 @@ function Home() {
       <FeaturedStories stories={featuredStoriesData} />
       <LatestStories stories={latestStoriesData} />
       <Trending stories={trendingStoriesData} />
-      <ReadingJourney />
-      <CategoryCarousel categories={categoriesData} />
       <LatestBlogs blogs={blogsData} />
       <VideoLibrary videos={videosData} />
       <Newsletter />

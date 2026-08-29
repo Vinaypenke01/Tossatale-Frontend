@@ -11,7 +11,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-export function PrivacyPage() {
+function PrivacyPage() {
   return (
     <SiteLayout>
       <div className="mx-auto max-w-[840px] px-5 py-20 lg:px-8">

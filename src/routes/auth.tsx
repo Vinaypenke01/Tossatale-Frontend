@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   Sparkles,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -49,6 +50,7 @@ interface FormErrors {
   portfolioUrl?: string;
   otp?: string;
   newPassword?: string;
+  consent?: string;
 }
 
 type AuthMode = "signin" | "signup" | "forgot" | "verify-otp";
@@ -70,6 +72,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [consentGiven, setConsentGiven] = useState(false);
 
   // Forgot Password 3-Step Flow:
   // Step 1: Enter email & Send OTP
@@ -376,6 +379,10 @@ function AuthPage() {
       if (portfolioUrl.trim() && !/^https?:\/\/.+/i.test(portfolioUrl.trim())) {
         newErrors.portfolioUrl = "Please enter a valid URL starting with http:// or https://";
       }
+
+      if (!consentGiven) {
+        newErrors.consent = "You must agree to the Terms of service and Privacy policy to register.";
+      }
     }
 
     setErrors(newErrors);
@@ -425,6 +432,8 @@ function AuthPage() {
           role: "WRITER",
           bio: portfolioUrl.trim() ? `Portfolio: ${portfolioUrl.trim()}` : undefined,
           website_url: portfolioUrl.trim() || undefined,
+          consent: consentGiven,
+          terms_accepted: consentGiven,
         });
 
         if (regRes.data?.requires_otp) {
@@ -501,115 +510,99 @@ function AuthPage() {
   };
 
   return (
-    <div className="grid h-screen w-full overflow-hidden lg:grid-cols-[1.05fr_1.15fr]">
-      <div className="flex h-full w-full flex-col justify-between p-6 sm:p-8 lg:p-10 overflow-y-auto bg-background relative">
-        <div className="flex items-center justify-between w-full shrink-0">
-          <Link to="/" className="inline-flex items-center">
-            <img src={logo} alt="tossatale" className="h-8 w-auto object-contain" />
-          </Link>
-        </div>
+    <div className="min-h-screen w-full bg-white dark:bg-zinc-950 flex flex-col justify-between items-center px-4 py-8 sm:py-12 relative overflow-x-hidden">
+      {/* Top right "X" mark to return to Home page */}
+      <Link
+        to="/"
+        className="absolute top-6 right-6 size-10 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-black dark:hover:text-white flex items-center justify-center transition-colors z-20"
+        aria-label="Back to Home"
+      >
+        <X className="size-5" />
+      </Link>
 
-        <div className="mx-auto my-auto max-w-[390px] w-full py-4 flex flex-col justify-center">
-          {/* Header Title */}
-          <h1
-            className={cn(
-              "font-display font-bold leading-tight text-heading transition-all",
-              isSignup || isForgot || isVerifyOtp ? "text-[clamp(1.4rem,2.2vw,1.85rem)]" : "text-[clamp(1.75rem,2.8vw,2.2rem)]",
-            )}
-          >
-            {isVerifyOtp
-              ? "Activate Writer Account"
-              : isForgot
-                ? forgotStep === 1
-                  ? "Reset Your Password"
-                  : forgotStep === 2
-                    ? "Verify 6-Digit Code"
-                    : "Set New Password"
-                : isSignup
-                  ? "Become a Contributing Writer."
-                  : "Sign In to tossatale."}
-          </h1>
+      <div className="w-full flex-1 flex items-center justify-center my-auto">
+        <div className="max-w-[440px] w-full rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-8 sm:p-10 relative overflow-hidden">
+          {/* Subtle logo tint ambient backdrop */}
+          <div className="pointer-events-none absolute -top-20 -right-20 size-48 rounded-full bg-[#2B638C]/10 blur-3xl" />
 
-          {/* Subtitle */}
-          <p
-            className={cn(
-              "text-body leading-snug transition-all",
-              isSignup || isForgot || isVerifyOtp ? "mt-1 text-[0.84rem]" : "mt-2 text-[0.9375rem]",
-            )}
-          >
-            {isVerifyOtp
-              ? `Enter the 6-digit verification code sent to ${email || "your email"} to activate your writer studio.`
-              : isForgot
-                ? forgotStep === 1
-                  ? "Enter your account email to receive a 6-digit verification code."
-                  : forgotStep === 2
-                    ? `Enter the 6-digit verification code sent to ${email}.`
-                    : "Choose a secure new password for your account."
-                : isSignup
-                  ? "Join our storyteller collective to write and publish longform stories, series and essays."
-                  : "Readers sign in with Google. Writers and Editors access studios with email."}
-          </p>
+          {/* Clean Header Title without logo inside form */}
+          <div className="text-center">
+            <h1 className="font-display text-3xl font-bold text-heading">
+              {isVerifyOtp
+                ? "Activate Account"
+                : isForgot
+                  ? forgotStep === 1
+                    ? "Reset Password"
+                    : forgotStep === 2
+                      ? "Verify Code"
+                      : "New Password"
+                  : isSignup
+                    ? "Writer Registration"
+                    : "Sign In"}
+            </h1>
+            <p className="mt-1.5 text-[0.9375rem] text-subtle">
+              Sign In to tossatale
+            </p>
+          </div>
 
           {/* Maintenance Notice */}
           {isMaintenance && (
-            <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-left text-xs text-amber-600 dark:text-amber-300 flex items-start gap-2.5 shadow-sm">
+            <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-left text-xs text-amber-600 dark:text-amber-300 flex items-start gap-2.5 shadow-sm">
               <ShieldAlert className="size-4 shrink-0 text-amber-500 mt-0.5" />
               <div>
                 <span className="font-bold block text-amber-700 dark:text-amber-200">
                   Platform Under Maintenance
                 </span>
-                Sign-in is currently restricted to Administrators only. Reader and Writer access and new registrations are temporarily paused.
+                Sign-in is currently restricted to Administrators only. Reader and Writer access is temporarily paused.
               </div>
             </div>
           )}
 
-          {/* Mode Switcher Tabs (Sign In / Writer Registration) */}
+          {/* Reader / Writer Side-by-Side Switcher */}
           {!isMaintenance && !isForgot && !isVerifyOtp && (
-            <div
-              className={cn(
-                "flex rounded-full border border-border bg-surface p-1 transition-all",
-                isSignup ? "mt-3" : "mt-4",
-              )}
-            >
-              {(
-                [
-                  ["signin", "Sign In"],
-                  ["signup", "Writer Registration"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  suppressHydrationWarning
-                  disabled={isSubmitting}
-                  onClick={() => handleModeSwitch(key)}
-                  className={cn(
-                    "flex-1 rounded-full py-1.5 font-sans text-[0.8125rem] font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5",
-                    mode === key ? "bg-primary text-primary-foreground" : "text-body hover:text-primary",
-                  )}
-                >
-                  {key === "signup" && <Feather className="size-3.5" />}
-                  <span>{label}</span>
-                </button>
-              ))}
+            <div className="mt-6 grid grid-cols-2 rounded-xl bg-slate-100 dark:bg-zinc-800 p-1">
+              <button
+                type="button"
+                suppressHydrationWarning
+                disabled={isSubmitting}
+                onClick={() => handleModeSwitch("signin")}
+                className={cn(
+                  "py-2 rounded-lg font-sans text-[0.875rem] font-bold transition-all text-center cursor-pointer",
+                  mode === "signin"
+                    ? "bg-white dark:bg-zinc-900 text-black dark:text-white shadow-xs"
+                    : "text-slate-500 hover:text-black dark:hover:text-white",
+                )}
+              >
+                Reader
+              </button>
+              <button
+                type="button"
+                suppressHydrationWarning
+                disabled={isSubmitting}
+                onClick={() => handleModeSwitch("signup")}
+                className={cn(
+                  "py-2 rounded-lg font-sans text-[0.875rem] font-bold transition-all text-center cursor-pointer",
+                  mode === "signup"
+                    ? "bg-white dark:bg-zinc-900 text-black dark:text-white shadow-xs"
+                    : "text-slate-500 hover:text-black dark:hover:text-white",
+                )}
+              >
+                Writer
+              </button>
             </div>
           )}
 
           {/* Quick Reader Google Login on Sign In view */}
           {!isMaintenance && mode === "signin" && (
-            <div className="mt-4 mb-1">
+            <div className="mt-6">
               <div className="rounded-2xl border border-border/80 bg-surface/50 p-4 text-center">
-                <div className="flex items-center justify-center gap-1 text-xs font-semibold text-heading mb-2.5">
-                  <Sparkles className="size-3.5 text-primary" />
-                  <span>Reader Quick Sign In</span>
-                </div>
                 <div id="google-signin-btn-container" className="min-h-[40px] flex items-center justify-center" />
-                <p className="mt-1.5 text-[0.7rem] text-subtle">
-                  Instant access to bookmarks and liked stories
+                <p className="mt-2 text-[0.75rem] text-subtle">
+                  Instant access to bookmarks and saved stories
                 </p>
               </div>
 
-              <div className="my-4 flex items-center gap-3 text-subtle text-xs">
+              <div className="my-5 flex items-center gap-3 text-subtle text-xs">
                 <span className="h-px flex-1 bg-border" /> or with email <span className="h-px flex-1 bg-border" />
               </div>
             </div>
@@ -617,7 +610,7 @@ function AuthPage() {
 
           {/* ─── WRITER REGISTRATION OTP VERIFICATION FLOW ─── */}
           {isVerifyOtp ? (
-            <div className="mt-4 space-y-4">
+            <div className="mt-6 space-y-4">
               <form onSubmit={handleVerifyRegistrationOtp} className="space-y-3.5 animate-fade-up">
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-3.5 text-xs text-primary dark:text-primary flex items-start gap-2.5 shadow-sm">
                   <ShieldCheck className="size-4 shrink-0 text-primary mt-0.5" />
@@ -661,7 +654,7 @@ function AuthPage() {
                     <button
                       type="button"
                       onClick={handleResendRegistrationOtp}
-                      className="inline-flex items-center gap-1 text-primary font-bold hover:underline"
+                      className="inline-flex items-center gap-1 text-primary font-bold hover:underline cursor-pointer"
                     >
                       <RefreshCw className="size-3" /> Resend Code
                     </button>
@@ -672,17 +665,17 @@ function AuthPage() {
                   type="submit"
                   size="md"
                   disabled={isSubmitting || otpCode.length < 6}
-                  className="w-full h-10 text-[0.875rem] mt-2 font-bold gap-2"
+                  className="w-full h-11 text-[0.875rem] mt-2 font-bold gap-2 bg-[#FF6B35] hover:bg-[#e85b27] text-white border-none"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="size-4 animate-spin text-primary-foreground" />
+                      <Loader2 className="size-4 animate-spin text-white" />
                       <span>Activating Account...</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="size-4" />
-                      <span>Verify & Enter Writer Studio</span>
+                      <span>Verify & Enter Studio</span>
                     </>
                   )}
                 </Button>
@@ -690,14 +683,14 @@ function AuthPage() {
                 <button
                   type="button"
                   onClick={() => handleModeSwitch("signin")}
-                  className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1"
+                  className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1 cursor-pointer"
                 >
                   <ArrowLeft className="size-3.5" /> Back to Sign In
                 </button>
               </form>
             </div>
           ) : isForgot ? (
-            <div className="mt-4 space-y-4">
+            <div className="mt-6 space-y-4">
               {/* STEP 1: Enter Email & Send OTP */}
               {forgotStep === 1 && (
                 <form onSubmit={handleSendOtp} className="space-y-3.5">
@@ -712,7 +705,7 @@ function AuthPage() {
                         if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
                       }}
                       className={cn(
-                        "h-10 text-[0.875rem]",
+                        "h-11 text-[0.875rem]",
                         errors.email && "border-destructive focus:border-destructive focus:ring-destructive/20",
                       )}
                     />
@@ -727,11 +720,11 @@ function AuthPage() {
                     type="submit"
                     size="md"
                     disabled={isSubmitting}
-                    className="w-full h-10 text-[0.875rem] mt-2 gap-2 font-bold"
+                    className="w-full h-11 text-[0.875rem] mt-2 gap-2 font-bold bg-[#FF6B35] hover:bg-[#e85b27] text-white border-none"
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="size-4 animate-spin text-primary-foreground" />
+                        <Loader2 className="size-4 animate-spin text-white" />
                         <span>Sending Verification Code...</span>
                       </>
                     ) : (
@@ -745,14 +738,14 @@ function AuthPage() {
                   <button
                     type="button"
                     onClick={() => handleModeSwitch("signin")}
-                    className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1"
+                    className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1 cursor-pointer"
                   >
                     <ArrowLeft className="size-3.5" /> Back to Sign In
                   </button>
                 </form>
               )}
 
-              {/* STEP 2: Verify OTP Only (No Password Fields Shown) */}
+              {/* STEP 2: Verify OTP Only */}
               {forgotStep === 2 && (
                 <form onSubmit={handleVerifyOtp} className="space-y-3.5">
                   <div className="flex items-center justify-between rounded-xl bg-surface-alt px-3 py-2 border border-border text-xs">
@@ -762,7 +755,7 @@ function AuthPage() {
                     <button
                       type="button"
                       onClick={() => setForgotStep(1)}
-                      className="text-primary font-bold hover:underline shrink-0"
+                      className="text-primary font-bold hover:underline shrink-0 ml-2 cursor-pointer"
                     >
                       Change
                     </button>
@@ -791,7 +784,6 @@ function AuthPage() {
                     )}
                   </Field>
 
-                  {/* Resend OTP button */}
                   <div className="flex items-center justify-between text-xs pt-1">
                     <span className="text-subtle">Didn't receive code?</span>
                     {otpCountdown > 0 ? (
@@ -799,8 +791,8 @@ function AuthPage() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => handleSendOtp()}
-                        className="inline-flex items-center gap-1 text-primary font-bold hover:underline"
+                        onClick={handleSendOtp}
+                        className="inline-flex items-center gap-1 text-primary font-bold hover:underline cursor-pointer"
                       >
                         <RefreshCw className="size-3" /> Resend Code
                       </button>
@@ -811,17 +803,17 @@ function AuthPage() {
                     type="submit"
                     size="md"
                     disabled={isSubmitting || otpCode.length < 6}
-                    className="w-full h-10 text-[0.875rem] mt-2 font-bold gap-2"
+                    className="w-full h-11 text-[0.875rem] mt-2 gap-2 font-bold bg-[#FF6B35] hover:bg-[#e85b27] text-white border-none"
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="size-4 animate-spin text-primary-foreground" />
+                        <Loader2 className="size-4 animate-spin text-white" />
                         <span>Verifying Code...</span>
                       </>
                     ) : (
                       <>
-                        <ShieldCheck className="size-4" />
-                        <span>Verify Code</span>
+                        <CheckCircle2 className="size-4" />
+                        <span>Verify & Continue</span>
                       </>
                     )}
                   </Button>
@@ -829,22 +821,21 @@ function AuthPage() {
                   <button
                     type="button"
                     onClick={() => handleModeSwitch("signin")}
-                    className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1"
+                    className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1 cursor-pointer"
                   >
                     <ArrowLeft className="size-3.5" /> Back to Sign In
                   </button>
                 </form>
               )}
 
-              {/* STEP 3: Enter New Password (Only Shown After OTP Is Verified) */}
+              {/* STEP 3: Set New Password */}
               {forgotStep === 3 && (
-                <form onSubmit={handleSetNewPassword} className="space-y-3.5 animate-fade-up">
-                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                    <CheckCircle2 className="size-4 shrink-0" />
-                    <span>OTP verified for <strong>{email}</strong>. Please enter your new password below.</span>
+                <form onSubmit={handleSetNewPassword} className="space-y-3.5">
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                    <span>Identity verified. Please set your new password.</span>
                   </div>
 
-                  {/* New Password Field */}
                   <Field label="New Password" hint="At least 8 characters.">
                     <div className="relative">
                       <Input
@@ -857,7 +848,7 @@ function AuthPage() {
                           if (errors.newPassword) setErrors((prev) => ({ ...prev, newPassword: "" }));
                         }}
                         className={cn(
-                          "pr-10 h-10 text-[0.875rem]",
+                          "pr-10 h-11 text-[0.875rem]",
                           errors.newPassword && "border-destructive focus:border-destructive focus:ring-destructive/20",
                         )}
                       />
@@ -867,7 +858,7 @@ function AuthPage() {
                         disabled={isSubmitting}
                         onClick={() => setShowNewPassword((prev) => !prev)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors"
-                        aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                        aria-label={showNewPassword ? "Hide password" : "Show password"}
                       >
                         {showNewPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
@@ -879,7 +870,6 @@ function AuthPage() {
                     )}
                   </Field>
 
-                  {/* Confirm New Password Field */}
                   <Field label="Confirm New Password">
                     <div className="relative">
                       <Input
@@ -892,7 +882,7 @@ function AuthPage() {
                           if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: "" }));
                         }}
                         className={cn(
-                          "pr-10 h-10 text-[0.875rem]",
+                          "pr-10 h-11 text-[0.875rem]",
                           errors.confirmPassword && "border-destructive focus:border-destructive focus:ring-destructive/20",
                         )}
                       />
@@ -918,17 +908,17 @@ function AuthPage() {
                     type="submit"
                     size="md"
                     disabled={isSubmitting}
-                    className="w-full h-10 text-[0.875rem] mt-2 font-bold gap-2"
+                    className="w-full h-11 text-[0.875rem] mt-2 gap-2 font-bold bg-[#FF6B35] hover:bg-[#e85b27] text-white border-none"
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="size-4 animate-spin text-primary-foreground" />
+                        <Loader2 className="size-4 animate-spin text-white" />
                         <span>Updating Password...</span>
                       </>
                     ) : (
                       <>
                         <KeyRound className="size-4" />
-                        <span>Set New Password & Sign In</span>
+                        <span>Update Password & Sign In</span>
                       </>
                     )}
                   </Button>
@@ -936,17 +926,12 @@ function AuthPage() {
               )}
             </div>
           ) : (
-            /* ─── STANDARD SIGN IN & WRITER SIGNUP FORMS ─── */
-            <form
-              className={cn("transition-all relative", isSignup ? "mt-3 space-y-2.5" : "space-y-3.5")}
-              onSubmit={handleSubmit}
-              noValidate
-            >
+            <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
               {isSignup && (
                 <>
                   <Field label="Full name">
                     <Input
-                      placeholder="e.g. Vikram Seth"
+                      placeholder="e.g. Maya Sen"
                       disabled={isSubmitting}
                       value={fullName}
                       onChange={(e) => {
@@ -954,7 +939,7 @@ function AuthPage() {
                         if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: "" }));
                       }}
                       className={cn(
-                        "h-8.5 text-[0.8125rem]",
+                        "h-10 text-[0.875rem]",
                         errors.fullName && "border-destructive focus:border-destructive focus:ring-destructive/20",
                       )}
                     />
@@ -975,7 +960,7 @@ function AuthPage() {
                         if (errors.portfolioUrl) setErrors((prev) => ({ ...prev, portfolioUrl: "" }));
                       }}
                       className={cn(
-                        "h-8.5 text-[0.8125rem]",
+                        "h-10 text-[0.875rem]",
                         errors.portfolioUrl && "border-destructive focus:border-destructive focus:ring-destructive/20",
                       )}
                     />
@@ -999,8 +984,8 @@ function AuthPage() {
                     if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
                   }}
                   className={cn(
+                    "h-10 text-[0.875rem]",
                     errors.email && "border-destructive focus:border-destructive focus:ring-destructive/20",
-                    isSignup ? "h-8.5 text-[0.8125rem]" : "h-10 text-[0.875rem]",
                   )}
                 />
                 {errors.email && (
@@ -1010,7 +995,7 @@ function AuthPage() {
                 )}
               </Field>
 
-              <Field label="Password" hint={isSignup ? "At least 8 characters." : undefined}>
+              <Field label="Password">
                 <div className="relative">
                   <Input
                     type={showPassword ? "text" : "password"}
@@ -1022,9 +1007,8 @@ function AuthPage() {
                       if (errors.password) setErrors((prev) => ({ ...prev, password: "" }));
                     }}
                     className={cn(
-                      "pr-10",
+                      "pr-10 h-10 text-[0.875rem]",
                       errors.password && "border-destructive focus:border-destructive focus:ring-destructive/20",
-                      isSignup ? "h-8.5 text-[0.8125rem]" : "h-10 text-[0.875rem]",
                     )}
                   />
                   <button
@@ -1032,7 +1016,7 @@ function AuthPage() {
                     suppressHydrationWarning
                     disabled={isSubmitting}
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors cursor-pointer"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -1045,13 +1029,12 @@ function AuthPage() {
                 )}
               </Field>
 
-              {/* Forgot password link on Sign In */}
               {!isSignup && (
                 <div className="flex justify-end pt-0.5">
                   <button
                     type="button"
                     onClick={() => handleModeSwitch("forgot")}
-                    className="text-xs font-bold text-primary hover:underline"
+                    className="text-xs font-bold text-[#2B638C] hover:underline cursor-pointer"
                   >
                     Forgot password?
                   </button>
@@ -1071,7 +1054,7 @@ function AuthPage() {
                         if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: "" }));
                       }}
                       className={cn(
-                        "pr-10 h-8.5 text-[0.8125rem]",
+                        "pr-10 h-10 text-[0.875rem]",
                         errors.confirmPassword && "border-destructive focus:border-destructive focus:ring-destructive/20",
                       )}
                     />
@@ -1080,7 +1063,7 @@ function AuthPage() {
                       suppressHydrationWarning
                       disabled={isSubmitting}
                       onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors cursor-pointer"
                       aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                     >
                       {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -1094,18 +1077,48 @@ function AuthPage() {
                 </Field>
               )}
 
+              {isSignup && (
+                <div className="pt-1">
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none text-left">
+                    <input
+                      type="checkbox"
+                      checked={consentGiven}
+                      onChange={(e) => {
+                        setConsentGiven(e.target.checked);
+                        if (errors.consent) setErrors((prev) => ({ ...prev, consent: "" }));
+                      }}
+                      disabled={isSubmitting}
+                      className="size-4 mt-0.5 rounded border-slate-300 text-[#FF6B35] focus:ring-[#FF6B35] cursor-pointer shrink-0 accent-[#FF6B35]"
+                    />
+                    <span className="text-[0.8125rem] text-body leading-snug">
+                      I agree to the{" "}
+                      <Link to="/terms" target="_blank" className="font-bold text-[#2B638C] hover:underline" onClick={(e) => e.stopPropagation()}>
+                        Terms of service
+                      </Link>
+                      ,{" "}
+                      <Link to="/privacy" target="_blank" className="font-bold text-[#2B638C] hover:underline" onClick={(e) => e.stopPropagation()}>
+                        Privacy policy
+                      </Link>
+                      , and Writer Publishing Guidelines.
+                    </span>
+                  </label>
+                  {errors.consent && (
+                    <span className="mt-1.5 block font-sans text-[0.75rem] font-bold text-destructive text-left">
+                      {errors.consent}
+                    </span>
+                  )}
+                </div>
+              )}
+
               <Button
                 type="submit"
                 size="md"
                 disabled={isSubmitting}
-                className={cn(
-                  "w-full transition-all flex items-center justify-center gap-2",
-                  isSignup ? "h-9 text-[0.8125rem] mt-2" : "h-10 text-[0.875rem] mt-2",
-                )}
+                className="w-full h-11 text-[0.875rem] mt-3 font-bold bg-[#FF6B35] hover:bg-[#e85b27] text-white border-none shadow-xs cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="size-4 animate-spin text-primary-foreground" />
+                    <Loader2 className="size-4 animate-spin text-white" />
                     <span>{isSignup ? "Creating Writer Account..." : "Signing In..."}</span>
                   </>
                 ) : isSignup ? (
@@ -1117,33 +1130,24 @@ function AuthPage() {
             </form>
           )}
 
-          <p className={cn("text-subtle transition-all", isSignup ? "mt-3 text-[0.7rem]" : "mt-4 text-[0.75rem]")}>
+          {/* Centered Terms and Privacy */}
+          <p className="mt-5 text-center text-xs text-subtle">
             By continuing you agree to our{" "}
-            <Link to="/terms" className="text-primary hover:underline">
-              terms
+            <Link to="/terms" className="text-[#2B638C] font-semibold hover:underline">
+              Terms of service
             </Link>{" "}
             and{" "}
-            <Link to="/privacy" className="text-primary hover:underline">
-              privacy policy
+            <Link to="/privacy" className="text-[#2B638C] font-semibold hover:underline">
+              Privacy policy
             </Link>
             .
           </p>
         </div>
-
-        <div className="text-[0.75rem] text-subtle shrink-0 text-center sm:text-left">
-          © {new Date().getFullYear()} tossatale
-        </div>
       </div>
 
-      <div className="relative hidden h-full overflow-hidden lg:block">
-        <img src={authArt} alt="Writing desk" width={1920} height={1080} className="size-full object-cover" />
-        <span className="absolute inset-0 bg-primary-hover/35" />
-        <div className="absolute inset-x-0 bottom-0 p-10">
-          <p className="max-w-md font-display text-[1.65rem] leading-snug text-white italic">
-            “I came for one story and stayed for four years.”
-          </p>
-          <p className="mt-3 text-[0.875rem] text-white/80">Member since 2022 · Kolkata</p>
-        </div>
+      {/* Centered Footer Copyright */}
+      <div className="w-full text-center text-[0.8125rem] text-subtle shrink-0 pt-4">
+        © {new Date().getFullYear()} tossatale. All rights reserved.
       </div>
     </div>
   );

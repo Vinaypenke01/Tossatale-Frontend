@@ -209,7 +209,9 @@ function AdminProfileScreen() {
     { name: "Review Queue Moderation", desc: "Accept, reject, or request revisions on drafts", active: true },
   ];
 
-  const initials = `${firstName[0] || (displayName ? displayName[0] : "A")}${lastName[0] || (displayName && displayName.split(" ")[1] ? displayName.split(" ")[1][0] : "D")}`.toUpperCase();
+  const firstInitial = firstName[0] || displayName?.[0] || "A";
+  const secondInitial = lastName[0] || displayName?.split(" ")[1]?.[0] || "D";
+  const initials = `${firstInitial}${secondInitial}`.toUpperCase();
 
   return (
     <AppShell

@@ -11,7 +11,7 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 });
 
-export function TermsPage() {
+function TermsPage() {
   return (
     <SiteLayout>
       <div className="mx-auto max-w-[840px] px-5 py-20 lg:px-8">

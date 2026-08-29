@@ -3,6 +3,7 @@ import {
   ArrowRight,
   BookOpen,
   ChevronDown,
+  Facebook,
   Film,
   Globe,
   Instagram,
@@ -36,20 +37,20 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { label: "Home", to: "/" },
-  { label: "Films", to: "/videos" },
-  // { label: "Writers", to: "/writers" },
   { label: "Blog", to: "/blogs" },
+  { label: "About", to: "/about" },
+  { label: "Contact", to: "/contact" },
 ];
 
 const mobileNavLinks = [
   { label: "Home", to: "/" },
-  { label: "Search Library", to: "/search" },
   { label: "Stories", to: "/stories" },
-  { label: "Films", to: "/videos" },
-  { label: "Upcoming Projects", to: "/upcoming-projects" },
   { label: "Blog", to: "/blogs" },
+  { label: "Films", to: "/videos" },
+  { label: "About Us", to: "/about" },
   { label: "Contact", to: "/contact" },
   { label: "FAQ & Help", to: "/faq" },
+  { label: "Search Library", to: "/search" },
 ];
 
 export type UserRole = "guest" | "reader" | "writer" | "admin";
@@ -128,157 +129,149 @@ function useTheme(): [string, (next: string) => void] {
 
 export function ThemeToggle() {
   const [theme, toggleTheme] = useTheme();
-  const isDark = theme === "dark";
 
   return (
     <button
-      type="button"
       suppressHydrationWarning
-      aria-label={isDark ? "Switch to daylight reading mode" : "Switch to night reading mode"}
-      onClick={() => toggleTheme(isDark ? "light" : "dark")}
-      className={cn(
-        "relative flex h-8 w-14 items-center rounded-full p-1 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-inner",
-        isDark ? "bg-[#252529] border border-border" : "bg-[#d8e6fd] border border-primary/20",
-      )}
+      type="button"
+      aria-label="Toggle dark mode"
+      onClick={() => toggleTheme(theme === "dark" ? "light" : "dark")}
+      className="flex size-8 items-center justify-center text-black dark:text-white hover:text-primary transition-colors shrink-0 cursor-pointer"
     >
-      <span
-        className={cn(
-          "flex size-6 items-center justify-center rounded-full transition-transform duration-300 shadow-md",
-          isDark
-            ? "translate-x-[1.45rem] bg-[#d5b064] text-[#161618] shadow-amber-900/40"
-            : "translate-x-0 bg-[#5182ed] text-white shadow-blue-500/40",
-        )}
-      >
-        {isDark ? (
-          <Moon className="size-3.5 fill-current text-[#161618]" />
-        ) : (
-          <Sun className="size-3.5 text-white" />
-        )}
-      </span>
+      {theme === "dark" ? (
+        <Sun className="size-4.5 text-amber-400 hover:rotate-45 transition-transform" />
+      ) : (
+        <Moon className="size-4.5 text-black hover:-rotate-12 transition-transform" />
+      )}
     </button>
   );
 }
 
-const roleProfiles: Record<UserRole, { name: string; initials: string; role: string; profileUrl: string; dashboardUrl: string }> = {
-  guest: {
-    name: "Guest Visitor",
-    initials: "G",
-    role: "Visitor Mode",
-    profileUrl: "/auth",
-    dashboardUrl: "/",
-  },
-  reader: {
-    name: "Reader",
-    initials: "RD",
-    role: "Community Reader",
-    profileUrl: "/reader/history",
-    dashboardUrl: "/reader",
-  },
-  writer: {
-    name: "Writer",
-    initials: "WR",
-    role: "Contributing Writer",
-    profileUrl: "/writer/profile",
-    dashboardUrl: "/writer",
-  },
-  admin: {
-    name: "Editorial Desk",
-    initials: "ED",
-    role: "Managing Editor",
-    profileUrl: "/admin/profile",
-    dashboardUrl: "/admin",
-  },
-};
-
-const roleNavLinks: Record<UserRole, Array<{ label: string; to: string }>> = {
+const roleNavLinks: Record<UserRole, { label: string; to: string }[]> = {
   guest: [],
   reader: [
+    { label: "My Library", to: "/reader/library" },
     { label: "Bookmarks", to: "/reader/bookmarks" },
-    { label: "History", to: "/reader/history" },
-    { label: "Following", to: "/reader/following" },
   ],
   writer: [
-    { label: "Studio Overview", to: "/writer" },
-    { label: "My Drafts & Published", to: "/writer/stories" },
-    { label: "Analytics", to: "/writer/analytics" },
+    { label: "Studio", to: "/writer" },
+    { label: "My Stories", to: "/writer/stories" },
+    { label: "Write", to: "/writer/editor" },
   ],
   admin: [
-    { label: "Control Desk", to: "/admin" },
+    { label: "Dashboard", to: "/admin" },
     { label: "Review Queue", to: "/admin/review-queue" },
-    { label: "Homepage Builder", to: "/admin/homepage-builder" },
   ],
 };
 
-function UserProfileDropdown({ role, onRoleChange }: { role: UserRole; onRoleChange: (r: UserRole) => void }) {
+function UserProfileDropdown({
+  role,
+  onRoleChange,
+}: {
+  role: UserRole;
+  onRoleChange: (role: UserRole) => void;
+}) {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const normalizedRole: UserRole = (role && roleProfiles[role.toLowerCase() as UserRole])
-    ? (role.toLowerCase() as UserRole)
-    : "guest";
-  const defaultProfile = roleProfiles[normalizedRole] || roleProfiles.guest;
+  const handleSignOut = async () => {
+    await logout();
+    onRoleChange("guest");
+    toast.success("Signed out successfully");
+    navigate({ to: "/" });
+  };
 
-  const displayName = user?.full_name || (user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "") || user?.email || defaultProfile.name;
-  const userInitials = user?.first_name
-    ? user.first_name.substring(0, 2).toUpperCase()
-    : displayName.substring(0, 2).toUpperCase() || defaultProfile.initials;
+  const displayName = user?.full_name || user?.email || (role === "admin" ? "Admin" : role === "writer" ? "Writer" : "Reader");
+  const userInitials = displayName.substring(0, 2).toUpperCase();
 
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
+        suppressHydrationWarning
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-border bg-surface p-1 pr-3 text-left transition-colors hover:border-primary shrink-0"
+        className="flex items-center gap-2 rounded-full border border-border bg-surface p-1 pr-2.5 transition-all hover:border-primary/40 cursor-pointer"
       >
-        <Avatar initials={userInitials} size="sm" />
-        <div className="hidden text-left md:block">
-          <p className="font-sans text-[0.8125rem] font-bold text-heading leading-tight max-w-[120px] truncate">{displayName}</p>
-          <p className="text-[0.6875rem] text-primary font-bold uppercase tracking-wider">{normalizedRole}</p>
-        </div>
-        <ChevronDown className="size-3.5 text-subtle" />
+        <Avatar
+          initials={userInitials}
+          gender={(user as any)?.gender || "OTHER"}
+          src={user?.avatar_url || ""}
+          size="sm"
+        />
+        <span className="font-sans text-[0.8125rem] font-bold text-heading hidden sm:inline max-w-[100px] truncate">
+          {displayName}
+        </span>
+        <ChevronDown className={cn("size-3.5 text-subtle transition-transform duration-200", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-64 rounded-2xl border border-border bg-surface p-2 shadow-lift animate-in fade-in slide-in-from-top-2">
-          <div className="border-b border-border p-3">
-            <p className="font-sans text-[0.875rem] font-bold text-heading truncate">{displayName}</p>
-            <p className="text-[0.75rem] text-subtle truncate">{user?.email || defaultProfile.role}</p>
-            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary-light px-2.5 py-0.5 text-[0.6875rem] font-bold text-primary-hover uppercase tracking-wider">
-              <ShieldCheck className="size-3" /> Active: {normalizedRole}
-            </div>
+        <div className="absolute right-0 top-full mt-2 z-50 w-56 rounded-2xl border border-border bg-surface p-2 shadow-lift animate-in fade-in slide-in-from-top-2">
+          <div className="px-3 py-2 border-b border-border mb-1">
+            <p className="font-sans text-[0.8125rem] font-bold text-heading truncate">{displayName}</p>
+            <p className="font-sans text-[0.6875rem] font-extrabold uppercase tracking-wider text-primary">
+              {role === "admin" ? "Administrator" : role === "writer" ? "Story Writer" : "Reader"}
+            </p>
           </div>
 
-          <div className="py-2 border-b border-border">
-            <Link
-              to={defaultProfile.dashboardUrl}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover"
-            >
-              <LayoutDashboard className="size-4 text-primary" />
-              <span>{normalizedRole === "reader" ? "Reader Space" : normalizedRole === "writer" ? "Writer Studio" : normalizedRole === "admin" ? "Admin Desk" : "Dashboard"}</span>
-            </Link>
-            <Link
-              to={defaultProfile.profileUrl}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover"
-            >
-              <User className="size-4 text-primary" />
-              <span>Profile Settings</span>
-            </Link>
+          <div className="space-y-0.5">
+            {role === "admin" && (
+              <Link
+                to="/admin"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+              >
+                <LayoutDashboard className="size-4 text-primary" />
+                <span>Admin Dashboard</span>
+              </Link>
+            )}
+            {role === "writer" && (
+              <>
+                <Link
+                  to="/writer"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+                >
+                  <LayoutDashboard className="size-4 text-primary" />
+                  <span>Writer Studio</span>
+                </Link>
+                <Link
+                  to="/writer/editor"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+                >
+                  <PenLine className="size-4 text-primary" />
+                  <span>Write New Story</span>
+                </Link>
+              </>
+            )}
+            {role === "reader" && (
+              <>
+                <Link
+                  to="/reader"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+                >
+                  <LayoutDashboard className="size-4 text-primary" />
+                  <span>Reader Dashboard</span>
+                </Link>
+                <Link
+                  to="/reader"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+                >
+                  <BookOpen className="size-4 text-primary" />
+                  <span>My Shelf</span>
+                </Link>
+              </>
+            )}
           </div>
 
-          <div className="p-1">
+          <div className="border-t border-border mt-1 pt-1">
             <button
               type="button"
-              onClick={async () => {
-                await logout();
-                onRoleChange("guest");
-                setOpen(false);
-                toast.success("Signed out successfully");
-                navigate({ to: "/" });
-              }}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.875rem] font-bold text-destructive hover:bg-destructive/10"
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
             >
               <LogOut className="size-4" />
               <span>Sign Out</span>
@@ -292,12 +285,12 @@ function UserProfileDropdown({ role, onRoleChange }: { role: UserRole; onRoleCha
 
 function Wordmark({ onDark = false }: { onDark?: boolean }) {
   return (
-    <Link to="/" className="inline-flex items-center py-1">
+    <Link to="/" className="inline-flex items-center py-0.5">
       <img
         src={logo}
         alt="tossatale"
         className={cn(
-          "h-9 w-auto max-w-[160px] object-contain transition-opacity hover:opacity-90",
+          "h-11 sm:h-12 w-auto max-w-[190px] object-contain transition-opacity hover:opacity-90",
           onDark && "brightness-0 invert",
         )}
       />
@@ -319,12 +312,12 @@ function StoriesDropdown() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-sans text-[0.875rem] font-semibold transition-all cursor-pointer",
-          open ? "bg-primary-light text-primary-hover" : "text-heading/85 hover:bg-primary-light hover:text-primary-hover",
+          "flex items-center gap-1 px-3 py-1.5 font-sans text-[0.9375rem] font-medium transition-colors cursor-pointer text-black dark:text-white hover:text-[#2B638C]",
+          open && "text-[#2B638C] font-bold",
         )}
       >
         <span>Stories</span>
-        <ChevronDown className={cn("size-3.5 text-subtle transition-transform duration-200", open && "rotate-180")} />
+        <ChevronDown className={cn("size-3.5 transition-transform duration-200", open && "rotate-180")} />
       </button>
 
       {open && (
@@ -333,7 +326,7 @@ function StoriesDropdown() {
             <Link
               to="/stories"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
             >
               <BookOpen className="size-4 text-primary" />
               <span>All Stories</span>
@@ -341,7 +334,7 @@ function StoriesDropdown() {
             <Link
               to="/videos"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.875rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
             >
               <Film className="size-4 text-primary" />
               <span>Short Films</span>
@@ -382,7 +375,7 @@ export function AnnouncementBar({
   return (
     <div className="relative z-50 bg-gradient-to-r from-primary-hover via-primary to-primary-hover px-4 py-2 text-white shadow-paper transition-all">
       <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-4 text-[0.875rem]">
-        <div className="flex flex-1 flex-wrap items-center justify-center gap-2 text-center sm:justify-start">
+        <div className="flex flex-1 flex-wrap items-center justify-center gap-2 text-center">
           {announcement.badgeText && (
             <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 font-sans text-[0.6875rem] font-extrabold tracking-wider uppercase text-white backdrop-blur">
               <Sparkles className="size-3" />
@@ -427,45 +420,58 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
   const roleLinks = (mounted && roleNavLinks[currentRole]) ? roleNavLinks[currentRole] : [];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 bg-white dark:bg-zinc-950 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.35)] transition-colors">
       <AnnouncementBar announcement={announcement} />
-      <div className="mx-auto grid grid-cols-2 lg:grid-cols-[1fr_auto_1fr] h-18 max-w-[1240px] items-center px-5 py-4 lg:px-8">
+      <div className="mx-auto grid grid-cols-2 lg:grid-cols-[1fr_auto_1fr] h-18 max-w-[1240px] items-center px-5 py-3 lg:px-8">
         <div className="justify-self-start">
           <Wordmark />
         </div>
 
-        <nav className="justify-self-center hidden items-center gap-2 whitespace-nowrap lg:flex shrink-0">
+        <nav className="justify-self-center hidden items-center gap-5 whitespace-nowrap lg:flex shrink-0">
           <Link
             to="/"
             activeOptions={{ exact: true }}
-            activeProps={{ className: "bg-primary-light text-primary-hover font-bold shadow-xs" }}
-            className="rounded-full px-3.5 py-1.5 font-sans text-[0.875rem] font-semibold text-heading/85 transition-all hover:bg-primary-light hover:text-primary-hover shrink-0"
+            activeProps={{ className: "text-[#2B638C] dark:text-[#5295c5] font-bold" }}
+            className="px-2 py-1 font-sans text-[0.9375rem] font-medium text-black dark:text-white transition-colors hover:text-[#2B638C] shrink-0"
           >
             Home
           </Link>
 
           <StoriesDropdown />
 
-          {navLinks.filter((l) => l.to !== "/").map((l) => (
-            <Link
-              key={l.to}
-              to={l.to as any}
-              activeProps={{ className: "bg-primary-light text-primary-hover font-bold shadow-xs" }}
-              className="rounded-full px-3.5 py-1.5 font-sans text-[0.875rem] font-semibold text-heading/85 transition-all hover:bg-primary-light hover:text-primary-hover shrink-0"
-            >
-              {l.label}
-            </Link>
-          ))}
+          <Link
+            to="/blogs"
+            activeProps={{ className: "text-[#2B638C] dark:text-[#5295c5] font-bold" }}
+            className="px-2 py-1 font-sans text-[0.9375rem] font-medium text-black dark:text-white transition-colors hover:text-[#2B638C] shrink-0"
+          >
+            Blog
+          </Link>
+
+          <Link
+            to="/about"
+            activeProps={{ className: "text-[#2B638C] dark:text-[#5295c5] font-bold" }}
+            className="px-2 py-1 font-sans text-[0.9375rem] font-medium text-black dark:text-white transition-colors hover:text-[#2B638C] shrink-0"
+          >
+            About
+          </Link>
+
+          <Link
+            to="/contact"
+            activeProps={{ className: "text-[#2B638C] dark:text-[#5295c5] font-bold" }}
+            className="px-2 py-1 font-sans text-[0.9375rem] font-medium text-black dark:text-white transition-colors hover:text-[#2B638C] shrink-0"
+          >
+            Contact
+          </Link>
 
           {/* Integrated Reader Links in Navbar (Only for Readers) */}
           {mounted && currentRole === "reader" && roleLinks.length > 0 && (
-            <div className="ml-1.5 flex items-center gap-0.5 border-l border-border pl-1.5 shrink-0">
+            <div className="ml-1.5 flex items-center gap-1 border-l border-border pl-2 shrink-0">
               {roleLinks.map((rl) => (
                 <Link
                   key={rl.to}
                   to={rl.to}
-                  activeProps={{ className: "bg-primary-light text-primary-hover font-bold" }}
-                  className="rounded-full px-3 py-1.5 font-sans text-[0.875rem] font-semibold text-primary transition-all hover:bg-primary-light hover:text-primary-hover shrink-0"
+                  activeProps={{ className: "text-[#2B638C] dark:text-[#5295c5] font-bold" }}
+                  className="px-2 py-1 font-sans text-[0.875rem] font-medium text-black dark:text-white transition-colors hover:text-[#2B638C] shrink-0"
                 >
                   {rl.label}
                 </Link>
@@ -479,9 +485,9 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
             to="/search"
             search={{ q: "" }}
             aria-label="Search tossatale"
-            className="hidden size-8 place-items-center rounded-full border border-border bg-surface text-subtle transition-all hover:border-primary hover:text-primary md:grid shrink-0 shadow-xs"
+            className="hidden size-8 place-items-center text-black dark:text-white transition-colors hover:text-primary md:grid shrink-0 cursor-pointer"
           >
-            <Search className="size-4 text-subtle" />
+            <Search className="size-4.5" />
           </Link>
 
           {/* Theme Switcher Toggle */}
@@ -490,9 +496,12 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           {/* User Profile Dropdown OR Guest Sign In Buttons */}
           {!mounted || currentRole === "guest" ? (
             <div className="hidden sm:flex items-center gap-2">
-              <ButtonLink to="/auth" variant="ghostOutline" size="sm">
+              <Link
+                to="/auth"
+                className="inline-flex items-center justify-center rounded-xl bg-[#FF6B35] hover:bg-[#e85b27] text-white font-bold px-4.5 py-2 text-[0.875rem] shadow-xs transition-all hover:shadow-md"
+              >
                 Sign in
-              </ButtonLink>
+              </Link>
             </div>
           ) : (
             <UserProfileDropdown role={currentRole} onRoleChange={setCurrentRole} />
@@ -537,9 +546,13 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
 
           {currentRole === "guest" ? (
             <div className="mt-3 border-t border-border pt-2.5">
-              <ButtonLink to="/auth" variant="ghostOutline" size="sm" className="w-full justify-center px-2 text-[0.75rem]" onClick={() => setOpen(false)}>
+              <Link
+                to="/auth"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center justify-center rounded-xl bg-[#FF6B35] hover:bg-[#e85b27] text-white font-bold py-2 text-[0.8125rem]"
+              >
                 Sign in
-              </ButtonLink>
+              </Link>
             </div>
           ) : (
             <div className="mt-3 border-t border-border pt-2.5 space-y-2">
@@ -558,28 +571,19 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
                 >
                   Dashboard
                 </Link>
-                <Link
-                  to={currentRole === "writer" ? "/writer/profile" : currentRole === "admin" ? "/admin/profile" : "/reader"}
-                  onClick={() => setOpen(false)}
-                  className="rounded-xl px-2.5 py-1.5 font-sans text-[0.75rem] font-bold text-heading hover:bg-surface-alt text-center border border-border"
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logout();
+                    setCurrentRole("guest");
+                    setOpen(false);
+                    navigate({ to: "/" });
+                  }}
+                  className="rounded-xl px-2.5 py-1.5 font-sans text-[0.75rem] font-bold text-destructive hover:bg-destructive/10 text-center"
                 >
-                  Profile
-                </Link>
+                  <LogOut className="size-3.5 inline mr-1" /> Sign Out
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  await logout();
-                  setCurrentRole("guest");
-                  setOpen(false);
-                  toast.success("Signed out successfully");
-                  navigate({ to: "/" });
-                }}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-destructive/20 bg-destructive/5 py-2 text-xs font-bold text-destructive hover:bg-destructive/15 transition-colors"
-              >
-                <LogOut className="size-3.5" /> Sign Out
-              </button>
             </div>
           )}
         </div>
@@ -592,30 +596,36 @@ const footerColumns = [
   {
     title: "Explore",
     links: [
+      { label: "Home", to: "/" },
       { label: "Stories", to: "/stories" },
       { label: "Blog", to: "/blogs" },
       { label: "Short Films", to: "/videos" },
-      { label: "Upcoming Projects", to: "/upcoming-projects" },
+      { label: "Featured", to: "/stories" },
     ],
   },
   {
-    title: "Community & Writers",
+    title: "Writers",
     links: [
-      { label: "Writer Registration", to: "/auth?mode=signup" },
       { label: "Writers Directory", to: "/writers" },
+      { label: "Reader to Writer", to: "/auth?mode=signup" },
+      { label: "Help", to: "/faq" },
+    ],
+  },
+  {
+    title: "Community",
+    links: [
       { label: "Newsletter", to: "/#newsletter" },
       { label: "About Us", to: "/about" },
-      { label: "Contact & Pitch", to: "/contact" },
-      { label: "FAQ & Help", to: "/faq" },
+      { label: "Contact Us", to: "/contact" },
+      { label: "FAQs", to: "/faq" },
     ],
   },
   {
     title: "Legal",
     links: [
       { label: "Privacy Policy", to: "/privacy" },
-      { label: "Terms & Conditions", to: "/terms" },
+      { label: "Terms of Service", to: "/terms" },
       { label: "Submission Guidelines", to: "/contact" },
-      { label: "Stay Tuned", to: "/upcoming-projects" },
     ],
   },
 ];
@@ -636,77 +646,71 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
 
   const footer = propFooter || homepageData?.footer || defaultFooterSettings;
 
-  const aboutText = footer.aboutText || footer.about_text || defaultFooterSettings.aboutText;
-  const tagline = footer.tagline || defaultFooterSettings.tagline;
   const copyrightText = footer.copyrightText || footer.copyright_text || defaultFooterSettings.copyrightText;
   const twitterUrl = footer.twitter || footer.socials?.twitter || "https://twitter.com";
   const instagramUrl = footer.instagram || footer.socials?.instagram || "https://instagram.com";
   const linkedinUrl = footer.linkedin || footer.socials?.linkedin || "https://linkedin.com";
   const youtubeUrl = footer.youtube || footer.socials?.youtube || "https://youtube.com";
+  const facebookUrl = (footer as any).facebook || (footer as any).socials?.facebook || "https://facebook.com";
 
   return (
-    <footer className="mt-10 border-t border-border bg-surface">
-      <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
-        <div className="grid gap-12 md:grid-cols-[1.4fr_2fr]">
-          <div>
-            <Wordmark />
-            <p className="mt-5 max-w-sm text-[0.9375rem] text-body">
-              {aboutText}
-            </p>
-            <div className="mt-4 flex items-center gap-3 text-subtle">
-              {twitterUrl && (
-                <a href={twitterUrl} target="_blank" rel="noreferrer" aria-label="Twitter" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
-                  <Twitter className="size-4" />
-                </a>
-              )}
-              {instagramUrl && (
-                <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
-                  <Instagram className="size-4" />
-                </a>
-              )}
-              {linkedinUrl && (
-                <a href={linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
-                  <Linkedin className="size-4" />
-                </a>
-              )}
-              {youtubeUrl && (
-                <a href={youtubeUrl} target="_blank" rel="noreferrer" aria-label="YouTube" className="grid size-8 place-items-center rounded-full border border-border bg-surface text-body transition-colors hover:border-primary hover:text-primary">
-                  <Youtube className="size-4" />
-                </a>
-              )}
+    <footer className="mt-16 bg-slate-100 dark:bg-zinc-900 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)] text-black dark:text-white">
+      <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+          {footerColumns.map((col) => (
+            <div key={col.title}>
+              <p className="mb-4 font-sans text-[0.875rem] font-bold text-black dark:text-white uppercase tracking-wider">
+                {col.title}
+              </p>
+              <ul className="space-y-2.5">
+                {col.links.map((l) => (
+                  <li key={l.label}>
+                    <Link
+                      to={l.to}
+                      className="text-[0.9375rem] font-normal text-black/80 dark:text-white/80 transition-colors hover:text-[#2B638C] dark:hover:text-[#5295c5]"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="mt-6 font-display text-[1.0625rem] italic text-primary">
-              {tagline}
-            </p>
-          </div>
-          <div className="grid gap-8 sm:grid-cols-3">
-            {footerColumns.map((col) => (
-              <div key={col.title}>
-                <p className="mb-4 font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-                  {col.title}
-                </p>
-                <ul className="space-y-2.5">
-                  {col.links.map((l) => (
-                    <li key={l.label}>
-                      <Link
-                        to={l.to}
-                        className="text-[0.9375rem] text-body transition-colors hover:text-primary"
-                      >
-                        {l.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-divider pt-6 text-[0.8125rem] text-subtle sm:flex-row sm:items-center sm:justify-between">
-          <p>{copyrightText}</p>
-          <div className="flex items-center gap-4">
-            <Link to="/" className="hover:text-heading">Privacy Policy</Link>
-            <Link to="/" className="hover:text-heading">Terms of Service</Link>
+        <div className="mt-12 flex flex-col gap-4 border-t border-black/10 dark:border-white/10 pt-6 text-[0.875rem] sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-black dark:text-white">All rights reserved.</p>
+            <p className="text-subtle text-[0.8125rem]">Copyright ©2026, tossatale.</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-bold text-black dark:text-white mr-1 text-[0.875rem]">Follow us:</span>
+            {facebookUrl && (
+              <a href={facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+                <Facebook className="size-4" />
+              </a>
+            )}
+            {instagramUrl && (
+              <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+                <Instagram className="size-4" />
+              </a>
+            )}
+            {twitterUrl && (
+              <a href={twitterUrl} target="_blank" rel="noreferrer" aria-label="X (Twitter)" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+                <Twitter className="size-4" />
+              </a>
+            )}
+            {linkedinUrl && (
+              <a href={linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+                <Linkedin className="size-4" />
+              </a>
+            )}
+            {youtubeUrl && (
+              <a href={youtubeUrl} target="_blank" rel="noreferrer" aria-label="YouTube" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+                <Youtube className="size-4" />
+              </a>
+            )}
           </div>
         </div>
       </div>
