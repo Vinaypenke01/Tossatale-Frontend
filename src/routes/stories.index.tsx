@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
 import { StoryCard } from "@/components/tossa/StoryCard";
+import { StoriesGridSkeleton } from "@/components/tossa/Skeletons";
 import { Pagination } from "@/components/tossa/Pagination";
 import { CategoryPill, CustomSelect, Input, Panel } from "@/components/tossa/kit";
 import { cn } from "@/lib/utils";
@@ -206,9 +207,7 @@ function StoriesIndex() {
         </p>
 
         {isLoading ? (
-          <div className="py-16 text-center text-subtle font-medium">
-            Loading stories...
-          </div>
+          <StoriesGridSkeleton count={9} view={view} />
         ) : displayStories.length === 0 ? (
           <Panel className="mt-8 p-12 text-center">
             <h3 className="font-display text-xl font-bold text-heading">No published stories found</h3>

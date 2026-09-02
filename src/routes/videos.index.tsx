@@ -5,10 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
+import { VideosGridSkeleton } from "@/components/tossa/Skeletons";
 import { Pagination } from "@/components/tossa/Pagination";
 import { CategoryPill, Panel } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
-import { videos as mockVideos } from "@/lib/data";
 
 export const Route = createFileRoute("/videos/")({
   head: () => ({
@@ -42,12 +42,12 @@ function VideosIndexPage() {
         const res = await api.get(`/public/videos/?page=${page}&page_size=12`);
         return res.data?.data || res.data || {};
       } catch {
-        return mockVideos;
+        return {};
       }
     },
   });
 
-  const rawVideos = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : mockVideos);
+  const rawVideos = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : []);
   const totalVideosCount = apiResponse?.count || rawVideos.length || 0;
   const totalPages = Math.ceil(totalVideosCount / 12);
 
@@ -58,7 +58,7 @@ function VideosIndexPage() {
           slug: v.slug,
           title: v.title,
           series: v.category?.name || v.series_name || "Documentary",
-          duration: v.duration || "12:40",
+          duration: v.duration || "",
           views: v.views_count ? `${v.views_count}` : "0",
           cover: v.cover || v.thumbnail_url || `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`,
           editorialNote: v.editorial_note || v.description || "",
@@ -84,7 +84,7 @@ function VideosIndexPage() {
 
       <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
         {isLoading ? (
-          <div className="py-16 text-center text-subtle font-medium">Loading video library...</div>
+          <VideosGridSkeleton count={6} />
         ) : displayVideos.length === 0 ? (
           <Panel className="p-12 text-center">
             <h3 className="font-display text-xl font-bold text-heading">No videos in library</h3>

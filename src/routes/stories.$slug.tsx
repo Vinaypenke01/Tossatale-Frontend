@@ -35,7 +35,7 @@ import {
   Tag,
   VerifiedBadge,
 } from "@/components/tossa/kit";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/stories/$slug")({
@@ -426,15 +426,13 @@ function StoryDetail() {
           <div className="relative z-10 mx-auto max-w-[920px] px-5 pt-6 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-subtle">
-                <Link to="/" className="hover:text-primary">
+                <Link to="/" className="hover:text-primary transition-colors">
                   Home
                 </Link>
                 <span className="px-2">/</span>
-                <Link to="/stories" className="hover:text-primary">
+                <Link to="/stories" className="hover:text-primary transition-colors">
                   Stories
                 </Link>
-                <span className="px-2">/</span>
-                <span className="text-body">{story.category?.name || "General"}</span>
               </nav>
 
               <div className="flex items-center gap-3">
@@ -448,7 +446,7 @@ function StoryDetail() {
             <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-heading sm:text-5xl lg:text-[3.25rem] leading-[1.12]">
               {story.title}
             </h1>
-            <p className="mt-2 font-display text-lg text-body sm:text-xl italic leading-relaxed">
+            <p className="mt-2 font-display text-lg text-body sm:text-xl leading-relaxed">
               {story.subtitle || "A quiet piece of prose written for thoughtful readers."}
             </p>
 
@@ -468,8 +466,8 @@ function StoryDetail() {
                   <p className="flex items-center gap-1.5 font-sans text-[1rem] font-bold text-heading">
                     {writerName} {story.writer?.is_verified && <VerifiedBadge />}
                   </p>
-                  <p className="text-[0.8125rem] text-subtle">
-                    Published {story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recently"}
+                  <p className="text-[0.8125rem] text-subtle" suppressHydrationWarning>
+                    Published {formatDate(story.published_at)}
                   </p>
                 </div>
               </Link>
@@ -509,16 +507,7 @@ function StoryDetail() {
                   <Share2 className="size-4 text-subtle" />
                   Share
                 </Button>
-                <Button
-                  variant="ghostOutline"
-                  size="sm"
-                  onClick={() => setShowShareModal(true)}
-                  className="gap-1.5"
-                  title="Copy link"
-                >
-                  <Link2 className="size-4 text-subtle" />
-                  Link
-                </Button>
+
               </div>
             </div>
           </div>
@@ -566,7 +555,7 @@ function StoryDetail() {
                   writer: s.writer?.slug || "writer",
                   writerName: s.writer?.name || s.writer?.user?.full_name || "Author",
                   category: s.category?.name || "General",
-                  date: s.published_at ? new Date(s.published_at).toLocaleDateString() : "Recent",
+                  date: formatDate(s.published_at, "Recent"),
                   readingTime: s.estimated_reading_time || 5,
                   cover: s.cover_image || coverLane,
                   views: s.views_count || 0,

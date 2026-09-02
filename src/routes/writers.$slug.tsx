@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
 import { StoryCard } from "@/components/tossa/StoryCard";
+import { StoryCardSkeleton } from "@/components/tossa/Skeletons";
 import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { Avatar, Button, ButtonLink, Panel, VerifiedBadge } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
@@ -66,7 +67,7 @@ function WriterProfile() {
   const [isSupporting, setIsSupporting] = useState(false);
   const [hasSupported, setHasSupported] = useState(false);
 
-  const { data: publicStories } = useQuery({
+  const { data: publicStories, isLoading: isStoriesLoading } = useQuery({
     queryKey: ["public-writer-stories", writer?.slug],
     queryFn: async () => {
       if (!writer?.slug) return [];
@@ -185,7 +186,13 @@ function WriterProfile() {
       <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-16 lg:grid-cols-[1fr_320px] lg:px-8">
         <div>
           <h2 className="text-[1.7rem] font-display font-bold text-heading">Published stories</h2>
-          {publishedStories.length === 0 ? (
+          {isStoriesLoading ? (
+            <div className="mt-7 grid gap-6 md:grid-cols-2">
+              {[1, 2].map((idx) => (
+                <StoryCardSkeleton key={idx} />
+              ))}
+            </div>
+          ) : publishedStories.length === 0 ? (
             <EmptySectionFallback
               icon="write"
               title="No Stories Published Yet"

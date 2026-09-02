@@ -52,7 +52,7 @@ export const clearAuthTokens = () => {
   localStorage.removeItem("tossatale_user_role");
   localStorage.removeItem("tossatale_user_data");
   const path = window.location.pathname;
-  if (path.startsWith("/admin") || path.startsWith("/writer") || path.startsWith("/reader")) {
+  if (path.startsWith("/admin") || path === "/writer" || path.startsWith("/writer/") || path.startsWith("/reader")) {
     window.location.href = "/auth";
   }
 };

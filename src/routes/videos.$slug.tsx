@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Clock, Eye, Film, Heart, Link2, Play, Share2, Twitter } from "lucide-react";
+import { ArrowRight, Clock, Eye, Film, Heart, Link2, Play, Share2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal, useScrollProgress } from "@/components/tossa/Reveal";
-import { Button, ButtonLink, CategoryPill, Panel } from "@/components/tossa/kit";
+import { VideosGridSkeleton } from "@/components/tossa/Skeletons";
+import { Button, ButtonLink, CategoryPill, Panel, XIcon } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
-import { videos as mockVideos } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/videos/$slug")({
@@ -19,25 +19,7 @@ export const Route = createFileRoute("/videos/$slug")({
         return { video: videoData };
       }
     } catch {
-      // Fallback
-    }
-
-    // Fallback search in mock videos
-    const mock = mockVideos.find((v) => v.slug === params.slug);
-    if (mock) {
-      return {
-        video: {
-          slug: mock.slug,
-          title: mock.title,
-          youtube_url: mock.youtubeUrl || "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          youtube_id: "dQw4w9WgXcQ",
-          editorial_note: (mock as any).dek || "A short documentary film from tossatale.",
-          category: { name: mock.series || "Documentary" },
-          duration: mock.duration || "12:40",
-          views_count: mock.views || "1.2k",
-          published_at: new Date().toISOString(),
-        },
-      };
+      // Return null if not found
     }
     return { video: null };
   },
@@ -90,7 +72,7 @@ function FloatingShare() {
     <div className="flex items-center gap-2">
       <span className="mr-2 text-[0.75rem] font-bold text-subtle uppercase">Share</span>
       {[
-        { icon: Twitter, label: "Share on X" },
+        { icon: XIcon, label: "Share on X" },
         { icon: Share2, label: "Share" },
         {
           icon: Link2,
@@ -127,7 +109,7 @@ function VideoDetail() {
     [video]
   );
 
-  const { data: relatedVideos } = useQuery({
+  const { data: relatedVideos, isLoading: isRelatedLoading } = useQuery({
     queryKey: ["public-videos-related", video?.id, video?.slug],
     queryFn: async () => {
       try {
@@ -135,7 +117,7 @@ function VideoDetail() {
         let items = res.data?.results || res.data?.data || res.data || [];
         return items.filter((item: any) => item.slug !== video?.slug && item.id !== video?.id);
       } catch {
-        return mockVideos.filter((m) => m.slug !== video?.slug);
+        return [];
       }
     },
     enabled: !!video,
@@ -257,45 +239,49 @@ function VideoDetail() {
               </Link>
             </div>
 
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {relatedVideos.slice(0, 3).map((v: any, i: number) => {
-                const itemYtId = v.youtube_id || youtubeId(v.youtube_url || "") || "default";
-                const thumb = v.cover || v.thumbnail_url || `https://img.youtube.com/vi/${itemYtId}/hqdefault.jpg`;
+            {isRelatedLoading ? (
+              <VideosGridSkeleton count={3} />
+            ) : relatedVideos && relatedVideos.length > 0 ? (
+              <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {relatedVideos.slice(0, 3).map((v: any, i: number) => {
+                  const itemYtId = v.youtube_id || youtubeId(v.youtube_url || "") || "default";
+                  const thumb = v.cover || v.thumbnail_url || `https://img.youtube.com/vi/${itemYtId}/hqdefault.jpg`;
 
-                return (
-                  <Reveal key={v.slug || v.id} delay={i * 70}>
-                    <Link to="/videos/$slug" params={{ slug: v.slug }}>
-                      <Panel hover className="group h-full overflow-hidden flex flex-col justify-between">
-                        <div>
-                          <div className="relative aspect-video w-full overflow-hidden bg-black">
-                            <img
-                              src={thumb}
-                              alt={v.title}
-                              loading="lazy"
-                              className="size-full object-cover opacity-90 transition-transform duration-[1200ms] group-hover:scale-105"
-                            />
-                            <span className="absolute inset-0 grid place-items-center bg-black/25">
-                              <span className="grid size-12 place-items-center rounded-full bg-white/90 shadow-md transition-transform group-hover:scale-110">
-                                <Play className="size-5 text-primary fill-current translate-x-0.5" />
+                  return (
+                    <Reveal key={v.slug || v.id} delay={i * 70}>
+                      <Link to="/videos/$slug" params={{ slug: v.slug }}>
+                        <Panel hover className="group h-full overflow-hidden flex flex-col justify-between">
+                          <div>
+                            <div className="relative aspect-video w-full overflow-hidden bg-black">
+                              <img
+                                src={thumb}
+                                alt={v.title}
+                                loading="lazy"
+                                className="size-full object-cover opacity-90 transition-transform duration-[1200ms] group-hover:scale-105"
+                              />
+                              <span className="absolute inset-0 grid place-items-center bg-black/25">
+                                <span className="grid size-12 place-items-center rounded-full bg-white/90 shadow-md transition-transform group-hover:scale-110">
+                                  <Play className="size-5 text-primary fill-current translate-x-0.5" />
+                                </span>
                               </span>
-                            </span>
+                            </div>
+                            <div className="p-6">
+                              <CategoryPill>{v.series_name || v.category?.name || "Documentary"}</CategoryPill>
+                              <h3 className="mt-3 font-display text-[1.15rem] font-bold text-heading line-clamp-2 min-h-[3.25rem]">
+                                {v.title}
+                              </h3>
+                            </div>
                           </div>
-                          <div className="p-6">
-                            <CategoryPill>{v.series_name || v.category?.name || "Documentary"}</CategoryPill>
-                            <h3 className="mt-3 font-display text-[1.15rem] font-bold text-heading line-clamp-2 min-h-[3.25rem]">
-                              {v.title}
-                            </h3>
+                          <div className="px-6 pb-6 pt-2 border-t border-border/40 text-[0.8125rem] text-subtle">
+                            Watch video film
                           </div>
-                        </div>
-                        <div className="px-6 pb-6 pt-2 border-t border-border/40 text-[0.8125rem] text-subtle">
-                          Watch video film
-                        </div>
-                      </Panel>
-                    </Link>
-                  </Reveal>
-                );
-              })}
-            </div>
+                        </Panel>
+                      </Link>
+                    </Reveal>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         </section>
       )}

@@ -142,11 +142,25 @@ export type SiteContactSettings = {
 };
 
 export type SiteFooterSettings = {
-  tagline: string;
-  copyright: string;
-  aboutText?: string;
   copyrightText?: string;
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  linkedin?: string;
+  youtube?: string;
+  // Backward compatibility optional fields
+  copyright_text?: string;
+  aboutText?: string;
+  tagline?: string;
   subnoteText?: string;
+  copyright?: string;
+  socials?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    linkedin?: string;
+    youtube?: string;
+  };
 };
 
 export type FooterSettings = SiteFooterSettings;
@@ -184,11 +198,12 @@ export const defaultContactSettings: SiteContactSettings = {
 };
 
 export const defaultFooterSettings: FooterSettings = {
-  tagline: "Stories worth slowing down for.",
-  copyright: "© tossatale. All rights reserved.",
-  aboutText: "A community for longform stories and visual storytelling.",
-  copyrightText: "© tossatale. All rights reserved.",
-  subnoteText: "Crafted for deep readers.",
+  copyrightText: "Copyright ©2026, tossatale.",
+  facebook: "https://facebook.com",
+  instagram: "https://instagram.com",
+  twitter: "https://twitter.com",
+  linkedin: "https://linkedin.com",
+  youtube: "https://youtube.com",
 };
 
 // Pure empty array exports — all data is fetched live from Django REST APIs

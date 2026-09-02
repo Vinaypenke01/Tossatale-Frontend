@@ -6,9 +6,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Facebook,
   FileText,
+  Globe,
   GripVertical,
+  Instagram,
   LayoutTemplate,
+  Linkedin,
   Mail,
   MapPin,
   Megaphone,
@@ -20,8 +24,10 @@ import {
   Sliders,
   Sparkles,
   Star,
+  Twitter,
   Users,
   X,
+  Youtube,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,7 +36,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { AppShell } from "@/components/tossa/AppShell";
-import { Avatar, Badge, Button, CategoryPill, Field, Input, Panel, Textarea, VerifiedBadge } from "@/components/tossa/kit";
+import { Avatar, Badge, Button, CategoryPill, Field, Input, Panel, Textarea, VerifiedBadge, XIcon } from "@/components/tossa/kit";
 import { pageHead } from "@/lib/head";
 import {
   collections,
@@ -62,7 +68,7 @@ const slots = [
   { name: "Hero spotlight", capacity: 1, count: 1 },
   { name: "Featured writers", capacity: 6, count: 5 },
   { name: "Featured row", capacity: 3, count: 3 },
-  { name: "Announcement & Footer", capacity: 2, count: 2 },
+  { name: "Trending row", capacity: 6, count: 6 },
 ];
 
 function HomepageBuilder() {
@@ -157,7 +163,7 @@ function HomepageBuilder() {
 
       const trendIds = (serverSlots?.trending_story_ids && serverSlots.trending_story_ids.length > 0)
         ? serverSlots.trending_story_ids
-        : allStories.slice(0, 3).map((s: any) => String(s.id || s.slug));
+        : allStories.slice(0, 6).map((s: any) => String(s.id || s.slug));
 
       setStorySlots({
         featured: featFinal,
@@ -170,7 +176,7 @@ function HomepageBuilder() {
   const handleToggleSectionStory = (storyId: string, section: "featured" | "latest" | "trending") => {
     setStorySlots((prev) => {
       const currentList = prev[section];
-      const maxLimit = section === "featured" ? 2 : 3;
+      const maxLimit = section === "featured" ? 2 : section === "latest" ? 3 : 6;
       let newList: string[];
 
       if (currentList.includes(storyId)) {
@@ -362,7 +368,7 @@ function HomepageBuilder() {
                   <Star className="size-5 text-amber-500 fill-amber-500" /> Front Page Section Story Slot Assignment
                 </h2>
                 <p className="mt-1 text-[0.875rem] text-subtle">
-                  Shuffle and assign stories to the 3 main homepage sections: <strong>Featured Stories (2 max)</strong>, <strong>Latest Stories (3 max)</strong>, and <strong>Trending Stories (3 max)</strong>.
+                  Shuffle and assign stories to the 3 main homepage sections: <strong>Featured Stories (2 max)</strong>, <strong>Latest Stories (3 max)</strong>, and <strong>Trending Stories (6 max)</strong>.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -373,7 +379,7 @@ function HomepageBuilder() {
                   ⏱️ Latest: {storySlots.latest.length}/3
                 </Badge>
                 <Badge tone="success">
-                  🔥 Trending: {storySlots.trending.length}/3
+                  🔥 Trending: {storySlots.trending.length}/6
                 </Badge>
               </div>
             </div>
@@ -795,42 +801,66 @@ function HomepageBuilder() {
       {activeTab === "footer" && (
         <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
           <Panel className="p-6">
-            <h2 className="text-xl">Footer Content & Branding</h2>
+            <h2 className="text-xl">Footer & Social Links Management</h2>
             <p className="mt-1 text-[0.875rem] text-subtle">
-              Customize the text, taglines, and legal details displayed in the footer across all pages.
+              Configure the copyright notice and official social media channels displayed in the website footer across all pages.
             </p>
 
             <div className="mt-6 space-y-5">
-              <Field label="Footer Description Bio" hint="Brief summary shown next to the logo in the footer.">
-                <Textarea
-                  rows={3}
-                  value={footer.aboutText}
-                  onChange={(e) => setFooter({ ...footer, aboutText: e.target.value })}
+              <Field label="Copyright Notice" hint="Legal copyright notice displayed at the bottom of the footer.">
+                <Input
+                  value={footer.copyrightText || ""}
+                  onChange={(e) => setFooter({ ...footer, copyrightText: e.target.value })}
+                  placeholder="Copyright ©2026, tossatale."
                 />
               </Field>
 
-              <Field label="Editorial Tagline Quote">
-                <Input
-                  value={footer.tagline}
-                  onChange={(e) => setFooter({ ...footer, tagline: e.target.value })}
-                />
-              </Field>
+              <div className="pt-2 border-t border-border">
+                <h3 className="font-display font-bold text-heading text-[1rem]">Official Social Media Links</h3>
+                <p className="mt-0.5 text-xs text-subtle">Enter full URLs to your social profiles. Icons will link directly to these channels in the footer.</p>
+              </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Copyright Line">
+                <Field label="Facebook URL">
                   <Input
-                    value={footer.copyrightText}
-                    onChange={(e) => setFooter({ ...footer, copyrightText: e.target.value })}
+                    value={footer.facebook || ""}
+                    onChange={(e) => setFooter({ ...footer, facebook: e.target.value })}
+                    placeholder="https://facebook.com/yourpage"
                   />
                 </Field>
 
-                <Field label="Secondary Footer Sub-note">
+                <Field label="Instagram URL">
                   <Input
-                    value={footer.subnoteText}
-                    onChange={(e) => setFooter({ ...footer, subnoteText: e.target.value })}
+                    value={footer.instagram || ""}
+                    onChange={(e) => setFooter({ ...footer, instagram: e.target.value })}
+                    placeholder="https://instagram.com/yourhandle"
+                  />
+                </Field>
+
+                <Field label="X (Twitter) URL">
+                  <Input
+                    value={footer.twitter || ""}
+                    onChange={(e) => setFooter({ ...footer, twitter: e.target.value })}
+                    placeholder="https://twitter.com/yourhandle"
+                  />
+                </Field>
+
+                <Field label="LinkedIn URL">
+                  <Input
+                    value={footer.linkedin || ""}
+                    onChange={(e) => setFooter({ ...footer, linkedin: e.target.value })}
+                    placeholder="https://linkedin.com/company/yourcompany"
                   />
                 </Field>
               </div>
+
+              <Field label="YouTube Channel URL">
+                <Input
+                  value={footer.youtube || ""}
+                  onChange={(e) => setFooter({ ...footer, youtube: e.target.value })}
+                  placeholder="https://youtube.com/@yourchannel"
+                />
+              </Field>
 
               <div className="pt-4">
                 <Button onClick={handleSave}>
@@ -847,20 +877,59 @@ function HomepageBuilder() {
                 Live Footer Preview
               </h3>
 
-              <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-paper">
-                <div className="flex items-center gap-3">
-                  <span className="grid size-8 place-items-center rounded-lg bg-primary text-white font-display font-bold">
-                    T
-                  </span>
-                  <span className="font-display text-lg font-bold text-heading">Tossatale</span>
+              <div className="mt-4 rounded-2xl border border-border bg-slate-100 dark:bg-zinc-900 p-6 shadow-paper text-black dark:text-white">
+                <div className="grid grid-cols-2 gap-4 pb-6 border-b border-black/10 dark:border-white/10 text-xs">
+                  <div>
+                    <p className="font-bold uppercase tracking-wider text-black dark:text-white mb-2">Explore</p>
+                    <ul className="space-y-1 text-black/70 dark:text-white/70">
+                      <li>Home</li>
+                      <li>Stories</li>
+                      <li>Blog</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-bold uppercase tracking-wider text-black dark:text-white mb-2">Community</p>
+                    <ul className="space-y-1 text-black/70 dark:text-white/70">
+                      <li>Newsletter</li>
+                      <li>About Us</li>
+                      <li>Contact Us</li>
+                    </ul>
+                  </div>
                 </div>
-                <p className="mt-3 text-[0.875rem] text-body">{footer.aboutText}</p>
-                <p className="mt-4 font-display text-[0.9375rem] italic text-primary">
-                  {footer.tagline}
-                </p>
-                <div className="mt-6 border-t border-divider pt-3 text-[0.75rem] text-subtle flex flex-col gap-1">
-                  <p>{footer.copyrightText}</p>
-                  <p>{footer.subnoteText}</p>
+
+                <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-xs">
+                  <div>
+                    <p className="font-semibold text-black dark:text-white">All rights reserved.</p>
+                    <p className="text-subtle">{footer.copyrightText || "Copyright ©2026, tossatale."}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {footer.facebook && (
+                      <span className="grid size-7 place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-xs">
+                        <Facebook className="size-3.5" />
+                      </span>
+                    )}
+                    {footer.instagram && (
+                      <span className="grid size-7 place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-xs">
+                        <Instagram className="size-3.5" />
+                      </span>
+                    )}
+                    {footer.twitter && (
+                      <span className="grid size-7 place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-xs">
+                        <XIcon className="size-3" />
+                      </span>
+                    )}
+                    {footer.linkedin && (
+                      <span className="grid size-7 place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-xs">
+                        <Linkedin className="size-3.5" />
+                      </span>
+                    )}
+                    {footer.youtube && (
+                      <span className="grid size-7 place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-xs">
+                        <Youtube className="size-3.5" />
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </Panel>

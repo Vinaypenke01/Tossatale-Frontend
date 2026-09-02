@@ -160,10 +160,11 @@ export function Avatar({
   gender?: "MALE" | "FEMALE" | "OTHER" | string;
   initials?: string;
   useIcon?: boolean;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }) {
   const sizes = {
+    xs: "size-6 text-[0.5625rem]",
     sm: "size-8 text-[0.6875rem]",
     md: "size-10 text-xs",
     lg: "size-14 text-sm",
@@ -171,6 +172,7 @@ export function Avatar({
   } as const;
 
   const iconSizes = {
+    xs: "size-3",
     sm: "size-4",
     md: "size-5",
     lg: "size-7",
@@ -299,7 +301,7 @@ export function Field({
   children,
 }: {
   label: string;
-  hint?: string | undefined;
+  hint?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -486,4 +488,12 @@ export function EmptyState({
 
 export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("skeleton-sheen rounded-xl", className)} />;
+}
+
+export function XIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
 }

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
+import { WritersGridSkeleton } from "@/components/tossa/Skeletons";
 import {
   Avatar,
   ButtonLink,
@@ -89,7 +90,7 @@ function WritersIndex() {
         </div>
 
         {isLoading ? (
-          <div className="py-16 text-center text-subtle font-medium">Loading writers...</div>
+          <WritersGridSkeleton count={6} />
         ) : displayWriters.length === 0 ? (
           <Panel className="mt-8 p-12 text-center">
             <h3 className="font-display text-xl font-bold text-heading">No writers found</h3>

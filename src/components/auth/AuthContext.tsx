@@ -30,6 +30,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export function normalizeUserRole(rawRole?: string | null): "reader" | "writer" | "admin" {
+  if (!rawRole) return "reader";
+  const r = rawRole.toLowerCase();
+  if (r === "admin") return "admin";
+  if (r === "writer") return "writer";
+  return "reader";
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     if (typeof window === "undefined") return null;
@@ -43,8 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const role: "reader" | "writer" | "admin" = user
-    ? (user.role.toLowerCase() as any)
-    : (typeof window !== "undefined" ? (localStorage.getItem("tossatale_user_role") as any) : null) || "reader";
+    ? normalizeUserRole(user.role)
+    : (typeof window !== "undefined" ? normalizeUserRole(localStorage.getItem("tossatale_user_role")) : "reader");
 
   const refreshUser = async () => {
     const token = getAuthToken();
@@ -59,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(res.data);
         if (typeof window !== "undefined") {
           localStorage.setItem("tossatale_user_data", JSON.stringify(res.data));
-          localStorage.setItem("tossatale_user_role", res.data.role.toLowerCase());
+          localStorage.setItem("tossatale_user_role", normalizeUserRole(res.data.role));
         }
       }
     } catch (err) {
@@ -98,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         res.data.user = currentUser;
         if (typeof window !== "undefined") {
           localStorage.setItem("tossatale_user_data", JSON.stringify(currentUser));
-          localStorage.setItem("tossatale_user_role", currentUser.role.toLowerCase());
+          localStorage.setItem("tossatale_user_role", normalizeUserRole(currentUser.role));
         }
       }
     }
@@ -126,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         res.data.user = currentUser;
         if (typeof window !== "undefined") {
           localStorage.setItem("tossatale_user_data", JSON.stringify(currentUser));
-          localStorage.setItem("tossatale_user_role", currentUser.role.toLowerCase());
+          localStorage.setItem("tossatale_user_role", normalizeUserRole(currentUser.role));
         }
       }
     }

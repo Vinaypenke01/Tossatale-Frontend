@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Bookmark, Clock, Edit3, Eye, EyeOff, FileText, Folder, Heart, ImagePlus, Plus, Send, Sparkles, Trash2 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -30,7 +30,8 @@ function AdminBlogs() {
   const [body, setBody] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-  const [readingTimeInput, setReadingTimeInput] = useState("5");
+  const [isReadingTimeCustom, setIsReadingTimeCustom] = useState(false);
+  const [readingTimeInput, setReadingTimeInput] = useState("1");
   const [isFeatured, setIsFeatured] = useState(false);
   const [preview, setPreview] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -93,8 +94,21 @@ function AdminBlogs() {
     [body],
   );
 
-  const words = useMemo(() => body.trim().split(/\s+/).filter(Boolean).length, [body]);
-  const minutes = Math.max(1, Math.round(words / 220));
+  const words = useMemo(() => {
+    const clean = body.replace(/<[^>]*>/g, "").trim();
+    return clean ? clean.split(/\s+/).filter(Boolean).length : 0;
+  }, [body]);
+
+  const minutes = useMemo(() => {
+    if (words === 0) return 0;
+    return Math.max(1, Math.ceil(words / 220));
+  }, [words]);
+
+  useEffect(() => {
+    if (!isReadingTimeCustom) {
+      setReadingTimeInput(String(minutes || 1));
+    }
+  }, [minutes, isReadingTimeCustom]);
 
   const handlePublish = async () => {
     if (!title.trim() || !body.trim()) {
@@ -140,7 +154,13 @@ function AdminBlogs() {
     setSelectedCategory(post.category?.id || post.category?.slug || "");
     setCoverImage(post.cover_image || post.cover || null);
     setTagsInput(post.tag || post.tags || "");
-    setReadingTimeInput(String(post.reading_time || post.readingTime || 5));
+    const savedRT = post.reading_time || post.readingTime;
+    if (savedRT) {
+      setReadingTimeInput(String(savedRT));
+      setIsReadingTimeCustom(true);
+    } else {
+      setIsReadingTimeCustom(false);
+    }
     setIsFeatured(Boolean(post.is_featured));
     setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -160,7 +180,8 @@ function AdminBlogs() {
     setBody("");
     setCoverImage(null);
     setTagsInput("");
-    setReadingTimeInput("5");
+    setReadingTimeInput("1");
+    setIsReadingTimeCustom(false);
     setIsFeatured(false);
     toast.info("Cleared editor canvas to compose new blog post.");
   };
@@ -347,13 +368,37 @@ function AdminBlogs() {
                 />
               </Field>
 
-              <Field label="Reading Time (mins)">
+              <Field
+                label="Reading Time (mins)"
+                hint={
+                  isReadingTimeCustom ? (
+                    <span>
+                      Custom set ·{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsReadingTimeCustom(false);
+                          setReadingTimeInput(String(minutes || 1));
+                        }}
+                        className="text-primary font-bold underline hover:opacity-80 cursor-pointer"
+                      >
+                        Auto-calculate (~{minutes || 1} min)
+                      </button>
+                    </span>
+                  ) : (
+                    `Auto-calculated: ~${minutes || 1} min (${words} words)`
+                  )
+                }
+              >
                 <Input
                   type="number"
                   min="1"
                   value={readingTimeInput}
-                  onChange={(e) => setReadingTimeInput(e.target.value)}
-                  placeholder="5"
+                  onChange={(e) => {
+                    setIsReadingTimeCustom(true);
+                    setReadingTimeInput(e.target.value);
+                  }}
+                  placeholder={String(minutes || 1)}
                   className="h-11 text-[0.875rem]"
                 />
               </Field>

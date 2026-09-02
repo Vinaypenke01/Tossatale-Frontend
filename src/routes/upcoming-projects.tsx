@@ -74,7 +74,21 @@ function UpcomingProjectsPage() {
 
       <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
         {isLoading ? (
-          <div className="py-12 text-center text-subtle font-medium">Loading upcoming productions...</div>
+          <div className="grid gap-8 md:grid-cols-2">
+            {[1, 2].map((idx) => (
+              <div
+                key={idx}
+                className="flex flex-col h-full rounded-2xl bg-surface border border-border/40 overflow-hidden shadow-xs"
+              >
+                <div className="aspect-video w-full bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+                <div className="p-6 space-y-3">
+                  <div className="h-6 w-3/4 rounded-md bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+                  <div className="h-4 w-full rounded-md bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+                  <div className="h-4 w-2/3 rounded-md bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : projects.length === 0 ? (
           <EmptySectionFallback
             icon="video"

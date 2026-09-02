@@ -35,8 +35,11 @@ export function StoryEditor({
 
   const initialTags = story?.tags ? (Array.isArray(story.tags) ? story.tags.map((t: any) => t.name || t).join(", ") : "") : "";
   const [tagsInput, setTagsInput] = useState(initialTags);
+  const [isReadingTimeCustom, setIsReadingTimeCustom] = useState(
+    Boolean((story as any)?.estimated_reading_time || (story as any)?.reading_time)
+  );
   const [readingTimeInput, setReadingTimeInput] = useState(
-    String((story as any)?.estimated_reading_time || (story as any)?.reading_time || "5")
+    String((story as any)?.estimated_reading_time || (story as any)?.reading_time || "1")
   );
 
   useEffect(() => {
@@ -53,7 +56,13 @@ export function StoryEditor({
       if (story.tags) {
         setTagsInput(Array.isArray(story.tags) ? story.tags.map((t: any) => t.name || t).join(", ") : "");
       }
-      setReadingTimeInput(String((story as any).estimated_reading_time || (story as any).reading_time || "5"));
+      const savedRT = (story as any).estimated_reading_time || (story as any).reading_time;
+      if (savedRT) {
+        setReadingTimeInput(String(savedRT));
+        setIsReadingTimeCustom(true);
+      } else {
+        setIsReadingTimeCustom(false);
+      }
     }
   }, [story]);
 
@@ -108,8 +117,22 @@ export function StoryEditor({
     [body],
   );
 
-  const words = useMemo(() => body.trim().split(/\s+/).filter(Boolean).length, [body]);
-  const minutes = Math.max(1, Math.round(words / 220));
+  const words = useMemo(() => {
+    const clean = body.replace(/<[^>]*>/g, "").trim();
+    return clean ? clean.split(/\s+/).filter(Boolean).length : 0;
+  }, [body]);
+
+  const minutes = useMemo(() => {
+    if (words === 0) return 0;
+    return Math.max(1, Math.ceil(words / 220));
+  }, [words]);
+
+  // Auto-fill reading time input if user hasn't manually set a custom value
+  useEffect(() => {
+    if (!isReadingTimeCustom) {
+      setReadingTimeInput(String(minutes || 1));
+    }
+  }, [minutes, isReadingTimeCustom]);
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -584,13 +607,37 @@ export function StoryEditor({
                   />
                 </Field>
 
-                <Field label="Reading Time (mins)" hint="Duration in minutes">
+                <Field
+                  label="Reading Time (mins)"
+                  hint={
+                    isReadingTimeCustom ? (
+                      <span>
+                        Custom set ·{" "}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsReadingTimeCustom(false);
+                            setReadingTimeInput(String(minutes || 1));
+                          }}
+                          className="text-primary font-bold underline hover:opacity-80 cursor-pointer"
+                        >
+                          Auto-calculate (~{minutes || 1} min)
+                        </button>
+                      </span>
+                    ) : (
+                      `Auto-calculated: ~${minutes || 1} min (${words} words)`
+                    )
+                  }
+                >
                   <Input
                     type="number"
                     min="1"
                     value={readingTimeInput}
-                    onChange={(e) => setReadingTimeInput(e.target.value)}
-                    placeholder="5"
+                    onChange={(e) => {
+                      setIsReadingTimeCustom(true);
+                      setReadingTimeInput(e.target.value);
+                    }}
+                    placeholder={String(minutes || 1)}
                     className="h-11 text-[0.875rem]"
                   />
                 </Field>

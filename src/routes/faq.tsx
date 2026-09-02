@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
+import { FaqSkeleton } from "@/components/tossa/Skeletons";
 import { Button, ButtonLink, Input, Panel } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -176,9 +177,7 @@ function FaqPage() {
 
         <div className="mt-10 space-y-4 max-w-4xl">
           {isLoading ? (
-            <div className="py-16 text-center text-subtle font-medium flex items-center justify-center gap-3">
-              <Loader2 className="size-5 animate-spin text-primary" /> Loading FAQs...
-            </div>
+            <FaqSkeleton count={5} />
           ) : filteredFaqs.length === 0 ? (
             <Panel className="p-10 text-center">
               <HelpCircle className="mx-auto size-10 text-subtle" />

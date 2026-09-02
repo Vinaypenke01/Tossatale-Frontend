@@ -5,7 +5,6 @@ import {
   Clock,
   Copy,
   Facebook,
-  Heart,
   Link2,
   Linkedin,
   Mail,
@@ -28,7 +27,7 @@ import {
   Panel,
   VerifiedBadge,
 } from "@/components/tossa/kit";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { covers, defaultCover } from "@/lib/data";
 
@@ -256,50 +255,7 @@ function BlogDetail() {
   const loaderData = Route.useLoaderData();
   const blog = loaderData?.blog;
   const progress = useScrollProgress();
-  const [liked, setLiked] = useState(Boolean(blog?.is_liked));
-  const [likesCount, setLikesCount] = useState<number>(blog?.likes_count || blog?.likes || 0);
   const [showShareModal, setShowShareModal] = useState(false);
-
-  // Trigger 1-view tracking on mount
-  useEffect(() => {
-    if (blog?.slug || blog?.id) {
-      api.post(`/public/blogs/${blog.slug || blog.id}/view/`).catch(() => {});
-    }
-  }, [blog?.slug, blog?.id]);
-
-  useEffect(() => {
-    if (blog) {
-      if (typeof blog.likes_count === "number") {
-        setLikesCount(blog.likes_count);
-      }
-      if (typeof blog.is_liked === "boolean") {
-        setLiked(blog.is_liked);
-      }
-    }
-  }, [blog]);
-
-  const handleLike = async () => {
-    if (!blog) return;
-    try {
-      if (!liked) {
-        const res = await api.post(`/public/blogs/${blog.slug || blog.id}/like/`);
-        const newLikes = res.data?.data?.likes_count ?? res.data?.likes_count;
-        setLiked(true);
-        setLikesCount((prev) => (typeof newLikes === "number" ? newLikes : prev + 1));
-        toast.success("Blog Post Liked!", {
-          description: `You appreciated "${blog.title}".`,
-        });
-      } else {
-        const res = await api.delete(`/public/blogs/${blog.slug || blog.id}/like/`);
-        const newLikes = res.data?.data?.likes_count ?? res.data?.likes_count;
-        setLiked(false);
-        setLikesCount((prev) => (typeof newLikes === "number" ? newLikes : Math.max(0, prev - 1)));
-        toast.success("Like Removed");
-      }
-    } catch (err: any) {
-      toast.error("Like Action Failed", { description: err.message });
-    }
-  };
 
   const { data: relatedBlogs } = useQuery({
     queryKey: ["public-blogs-related", blog?.id, blog?.category?.slug],
@@ -334,28 +290,29 @@ function BlogDetail() {
       </div>
 
       <article>
-        {/* Full Dark/Featured Hero Section */}
-        <header className="relative overflow-hidden bg-stone-900 py-20 text-white dark:bg-black">
-          <div className="absolute inset-0 z-0 opacity-20">
+        {/* Cinematic High-Contrast Hero Section */}
+        <header className="relative overflow-hidden bg-slate-950 py-16 lg:py-20 text-white dark:bg-black border-b border-white/10 shadow-md">
+          {/* Background Cover Image with Rich Gradient Overlay */}
+          <div className="absolute inset-0 z-0">
             <img
               src={blog.cover_image || covers.terrace || defaultCover}
               alt=""
-              className="h-full w-full object-cover blur-sm"
+              className="h-full w-full object-cover opacity-40 dark:opacity-30 scale-105 transition-transform duration-700"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-550 via-slate-550/80 to-slate-550/40 dark:from-black dark:via-black/85 dark:to-black/60" />
+            <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 size-[650px] rounded-full bg-primary/15 blur-3xl" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-[820px] px-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-white/70">
-                <Link to="/" className="hover:text-white">
+                <Link to="/" className="hover:text-white transition-colors">
                   Home
                 </Link>
-                <span className="px-2">/</span>
-                <Link to="/blogs" className="hover:text-white">
+                <span className="px-2 text-white/40">/</span>
+                <Link to="/blogs" className="hover:text-white transition-colors">
                   Blog
                 </Link>
-                <span className="px-2">/</span>
-                <span className="text-white">{blog.category?.name || "General"}</span>
               </nav>
 
               <div className="flex items-center gap-3">
@@ -366,7 +323,7 @@ function BlogDetail() {
               </div>
             </div>
 
-            <h1 className="mt-4 text-[clamp(2.1rem,4.2vw,3.6rem)] leading-[1.1] font-display font-bold text-white">
+            <h1 className="mt-4 text-[clamp(2.1rem,4.2vw,3.6rem)] leading-[1.1] font-display font-bold text-white drop-shadow-xs">
               {blog.title}
             </h1>
 
@@ -384,41 +341,22 @@ function BlogDetail() {
                   <p className="flex items-center gap-1.5 font-sans text-[1rem] font-bold text-white">
                     {authorName} <VerifiedBadge />
                   </p>
-                  <p className="text-[0.8125rem] text-white/70">
-                    Published {blog.published_at ? new Date(blog.published_at).toLocaleDateString() : "Recently"}
+                  <p className="text-[0.8125rem] text-white/70" suppressHydrationWarning>
+                    Published {formatDate(blog.published_at)}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant={liked ? "primary" : "inkOnDark"}
-                  size="sm"
-                  onClick={handleLike}
-                  className="gap-1.5 font-semibold"
-                >
-                  <Heart className={cn("size-4", liked && "fill-current")} />
-                  {liked ? "Liked" : "Like"} ({likesCount})
-                </Button>
-                <Button
                   variant="inkOnDark"
                   size="sm"
                   onClick={() => setShowShareModal(true)}
-                  className="gap-1.5 font-semibold"
+                  className="gap-1.5 font-semibold bg-white/10 hover:bg-white/20 border-white/20 text-white"
                   title="Share this post"
                 >
                   <Share2 className="size-4" />
                   Share
-                </Button>
-                <Button
-                  variant="inkOnDark"
-                  size="sm"
-                  onClick={() => setShowShareModal(true)}
-                  className="gap-1.5 font-semibold"
-                  title="Copy link"
-                >
-                  <Link2 className="size-4" />
-                  Link
                 </Button>
               </div>
             </div>
@@ -486,8 +424,8 @@ function BlogDetail() {
                         </div>
                       </div>
 
-                      <div className="px-6 pb-6 pt-2 border-t border-border/40 text-[0.8125rem] text-subtle">
-                        {b.published_at ? new Date(b.published_at).toLocaleDateString() : "Recent"} · {b.reading_time || 4} min read
+                      <div className="px-6 pb-6 pt-2 border-t border-border/40 text-[0.8125rem] text-subtle" suppressHydrationWarning>
+                        {formatDate(b.published_at)} · {b.reading_time || 4} min read
                       </div>
                     </Panel>
                   </Link>

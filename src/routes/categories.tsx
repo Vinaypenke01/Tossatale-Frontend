@@ -62,7 +62,18 @@ function CategoriesPage() {
 
       <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
         {isLoading ? (
-          <div className="py-16 text-center text-subtle font-medium">Loading categories...</div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
+              <div
+                key={idx}
+                className="h-64 rounded-2xl bg-slate-200/80 dark:bg-zinc-800/80 animate-pulse p-6 flex flex-col justify-end gap-2"
+              >
+                <div className="h-6 w-3/4 rounded-md bg-slate-300 dark:bg-zinc-700" />
+                <div className="h-4 w-5/6 rounded-md bg-slate-300 dark:bg-zinc-700" />
+                <div className="h-3 w-1/3 rounded-md bg-slate-300 dark:bg-zinc-700 mt-2" />
+              </div>
+            ))}
+          </div>
         ) : displayCategories.length === 0 ? (
           <Panel className="p-12 text-center">
             <h3 className="font-display text-xl font-bold text-heading">No categories available</h3>

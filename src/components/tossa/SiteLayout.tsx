@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
+  Bookmark,
   BookOpen,
   ChevronDown,
+  Clock,
   Facebook,
   Film,
   Globe,
@@ -20,6 +22,7 @@ import {
   Sun,
   Twitter,
   User,
+  UserPlus,
   X,
   Youtube,
 } from "lucide-react";
@@ -27,12 +30,13 @@ import { useState, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Avatar, Button, ButtonLink } from "@/components/tossa/kit";
+import { Avatar, Button, ButtonLink, XIcon } from "@/components/tossa/kit";
 import logo from "@/assets/official_tossatale_logo.png";
+import faviconLogo from "@/assets/favicon-96x96.png";
 import { api } from "@/lib/api";
 import { categories, defaultAnnouncementSettings, defaultFooterSettings, type AnnouncementSettings, type SiteFooterSettings } from "@/lib/data";
 import { CookieConsentBanner } from "@/components/tossa/CookieConsentBanner";
-import { useAuth } from "@/components/auth/AuthContext";
+import { useAuth, normalizeUserRole } from "@/components/auth/AuthContext";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -47,46 +51,23 @@ const mobileNavLinks = [
   { label: "Stories", to: "/stories" },
   { label: "Blog", to: "/blogs" },
   { label: "Films", to: "/videos" },
-  { label: "About Us", to: "/about" },
-  { label: "Contact", to: "/contact" },
-  { label: "FAQ & Help", to: "/faq" },
   { label: "Search Library", to: "/search" },
 ];
 
 export type UserRole = "guest" | "reader" | "writer" | "admin";
 
-export function getInitialRole(): UserRole {
-  if (typeof window === "undefined") return "guest";
-
-  const pathname = window.location.pathname;
-  if (pathname.startsWith("/admin")) return "admin";
-  if (pathname.startsWith("/writer")) return "writer";
-  if (pathname.startsWith("/reader")) return "reader";
-
-  const saved = (localStorage.getItem("tossatale_user_role") || "").toLowerCase();
-  if (saved === "user" || saved === "reader") return "reader";
-  if (saved === "writer") return "writer";
-  if (saved === "admin") return "admin";
-  return "guest";
-}
-
 export function useUserRole(): [UserRole, (role: UserRole) => void] {
-  const [role, setRoleState] = useState<UserRole>("guest");
+  const { user, isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    setRoleState(getInitialRole());
-
-    const handleStorageChange = () => {
-      setRoleState(getInitialRole());
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  const role: UserRole = (isAuthenticated && user)
+    ? normalizeUserRole(user.role)
+    : "guest";
 
   const setRole = (newRole: UserRole) => {
-    localStorage.setItem("tossatale_user_role", newRole);
-    setRoleState(newRole);
-    window.dispatchEvent(new Event("storage"));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("tossatale_user_role", newRole);
+      window.dispatchEvent(new Event("storage"));
+    }
   };
 
   return [role, setRole];
@@ -150,7 +131,7 @@ export function ThemeToggle() {
 const roleNavLinks: Record<UserRole, { label: string; to: string }[]> = {
   guest: [],
   reader: [
-    { label: "My Library", to: "/reader/library" },
+    { label: "Dashboard", to: "/reader" },
     { label: "Bookmarks", to: "/reader/bookmarks" },
   ],
   writer: [
@@ -246,24 +227,14 @@ function UserProfileDropdown({
               </>
             )}
             {role === "reader" && (
-              <>
-                <Link
-                  to="/reader"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
-                >
-                  <LayoutDashboard className="size-4 text-primary" />
-                  <span>Reader Dashboard</span>
-                </Link>
-                <Link
-                  to="/reader"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
-                >
-                  <BookOpen className="size-4 text-primary" />
-                  <span>My Shelf</span>
-                </Link>
-              </>
+              <Link
+                to="/reader/history"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[0.8125rem] font-sans font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+              >
+                <Clock className="size-4 text-primary" />
+                <span>Reading History</span>
+              </Link>
             )}
           </div>
 
@@ -286,11 +257,21 @@ function UserProfileDropdown({
 function Wordmark({ onDark = false }: { onDark?: boolean }) {
   return (
     <Link to="/" className="inline-flex items-center py-0.5">
+      {/* Mobile & Tablet Compact Logo */}
+      <img
+        src={faviconLogo}
+        alt="tossatale"
+        className={cn(
+          "size-9 sm:size-10 object-contain lg:hidden transition-opacity hover:opacity-90 shadow-xs",
+          onDark && "brightness-0 invert",
+        )}
+      />
+      {/* Desktop Full Logo */}
       <img
         src={logo}
         alt="tossatale"
         className={cn(
-          "h-11 sm:h-12 w-auto max-w-[190px] object-contain transition-opacity hover:opacity-90",
+          "hidden lg:block h-11 sm:h-12 w-auto max-w-[190px] object-contain transition-opacity hover:opacity-90",
           onDark && "brightness-0 invert",
         )}
       />
@@ -351,8 +332,6 @@ export function AnnouncementBar({
 }: {
   announcement?: AnnouncementSettings | undefined;
 }) {
-  const [dismissed, setDismissed] = useState(false);
-
   const { data: homepageData } = useQuery({
     queryKey: ["public-homepage-config"],
     queryFn: async () => {
@@ -368,39 +347,45 @@ export function AnnouncementBar({
 
   const announcement = propAnnouncement || homepageData?.announcement || defaultAnnouncementSettings;
 
-  if (!announcement || !announcement.enabled || !announcement.text || dismissed) {
+  if (!announcement || !announcement.enabled || !announcement.text) {
     return null;
   }
 
-  return (
-    <div className="relative z-50 bg-gradient-to-r from-primary-hover via-primary to-primary-hover px-4 py-2 text-white shadow-paper transition-all">
-      <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-4 text-[0.875rem]">
-        <div className="flex flex-1 flex-wrap items-center justify-center gap-2 text-center">
-          {announcement.badgeText && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 font-sans text-[0.6875rem] font-extrabold tracking-wider uppercase text-white backdrop-blur">
-              <Sparkles className="size-3" />
-              {announcement.badgeText}
-            </span>
-          )}
-          <span className="font-sans font-medium text-white/95">{announcement.text}</span>
-          {announcement.linkText && (
-            <Link
-              to={announcement.linkTo || "#"}
-              className="inline-flex items-center gap-1 font-sans font-bold text-white underline underline-offset-4 hover:text-white/80 transition-colors ml-1"
-            >
-              {announcement.linkText} <ArrowRight className="size-3.5" />
-            </Link>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          aria-label="Dismiss announcement"
-          className="grid size-7 place-items-center rounded-full text-white/80 transition-colors hover:bg-white/15 hover:text-white shrink-0"
+  const AnnouncementContent = () => (
+    <div className="inline-flex items-center gap-2 whitespace-nowrap text-[0.8125rem] sm:text-[0.875rem] px-4 shrink-0">
+      {announcement.badgeText && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 font-sans text-[0.6875rem] font-extrabold tracking-wider uppercase text-white backdrop-blur shrink-0">
+          <Sparkles className="size-3" />
+          {announcement.badgeText}
+        </span>
+      )}
+      <span className="font-sans font-medium text-white/95 shrink-0">{announcement.text}</span>
+      {announcement.linkText && (
+        <Link
+          to={announcement.linkTo || "#"}
+          className="inline-flex items-center gap-1 font-sans font-bold text-white underline underline-offset-4 hover:text-white/80 transition-colors ml-1 shrink-0"
         >
-          <X className="size-4" />
-        </button>
+          {announcement.linkText} <ArrowRight className="size-3.5" />
+        </Link>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="relative z-50 bg-gradient-to-r from-primary-hover via-primary to-primary-hover py-2 text-white shadow-paper transition-all overflow-hidden select-none">
+      {/* Desktop View: Centered single line */}
+      <div className="hidden md:flex items-center justify-center w-full">
+        <AnnouncementContent />
+      </div>
+
+      {/* Mobile View: Continuous single-line scrolling carousel */}
+      <div className="md:hidden flex w-full overflow-hidden">
+        <div className="animate-announcement-ticker flex items-center">
+          <AnnouncementContent />
+          <AnnouncementContent />
+          <AnnouncementContent />
+          <AnnouncementContent />
+        </div>
       </div>
     </div>
   );
@@ -480,7 +465,7 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           )}
         </nav>
 
-        <div className="justify-self-end flex items-center gap-3 shrink-0">
+        <div className="justify-self-end flex items-center gap-2.5 shrink-0">
           <Link
             to="/search"
             search={{ q: "" }}
@@ -493,9 +478,9 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           {/* Theme Switcher Toggle */}
           <ThemeToggle />
 
-          {/* User Profile Dropdown OR Guest Sign In Buttons */}
+          {/* Desktop User Profile Dropdown OR Guest Sign In */}
           {!mounted || currentRole === "guest" ? (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <Link
                 to="/auth"
                 className="inline-flex items-center justify-center rounded-xl bg-[#FF6B35] hover:bg-[#e85b27] text-white font-bold px-4.5 py-2 text-[0.875rem] shadow-xs transition-all hover:shadow-md"
@@ -504,86 +489,178 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
               </Link>
             </div>
           ) : (
-            <UserProfileDropdown role={currentRole} onRoleChange={setCurrentRole} />
+            <div className="hidden lg:block">
+              <UserProfileDropdown role={currentRole} onRoleChange={setCurrentRole} />
+            </div>
           )}
 
-          <Button
-            variant="quiet"
-            size="icon"
-            aria-label="Open menu"
-            aria-expanded={open}
-            className="lg:hidden"
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? <Menu className="size-5" /> : <Menu className="size-5" />}
-          </Button>
+          {/* Mobile Single Menu Trigger: Shows Avatar when logged in, or Hamburger when guest */}
+          {mounted && currentRole !== "guest" ? (
+            <button
+              type="button"
+              aria-label="Open navigation and account menu"
+              onClick={() => setOpen((v) => !v)}
+              className="lg:hidden flex items-center gap-1.5 rounded-full border border-border bg-surface p-1 pr-2 transition-all hover:border-primary/40 cursor-pointer shadow-xs"
+            >
+              <Avatar
+                initials={(user?.full_name || user?.email || "User").substring(0, 2).toUpperCase()}
+                gender={(user as any)?.gender || "OTHER"}
+                src={user?.avatar_url || ""}
+                size="xs"
+              />
+              <Menu className="size-3.5 text-heading" />
+            </button>
+          ) : (
+            <Button
+              variant="quiet"
+              size="icon"
+              aria-label="Open menu"
+              aria-expanded={open}
+              className="lg:hidden"
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? <X className="size-5" /> : <Menu className="size-5" />}
+            </Button>
+          )}
         </div>
       </div>
 
       {open && (
-        <div className="absolute right-4 top-full mt-2 z-50 w-72 rounded-2xl border border-border bg-surface p-3 shadow-lift lg:hidden animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center justify-between px-2 pb-2 border-b border-border">
+        <div className="absolute right-4 top-full mt-2 z-50 w-72 rounded-2xl border border-border bg-surface p-3.5 shadow-lift lg:hidden animate-in fade-in slide-in-from-top-2">
+          {/* Header row in mobile popup */}
+          <div className="flex items-center justify-between px-1 pb-2 border-b border-border">
             <span className="font-sans text-[0.625rem] font-black tracking-[0.2em] text-primary uppercase">
-              Navigation
+              {currentRole === "guest" ? "Navigation" : "Menu & Account"}
             </span>
             <Button variant="quiet" size="icon" className="size-6" aria-label="Close menu" onClick={() => setOpen(false)}>
               <X className="size-3.5" />
             </Button>
           </div>
 
-          <nav className="mt-2 grid grid-cols-2 gap-1">
-            {mobileNavLinks.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to as any}
-                onClick={() => setOpen(false)}
-                className="rounded-xl px-2.5 py-2 font-sans text-[0.8125rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
+          {/* If Logged In: Account Identity Card at Top */}
+          {currentRole !== "guest" && (
+            <div className="mt-2.5 p-2 rounded-xl bg-surface-alt/70 border border-border">
+              <div className="flex items-center gap-2.5">
+                <Avatar
+                  initials={(user?.full_name || user?.email || "User").substring(0, 2).toUpperCase()}
+                  gender={(user as any)?.gender || "OTHER"}
+                  src={user?.avatar_url || ""}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-sans text-[0.8125rem] font-bold text-heading truncate">
+                    {user?.full_name || user?.email || "My Account"}
+                  </p>
+                  <p className="font-sans text-[0.6875rem] font-extrabold uppercase tracking-wider text-primary">
+                    {currentRole === "admin" ? "Administrator" : currentRole === "writer" ? "Story Writer" : "Reader"}
+                  </p>
+                </div>
+              </div>
 
+              {/* Quick Role Links */}
+              <div className="mt-2.5 grid grid-cols-2 gap-1.5 border-t border-border/60 pt-2">
+                {currentRole === "reader" && (
+                  <>
+                    <Link
+                      to="/reader"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-2 py-1.5 font-sans text-[0.75rem] font-bold text-primary hover:bg-primary-light text-center border border-primary/20"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/reader/history"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-2 py-1.5 font-sans text-[0.75rem] font-bold text-heading hover:bg-primary-light text-center border border-border"
+                    >
+                      History
+                    </Link>
+                  </>
+                )}
+                {currentRole === "writer" && (
+                  <>
+                    <Link
+                      to="/writer"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-2 py-1.5 font-sans text-[0.75rem] font-bold text-primary hover:bg-primary-light text-center border border-primary/20"
+                    >
+                      Studio
+                    </Link>
+                    <Link
+                      to="/writer/editor"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-2 py-1.5 font-sans text-[0.75rem] font-bold text-heading hover:bg-primary-light text-center border border-border"
+                    >
+                      New Story
+                    </Link>
+                  </>
+                )}
+                {currentRole === "admin" && (
+                  <>
+                    <Link
+                      to="/admin"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-2 py-1.5 font-sans text-[0.75rem] font-bold text-primary hover:bg-primary-light text-center border border-primary/20"
+                    >
+                      Admin Panel
+                    </Link>
+                    <Link
+                      to="/admin/review-queue"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-2 py-1.5 font-sans text-[0.75rem] font-bold text-heading hover:bg-primary-light text-center border border-border"
+                    >
+                      Review Queue
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Links */}
+          <div className="mt-2.5">
+            <p className="px-1 mb-1 font-sans text-[0.625rem] font-bold tracking-wider text-subtle uppercase">
+              Explore
+            </p>
+            <nav className="grid grid-cols-2 gap-1">
+              {mobileNavLinks.map((l) => (
+                <Link
+                  key={l.to}
+                  to={l.to as any}
+                  onClick={() => setOpen(false)}
+                  className="rounded-xl px-2.5 py-2 font-sans text-[0.8125rem] font-bold text-heading hover:bg-primary-light hover:text-primary-hover transition-colors"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          {/* Bottom Action: Sign in (Guest) OR Sign out (Logged in) */}
           {currentRole === "guest" ? (
             <div className="mt-3 border-t border-border pt-2.5">
               <Link
                 to="/auth"
                 onClick={() => setOpen(false)}
-                className="flex w-full items-center justify-center rounded-xl bg-[#FF6B35] hover:bg-[#e85b27] text-white font-bold py-2 text-[0.8125rem]"
+                className="flex w-full items-center justify-center rounded-xl bg-[#FF6B35] hover:bg-[#e85b27] text-white font-bold py-2 text-[0.8125rem] shadow-xs transition-all"
               >
-                Sign in
+                Sign in / Register
               </Link>
             </div>
           ) : (
-            <div className="mt-3 border-t border-border pt-2.5 space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <span className="font-sans text-[0.625rem] font-black tracking-[0.2em] text-primary uppercase">
-                  Account ({currentRole})
-                </span>
-                <span className="text-xs text-subtle truncate max-w-[120px]">{user?.full_name || user?.email}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-1">
-                <Link
-                  to={currentRole === "writer" ? "/writer" : currentRole === "admin" ? "/admin" : "/reader"}
-                  onClick={() => setOpen(false)}
-                  className="rounded-xl px-2.5 py-1.5 font-sans text-[0.75rem] font-bold text-primary hover:bg-primary-light text-center border border-primary/20"
-                >
-                  Dashboard
-                </Link>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await logout();
-                    setCurrentRole("guest");
-                    setOpen(false);
-                    navigate({ to: "/" });
-                  }}
-                  className="rounded-xl px-2.5 py-1.5 font-sans text-[0.75rem] font-bold text-destructive hover:bg-destructive/10 text-center"
-                >
-                  <LogOut className="size-3.5 inline mr-1" /> Sign Out
-                </button>
-              </div>
+            <div className="mt-3 border-t border-border pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout();
+                  setCurrentRole("guest");
+                  setOpen(false);
+                  navigate({ to: "/" });
+                }}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 font-sans text-[0.8125rem] font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+              >
+                <LogOut className="size-4" /> Sign Out
+              </button>
             </div>
           )}
         </div>
@@ -600,7 +677,7 @@ const footerColumns = [
       { label: "Stories", to: "/stories" },
       { label: "Blog", to: "/blogs" },
       { label: "Short Films", to: "/videos" },
-      { label: "Featured", to: "/stories" },
+      { label: "Upcoming Projects", to: "/upcoming-projects" },
     ],
   },
   {
@@ -614,7 +691,6 @@ const footerColumns = [
   {
     title: "Community",
     links: [
-      { label: "Newsletter", to: "/#newsletter" },
       { label: "About Us", to: "/about" },
       { label: "Contact Us", to: "/contact" },
       { label: "FAQs", to: "/faq" },
@@ -681,7 +757,7 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
         <div className="mt-12 flex flex-col gap-4 border-t border-black/10 dark:border-white/10 pt-6 text-[0.875rem] sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold text-black dark:text-white">All rights reserved.</p>
-            <p className="text-subtle text-[0.8125rem]">Copyright ©2026, tossatale.</p>
+            <p className="text-subtle text-[0.8125rem]">{copyrightText}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -697,8 +773,8 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
               </a>
             )}
             {twitterUrl && (
-              <a href={twitterUrl} target="_blank" rel="noreferrer" aria-label="X (Twitter)" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
-                <Twitter className="size-4" />
+              <a href={twitterUrl} target="_blank" rel="noreferrer" aria-label="X" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+                <XIcon className="size-3.5" />
               </a>
             )}
             {linkedinUrl && (

@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Eye, Heart } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
+import { BlogsGridSkeleton } from "@/components/tossa/Skeletons";
 import { Pagination } from "@/components/tossa/Pagination";
 import { CategoryPill, Panel } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
 import { covers } from "@/lib/data";
+import { formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/blogs/")({
   head: () => ({
@@ -47,7 +48,7 @@ function BlogsPage() {
         title: b.title,
         dek: b.subtitle || b.excerpt || b.seo_description || "Editorial blog post",
         tag: b.category?.name || "Editorial",
-        date: b.published_at ? new Date(b.published_at).toLocaleDateString() : "Recent",
+        date: formatDate(b.published_at, "Recent"),
         readingTime: b.reading_time || 4,
         views: b.views_count ?? b.views ?? 0,
         likes: b.likes_count ?? b.likes ?? 0,
@@ -70,7 +71,7 @@ function BlogsPage() {
 
       <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
         {isLoading ? (
-          <div className="py-16 text-center text-subtle font-medium">Loading blogs...</div>
+          <BlogsGridSkeleton count={6} />
         ) : displayBlogs.length === 0 ? (
           <Panel className="p-12 text-center">
             <h3 className="font-display text-xl font-bold text-heading">No blogs published</h3>
@@ -103,18 +104,8 @@ function BlogsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="px-5 pb-5 pt-3 border-t border-border/40 flex items-center justify-between text-[0.8125rem] text-subtle">
-                      <span>{b.date} · {b.readingTime} min</span>
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex items-center gap-1 font-semibold text-heading">
-                          <Eye className="size-3.5 text-blue-500" />
-                          {Number(b.views).toLocaleString()}
-                        </span>
-                        <span className="inline-flex items-center gap-1 font-semibold text-heading">
-                          <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
-                          {Number(b.likes).toLocaleString()}
-                        </span>
-                      </div>
+                    <div className="px-5 pb-5 pt-3 border-t border-border/40 flex items-center justify-between text-[0.8125rem] text-subtle" suppressHydrationWarning>
+                      <span>{b.date} · {b.readingTime} min read</span>
                     </div>
                   </Panel>
                 </Link>

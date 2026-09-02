@@ -244,6 +244,25 @@
   }
 }
 
+@keyframes ticker-slide {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-announcement-ticker {
+  display: flex;
+  width: max-content;
+  animation: ticker-slide 22s linear infinite;
+}
+
+.animate-announcement-ticker:hover {
+  animation-play-state: paused;
+}
+
 @utility ink-gradient {
   background-image: var(--gradient-ink);
 }

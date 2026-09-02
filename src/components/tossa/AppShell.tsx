@@ -61,7 +61,6 @@ const navs: Record<Role, NavItem[]> = {
     { label: "Dashboard", to: "/reader", icon: LayoutDashboard },
     { label: "Bookmarks", to: "/reader/bookmarks", icon: Bookmark },
     { label: "History", to: "/reader/history", icon: Clock },
-    { label: "Following", to: "/reader/following", icon: UserPlus },
   ],
 };
 
