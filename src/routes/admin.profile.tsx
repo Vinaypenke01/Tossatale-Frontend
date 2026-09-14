@@ -84,6 +84,19 @@ function AdminProfileScreen() {
     },
   });
 
+  // Fetch live Audit Logs
+  const { data: liveAuditLogs = [], isLoading: isAuditLoading } = useQuery({
+    queryKey: ["admin-audit-logs"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/admin/audit-logs/?page_size=10");
+        return res.data?.results || res.data?.data?.results || (Array.isArray(res.data) ? res.data : []);
+      } catch {
+        return [];
+      }
+    },
+  });
+
   useEffect(() => {
     if (userProfile) {
       setFirstName(userProfile.first_name || "");
@@ -91,7 +104,6 @@ function AdminProfileScreen() {
       setDisplayName(userProfile.display_name || userProfile.full_name || "");
       setEmail(userProfile.email || "");
       setRoleTitle(userProfile.role ? `${userProfile.role} Administrator` : "Senior Managing Editor");
-      setProfilePhoto(userProfile.profile_photo || "");
     }
   }, [userProfile]);
 
@@ -103,7 +115,6 @@ function AdminProfileScreen() {
         first_name: firstName,
         last_name: lastName,
         display_name: displayName,
-        profile_photo: profilePhoto,
       });
 
       toast.success("Admin profile updated successfully!", {
@@ -178,29 +189,6 @@ function AdminProfileScreen() {
 
   const summary = adminAnalytics?.platform_summary || {};
 
-  const activityLogs = [
-    {
-      action: "Featured Writers Carousel Updated",
-      details: "Configured front page writer highlights",
-      time: "Recent activity",
-    },
-    {
-      action: "Approved Story Submission",
-      details: "Reviewed and published longform submission",
-      time: "Recent activity",
-    },
-    {
-      action: "Writer Verification Issued",
-      details: "Granted verified badge to platform author",
-      time: "Recent activity",
-    },
-    {
-      action: "Homepage Announcement Bar Updated",
-      details: "Updated top banner notification settings",
-      time: "Recent activity",
-    },
-  ];
-
   const adminPrivileges = [
     { name: "Direct Publish", desc: "Bypass review queue and publish directly to library", active: true },
     { name: "Homepage Layout Builder", desc: "Rearrange hero, featured rows, and writer carousels", active: true },
@@ -218,12 +206,6 @@ function AdminProfileScreen() {
       role="admin"
       title="Admin Profile"
       blurb="Editorial role settings, platform permissions, security credentials, and administrative activity log."
-      actions={
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-          {isSaving ? "Saving..." : "Save admin settings"}
-        </Button>
-      }
     >
       {/* Top Editorial Impact Metrics */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -299,14 +281,6 @@ function AdminProfileScreen() {
                     />
                     <Lock className="size-4 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
                   </div>
-                </Field>
-
-                <Field label="Profile Photo URL">
-                  <Input
-                    value={profilePhoto}
-                    onChange={(e) => setProfilePhoto(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                  />
                 </Field>
 
                 <div className="pt-2">
@@ -471,22 +445,34 @@ function AdminProfileScreen() {
                 <Activity className="size-5 text-primary" />
               </div>
 
-              <ul className="mt-5 space-y-4">
-                {activityLogs.map((log, idx) => (
-                  <li key={idx} className="rounded-xl border border-border bg-surface p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-sans text-[0.875rem] font-bold text-heading flex items-center gap-2">
-                        <CheckCircle2 className="size-4 text-primary" />
-                        {log.action}
-                      </span>
-                      <span className="text-[0.75rem] text-subtle flex items-center gap-1">
-                        <Clock className="size-3" /> {log.time}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-[0.8125rem] text-subtle pl-6">{log.details}</p>
-                  </li>
-                ))}
-              </ul>
+              {isAuditLoading ? (
+                <div className="py-8 text-center text-xs text-subtle">
+                  Loading activity logs...
+                </div>
+              ) : !liveAuditLogs || liveAuditLogs.length === 0 ? (
+                <div className="py-8 text-center text-xs text-subtle rounded-xl border border-dashed border-border mt-5">
+                  No administrative activity recorded yet. System actions will automatically appear here.
+                </div>
+              ) : (
+                <ul className="mt-5 space-y-4">
+                  {liveAuditLogs.map((log: any, idx: number) => (
+                    <li key={log.id || idx} className="rounded-xl border border-border bg-surface p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="font-sans text-[0.875rem] font-bold text-heading flex items-center gap-2">
+                          <CheckCircle2 className="size-4 text-primary" />
+                          {log.action || log.event_type || "Admin Action"}
+                        </span>
+                        <span className="text-[0.75rem] text-subtle flex items-center gap-1">
+                          <Clock className="size-3" /> {log.created_at ? new Date(log.created_at).toLocaleString() : "Recent"}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-[0.8125rem] text-subtle pl-6">
+                        {log.details || log.object_repr || log.object_type || "Administrative event"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Panel>
 
             {/* Quick Desk Shortcuts */}

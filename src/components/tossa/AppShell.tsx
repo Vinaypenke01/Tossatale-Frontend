@@ -5,6 +5,7 @@ import {
   Clock,
   FileCheck2,
   HelpCircle,
+  Home,
   LayoutDashboard,
   LayoutTemplate,
   Library,
@@ -25,8 +26,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Avatar } from "@/components/tossa/kit";
-import logo from "@/assets/favicon-96x96.png";
-import { ThemeToggle } from "@/components/tossa/SiteLayout";
+import fullLogo from "@/assets/official_tossatale_logo.png";
 import { NotificationDropdown } from "@/components/tossa/NotificationDropdown";
 import { useAuth } from "@/components/auth/AuthContext";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,7 @@ type NavItem = { label: string; to: string; icon: LucideIcon };
 
 const navs: Record<Role, NavItem[]> = {
   admin: [
+    { label: "Home", to: "/", icon: Home },
     { label: "Overview", to: "/admin", icon: LayoutDashboard },
     { label: "Write story", to: "/admin/editor", icon: PenLine },
     { label: "Blogs", to: "/admin/blogs", icon: Newspaper },
@@ -154,25 +155,16 @@ export function AppShell({
           >
             {mobileNavOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
-          <div className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center">
             <img
-              src={logo}
+              src={fullLogo}
               alt="tossatale"
-              width={32}
-              height={32}
-              className="size-8 rounded-lg object-cover shadow-xs"
+              className="h-9 w-auto max-w-[150px] object-contain dark:brightness-0 dark:invert"
             />
-            <span className="font-display text-[1.125rem] font-bold text-heading">
-              tossatale
-            </span>
-            <span className="rounded-md bg-primary/10 px-2 py-0.5 font-sans text-[0.625rem] font-bold tracking-wider text-primary uppercase">
-              {role}
-            </span>
-          </div>
+          </Link>
         </div>
         <div className="flex items-center gap-2">
           <NotificationDropdown />
-          <ThemeToggle />
         </div>
       </header>
 
@@ -192,34 +184,21 @@ export function AppShell({
         )}
       >
         <div className="flex items-center justify-between gap-3 px-5 py-5 border-b border-border lg:border-b-0">
-          <div className="flex items-center gap-3 min-w-0">
+          <Link to="/" className="block">
             <img
-              src={logo}
+              src={fullLogo}
               alt="tossatale"
-              width={36}
-              height={36}
-              className="size-9 rounded-xl object-cover shadow-paper shrink-0"
+              className="h-10 w-auto max-w-[170px] object-contain dark:brightness-0 dark:invert transition-opacity hover:opacity-90"
             />
-            <div className="min-w-0">
-              <Link to="/" className="block truncate font-display text-[1.125rem] leading-none text-heading">
-                tossatale
-              </Link>
-              <span className="font-sans text-[0.6875rem] font-black tracking-[0.18em] text-primary uppercase">
-                {role}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <button
-              type="button"
-              suppressHydrationWarning
-              onClick={() => setMobileNavOpen(false)}
-              className="grid size-9 place-items-center rounded-xl text-subtle hover:bg-surface-hover hover:text-heading lg:hidden"
-            >
-              <X className="size-5" />
-            </button>
-          </div>
+          </Link>
+          <button
+            type="button"
+            suppressHydrationWarning
+            onClick={() => setMobileNavOpen(false)}
+            className="grid size-9 place-items-center rounded-xl text-subtle hover:bg-surface-hover hover:text-heading lg:hidden"
+          >
+            <X className="size-5" />
+          </button>
         </div>
 
         <nav className="flex flex-col gap-1 px-3 py-3 overflow-y-auto flex-1">

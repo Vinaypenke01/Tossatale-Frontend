@@ -193,77 +193,15 @@ export function Avatar({
     );
   }
 
-  const normalizedGender = gender?.toUpperCase();
-
-  // Distinct stylized gradient and icons based on gender
-  if (normalizedGender === "FEMALE") {
-    return (
-      <span
-        title="Female Writer"
-        className={cn(
-          "grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-purple-600 text-white shadow-paper font-sans font-black",
-          sizes[size],
-          className
-        )}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={cn(iconSizes[size], "opacity-95")}
-        >
-          {/* Female silhouette with hair curve */}
-          <path d="M12 3a4 4 0 0 0-4 4c0 1.5.8 2.8 2 3.5-3 1.2-5 4.1-5 7.5h14c0-3.4-2-6.3-5-7.5 1.2-.7 2-2 2-3.5a4 4 0 0 0-4-4z" />
-          <path d="M8 8c0 2 1.8 3.5 4 3.5s4-1.5 4-3.5" />
-          <path d="M8 7c.5 1 2 1.5 4 1.5s3.5-.5 4-1.5" />
-        </svg>
-      </span>
-    );
-  }
-
-  if (normalizedGender === "MALE") {
-    return (
-      <span
-        title="Male Writer"
-        className={cn(
-          "grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-600 via-indigo-600 to-slate-800 text-white shadow-paper font-sans font-black",
-          sizes[size],
-          className
-        )}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={cn(iconSizes[size], "opacity-95")}
-        >
-          {/* Male silhouette */}
-          <path d="M12 3a4 4 0 0 0-4 4c0 1.8 1.2 3.3 2.8 3.8-3.3 1.3-4.8 4.2-4.8 7.2h12c0-3-1.5-5.9-4.8-7.2A4 4 0 0 0 16 7a4 4 0 0 0-4-4z" />
-          <path d="M9 10.5h6" />
-        </svg>
-      </span>
-    );
-  }
-
   return (
     <span
       className={cn(
-        "grid shrink-0 place-items-center rounded-full ink-gradient font-sans font-black tracking-widest text-primary-foreground shadow-paper",
+        "grid shrink-0 place-items-center rounded-full ink-gradient font-sans font-black tracking-wider text-primary-foreground shadow-paper",
         sizes[size],
         className,
       )}
     >
-      {useIcon ? (
-        <User className={cn(iconSizes[size], "opacity-90")} />
-      ) : (
-        initials
-      )}
+      {initials ? initials : <User className={cn(iconSizes[size], "opacity-90")} />}
     </span>
   );
 }

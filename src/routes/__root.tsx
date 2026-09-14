@@ -78,11 +78,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "tossatale — Stories worth slowing down for" },
+      { title: "tossatale - We are Storytellers, always." },
       {
         name: "description",
         content:
-          "tossatale is a premium storytelling ecosystem: longform stories, series, essays and films from a community of curious writers.",
+          "Discover stories, meet the writers behind them, and explore a world of storytelling through short stories, blogs, and films.",
       },
       { name: "author", content: "tossatale" },
       { property: "og:type", content: "website" },

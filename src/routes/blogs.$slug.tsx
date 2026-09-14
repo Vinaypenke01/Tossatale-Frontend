@@ -251,6 +251,34 @@ function ShareModal({
     </div>
   );
 }
+
+function renderBlogContent(rawContent: string) {
+  if (!rawContent) return "";
+  if (/<(p|div|figure|h1|h2|h3|h4|blockquote|ul|ol)\b/i.test(rawContent)) {
+    return rawContent;
+  }
+  let formatted = rawContent.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline font-medium hover:opacity-80">$1</a>'
+  );
+  formatted = formatted.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    '<figure class="my-6"><img src="$2" alt="$1" class="rounded-xl w-full max-h-[500px] object-cover" /><figcaption class="mt-2 text-center text-xs text-subtle italic">$1</figcaption></figure>'
+  );
+  formatted = formatted.replace(/^### (.*$)/gim, '<h3 class="font-display font-bold text-2xl text-heading mt-8 mb-3">$1</h3>');
+  formatted = formatted.replace(/^## (.*$)/gim, '<h2 class="font-display font-bold text-3xl text-heading mt-10 mb-4">$1</h2>');
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  formatted = formatted.replace(/^\> (.*$)/gim, '<blockquote class="border-l-4 border-primary pl-4 py-1 italic my-4 text-heading font-serif text-lg">$1</blockquote>');
+  const paragraphs = formatted.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  return paragraphs.map((p) => {
+    if (p.startsWith("<h") || p.startsWith("<figure") || p.startsWith("<blockquote")) {
+      return p;
+    }
+    return `<p class="leading-relaxed text-body text-[1.0625rem] mb-5">${p.replace(/\n/g, "<br />")}</p>`;
+  }).join("\n");
+}
+
 function BlogDetail() {
   const loaderData = Route.useLoaderData();
   const blog = loaderData?.blog;
@@ -367,7 +395,7 @@ function BlogDetail() {
         <div className="mx-auto max-w-[800px] px-5 py-14 lg:px-8">
           <div className="min-w-0 prose prose-lg dark:prose-invert max-w-none text-body font-sans leading-relaxed space-y-6 break-words [overflow-wrap:anywhere]">
             {blog.content ? (
-              <div dangerouslySetInnerHTML={{ __html: blog.content }} className="break-words [overflow-wrap:anywhere]" />
+              <div dangerouslySetInnerHTML={{ __html: renderBlogContent(blog.content) }} className="break-words [overflow-wrap:anywhere]" />
             ) : (
               <p className="text-lg leading-relaxed text-body break-words [overflow-wrap:anywhere]">
                 {blog.subtitle || blog.excerpt || "Full blog post content."}

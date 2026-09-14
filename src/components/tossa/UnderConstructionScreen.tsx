@@ -1,96 +1,75 @@
-import { Mail, Sparkles, Lock } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
+import { Instagram, Youtube, Linkedin, Facebook } from "lucide-react";
 
 import heroArt from "@/assets/Hero_section_pic.jpeg";
-import logo from "@/assets/favicon-96x96.png";
-import { Button, Input } from "@/components/tossa/kit";
+import officialLogo from "@/assets/official_tossatale_logo.png";
+import { XIcon } from "@/components/tossa/kit";
 
 export function UnderConstructionScreen({ message }: { message?: string }) {
-  const [email, setEmail] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    toast.success("You're on the list!", {
-      description: "We'll notify you the moment tossatale goes live.",
-    });
-    setEmail("");
-  };
+  const socialLinks = [
+    { label: "Instagram", href: "https://instagram.com/tossatale", icon: Instagram },
+    { label: "YouTube", href: "https://youtube.com/@tossatale", icon: Youtube },
+    { label: "X", href: "https://x.com/tossatale", icon: XIcon },
+    { label: "LinkedIn", href: "https://linkedin.com/company/tossatale", icon: Linkedin },
+    { label: "Facebook", href: "https://facebook.com/tossatale", icon: Facebook },
+  ];
 
   return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-zinc-950 px-5 text-center font-sans">
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-black px-5 text-center font-sans selection:bg-primary-light selection:text-primary">
       {/* Background Image with Dark Blur & Overlay */}
       <img
         src={heroArt}
         alt="Background"
         width={1920}
         height={1080}
-        className="absolute inset-0 size-full object-cover opacity-30 filter blur-sm scale-105"
+        className="absolute inset-0 size-full object-cover opacity-25 filter blur-md scale-105"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-zinc-950/50" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/85 to-black/60" />
 
-      {/* Main Under Construction Glass Card */}
-      <div className="relative z-10 mx-auto max-w-xl rounded-3xl border border-white/10 bg-zinc-900/60 p-8 sm:p-12 shadow-2xl backdrop-blur-2xl my-12">
-        <div className="relative inline-block">
+      {/* Main Under Construction Card - Shadow effect without corner border lines */}
+      <div className="relative z-10 mx-auto max-w-2xl w-full rounded-3xl bg-zinc-900/90 p-8 sm:p-12 md:p-14 shadow-[0_25px_70px_rgba(0,0,0,0.85)] backdrop-blur-2xl my-12 border-none">
+        {/* Full tossatale wordmark logo */}
+        <div className="flex justify-center">
           <img
-            src={logo}
+            src={officialLogo}
             alt="tossatale"
-            width={64}
-            height={64}
-            className="mx-auto size-16 rounded-2xl shadow-lift border border-white/10"
+            className="h-10 sm:h-12 w-auto object-contain brightness-0 invert"
           />
-          <span className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-primary text-white shadow-sm">
-            <Lock className="size-3" />
-          </span>
         </div>
 
-        <div className="mt-6 flex items-center justify-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 font-sans text-[0.75rem] font-bold tracking-wide text-amber-400 uppercase">
-            <Sparkles className="size-3.5" /> Site Under Construction
-          </span>
-        </div>
-
-        <h1 className="mt-5 text-[clamp(2.1rem,4.8vw,3.4rem)] leading-[1.1] font-display font-bold text-white">
+        {/* Heading in single line */}
+        <h1 className="mt-8 text-2xl sm:text-4xl md:text-[2.6rem] leading-tight font-display font-bold text-white whitespace-nowrap">
           We'll be back shortly
         </h1>
 
-        <p className="mx-auto mt-4 max-w-md text-[1rem] leading-relaxed text-zinc-300">
+        {/* Updated Maintenance Description */}
+        <p className="mx-auto mt-5 max-w-lg text-[0.9375rem] sm:text-[1.0625rem] leading-relaxed text-zinc-300">
           {message ||
-            "tossatale is currently undergoing scheduled platform upgrades to refine your storytelling experience. All page access is temporarily restricted."}
+            "Currently undergoing scheduled maintenance. We’re making a few improvements behind the scenes to make your experience better. so please check back soon."}
         </p>
 
-        <form
-          className="mx-auto mt-8 flex max-w-md flex-col gap-2.5 sm:flex-row"
-          onSubmit={handleSubmit}
-        >
-          <label className="sr-only" htmlFor="under-construction-email">
-            Email address
-          </label>
-          <Input
-            id="under-construction-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email for launch access"
-            className="h-11 border-white/20 bg-white/10 text-white placeholder:text-zinc-400 focus:ring-primary text-[0.875rem]"
-          />
-          <Button variant="inkOnDark" className="h-11 shrink-0 gap-2">
-            <Mail className="size-4" /> Notify Me
-          </Button>
-        </form>
+        {/* Social Media Section */}
+        <div className="mt-10 pt-8 border-t border-white/10 flex flex-col items-center justify-center">
+          <p className="font-sans text-[0.875rem] sm:text-[0.9375rem] font-bold text-zinc-200">
+            In the meantime, follow us for more updates.
+          </p>
 
-        <div className="mt-8 border-t border-white/10 pt-5 text-[0.8125rem] text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-emerald-500 animate-ping" />
-            <span>Platform updates in progress · Back live soon</span>
+          <div className="mt-5 flex items-center justify-center gap-3.5 sm:gap-4 flex-wrap">
+            {socialLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={item.label}
+                  className="grid size-11 place-items-center rounded-full bg-white/5 text-zinc-300 hover:text-white hover:bg-white/15 transition-all duration-200 hover:scale-105"
+                >
+                  <Icon className="size-4.5" />
+                </a>
+              );
+            })}
           </div>
-          <a
-            href="/auth"
-            className="text-xs text-zinc-500 hover:text-white transition-colors underline-offset-4 hover:underline"
-          >
-            Admin Sign In →
-          </a>
         </div>
       </div>
     </div>

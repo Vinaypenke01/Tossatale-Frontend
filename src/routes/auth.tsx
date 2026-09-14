@@ -21,9 +21,10 @@ import { toast } from "sonner";
 import authArt from "@/assets/cover-desk.jpg";
 import logo from "@/assets/official_tossatale_logo.png";
 import { Button, Field, Input } from "@/components/tossa/kit";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, setAuthTokens } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthContext";
+import { WriterGoogleBlockModal } from "@/components/auth/WriterGoogleBlockModal";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -52,12 +53,23 @@ interface FormErrors {
   consent?: string;
 }
 
-type AuthMode = "signin" | "signup" | "forgot" | "verify-otp";
+type AuthMode = "signin" | "signup" | "forgot" | "verify-otp" | "upgrade";
+
+function slugify(text: string) {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]+/g, "")
+    .replace(/--+/g, "-");
+}
 
 function AuthPage() {
   const getInitialMode = (): AuthMode => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      if (params.get("flow") === "reader-to-writer" || params.get("mode") === "upgrade") return "upgrade";
       if (params.get("mode") === "signup") return "signup";
       if (params.get("mode") === "forgot") return "forgot";
       if (params.get("mode") === "verify-otp") return "verify-otp";
@@ -71,6 +83,16 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [consentGiven, setConsentGiven] = useState(false);
+
+  // Reader -> Writer upgrade states
+  const [penName, setPenName] = useState("");
+  const [writerBio, setWriterBio] = useState("");
+  const [currentReaderPassword, setCurrentReaderPassword] = useState("");
+  const [confirmMigration, setConfirmMigration] = useState(false);
+
+  // Google Login Block Modal for Writers
+  const [showWriterGoogleBlockModal, setShowWriterGoogleBlockModal] = useState(false);
+  const [blockedGoogleEmail, setBlockedGoogleEmail] = useState("");
 
   // Forgot Password 3-Step Flow:
   // Step 1: Enter email & Send OTP
@@ -86,6 +108,7 @@ function AuthPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,12 +137,13 @@ function AuthPage() {
 
   const isMaintenance = Boolean(siteSettings?.maintenance_mode);
 
-  const { login, googleLogin, register, verifyRegistrationOtp, resendRegistrationOtp } = useAuth();
+  const { user, isAuthenticated, login, googleLogin, register, upgradeToWriter, verifyRegistrationOtp, resendRegistrationOtp } = useAuth();
   const navigate = useNavigate();
 
   const isSignup = mode === "signup";
   const isForgot = mode === "forgot";
   const isVerifyOtp = mode === "verify-otp";
+  const isUpgrade = mode === "upgrade";
 
   // Google Auth Button Rendering
   useEffect(() => {
@@ -148,6 +172,33 @@ function AuthPage() {
               navigate({ to: "/" });
             }
           } catch (err: any) {
+            const errMsg = (err.message || "").toLowerCase();
+            const errCode = (err.error_code || err.code || "").toUpperCase();
+            if (
+              errCode === "WRITER_GOOGLE_LOGIN_BLOCKED" ||
+              errMsg.includes("google login is only available for readers") ||
+              errMsg.includes("google login is not supported for writer") ||
+              (errMsg.includes("google") && errMsg.includes("writer"))
+            ) {
+              try {
+                const base64Url = response.credential.split(".")[1];
+                if (base64Url) {
+                  const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+                  const jsonPayload = decodeURIComponent(
+                    atob(base64)
+                      .split("")
+                      .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+                      .join(""),
+                  );
+                  const decoded = JSON.parse(jsonPayload);
+                  if (decoded?.email) {
+                    setBlockedGoogleEmail(decoded.email);
+                  }
+                }
+              } catch (_) {}
+              setShowWriterGoogleBlockModal(true);
+              return;
+            }
             toast.error("Google Sign-In Failed", {
               description: err.message || "Could not complete Google authentication.",
             });
@@ -499,6 +550,95 @@ function AuthPage() {
     }
   };
 
+  const handleUpgradeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: FormErrors = {};
+
+    if (!penName.trim()) {
+      newErrors.fullName = "Pen name is required";
+    } else if (penName.trim().length < 2) {
+      newErrors.fullName = "Pen name must be at least 2 characters";
+    }
+
+    if (!password) {
+      newErrors.password = "Writer password is required";
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters long";
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your writer password";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    if (!confirmMigration) {
+      newErrors.consent = "You must confirm that your reader account will be upgraded into a writer account.";
+    }
+
+    if (!isAuthenticated) {
+      if (!email.trim()) {
+        newErrors.email = "Your reader email is required";
+      }
+      if (!currentReaderPassword) {
+        newErrors.otp = "Current reader password is required";
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error("Validation Failed", {
+        description: "Please fill out all required fields before continuing.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
+      if (isAuthenticated) {
+        await upgradeToWriter({
+          pen_name: penName.trim(),
+          password,
+          bio: writerBio.trim(),
+          confirm_reader_migration: true,
+        });
+      } else {
+        const res = await api.post("/auth/migrate-reader/", {
+          email: email.trim(),
+          current_password: currentReaderPassword,
+          pen_name: penName.trim(),
+          new_password: password,
+          bio: writerBio.trim(),
+          confirm_reader_migration: true,
+        });
+        if (res.success && res.data) {
+          const { tokens, user: userData } = res.data;
+          if (tokens?.access && tokens?.refresh) {
+            setAuthTokens(tokens.access, tokens.refresh);
+          }
+          if (userData) {
+            localStorage.setItem("tossatale_user_data", JSON.stringify(userData));
+            localStorage.setItem("tossatale_user_role", "writer");
+            window.dispatchEvent(new Event("storage"));
+          }
+        }
+      }
+
+      toast.success("Account Upgraded to Writer! 🎉", {
+        description: "Welcome to tossatale Writer Studio.",
+      });
+      navigate({ to: "/writer" });
+    } catch (err: any) {
+      toast.error("Migration Failed", {
+        description: err.message || "Could not complete reader to writer migration.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-white dark:bg-zinc-950 flex flex-col justify-between items-center px-4 py-8 sm:py-12 relative overflow-x-hidden">
       {/* Top Left Back Navigation Button */}
@@ -523,34 +663,34 @@ function AuthPage() {
       <Link
         to="/"
         suppressHydrationWarning
-        className="absolute top-6 right-6 size-10 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-black dark:hover:text-white flex items-center justify-center transition-colors z-20"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 size-10 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-black dark:hover:text-white flex items-center justify-center transition-colors z-20"
         aria-label="Back to Home"
       >
         <X className="size-5" />
       </Link>
 
       <div className="w-full flex-1 flex items-center justify-center my-auto">
-        <div className="max-w-[440px] w-full rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-8 sm:p-10 relative overflow-hidden">
-          {/* Subtle logo tint ambient backdrop */}
-          <div className="pointer-events-none absolute -top-20 -right-20 size-48 rounded-full bg-[#2B638C]/10 blur-3xl" />
+        <div className="max-w-[440px] w-full rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-8 sm:p-10 relative isolate overflow-hidden">
 
           {/* Clean Header Title without logo inside form */}
           <div className="text-center">
             <h1 className="font-display text-3xl font-bold text-heading">
-              {isVerifyOtp
-                ? "Activate Account"
-                : isForgot
-                  ? forgotStep === 1
-                    ? "Reset Password"
-                    : forgotStep === 2
-                      ? "Verify Code"
-                      : "New Password"
-                  : isSignup
-                    ? "Writer Registration"
-                    : "Sign In"}
+              {isUpgrade
+                ? "Reader to Writer"
+                : isVerifyOtp
+                  ? "Activate Account"
+                  : isForgot
+                    ? forgotStep === 1
+                      ? "Reset Password"
+                      : forgotStep === 2
+                        ? "Verify Code"
+                        : "New Password"
+                    : isSignup
+                      ? "Writer Registration"
+                      : "Sign In"}
             </h1>
             <p className="mt-1.5 text-[0.9375rem] text-subtle">
-              Sign In to tossatale
+              {isUpgrade ? "Upgrade to tossatale Writer Studio" : "Sign In to tossatale"}
             </p>
           </div>
 
@@ -568,7 +708,7 @@ function AuthPage() {
           )}
 
           {/* Reader / Writer Side-by-Side Switcher */}
-          {!isMaintenance && !isForgot && !isVerifyOtp && (
+          {!isMaintenance && !isForgot && !isVerifyOtp && !isUpgrade && (
             <div className="mt-6 grid grid-cols-2 rounded-xl bg-slate-100 dark:bg-zinc-800 p-1">
               <button
                 type="button"
@@ -937,6 +1077,250 @@ function AuthPage() {
                 </form>
               )}
             </div>
+          ) : isUpgrade ? (
+            <form onSubmit={handleUpgradeSubmit} className="mt-6 space-y-4">
+              {/* Connected Account status or unauthenticated inputs */}
+              {isAuthenticated && user ? (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-left">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                    <Sparkles className="size-4" /> Connected Reader Account
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-heading">
+                    {user.email} {user.first_name ? `(${user.first_name})` : ""}
+                  </p>
+                  <p className="mt-0.5 text-xs text-subtle">
+                    Your reading history and saved bookmarks will transition into your new writer account.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-2xl border border-border bg-surface-alt/50 p-4">
+                  <div className="text-xs font-semibold text-heading flex items-center gap-1.5">
+                    <KeyRound className="size-3.5 text-primary" /> Current Reader Credentials
+                  </div>
+                  <Field label="Reader Email">
+                    <Input
+                      type="email"
+                      placeholder="reader@example.com"
+                      disabled={isSubmitting}
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
+                      }}
+                      className={cn(
+                        "h-10 text-[0.875rem]",
+                        errors.email && "border-destructive focus:border-destructive focus:ring-destructive/20",
+                      )}
+                    />
+                    {errors.email && (
+                      <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive">
+                        {errors.email}
+                      </span>
+                    )}
+                  </Field>
+                  <Field label="Current Reader Password">
+                    <div className="relative">
+                      <Input
+                        type={showCurrentPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        disabled={isSubmitting}
+                        value={currentReaderPassword}
+                        onChange={(e) => {
+                          setCurrentReaderPassword(e.target.value);
+                          if (errors.otp) setErrors((prev) => ({ ...prev, otp: "" }));
+                        }}
+                        className={cn(
+                          "pr-10 h-10 text-[0.875rem]",
+                          errors.otp && "border-destructive focus:border-destructive focus:ring-destructive/20",
+                        )}
+                      />
+                      <button
+                        type="button"
+                        suppressHydrationWarning
+                        disabled={isSubmitting}
+                        onClick={() => setShowCurrentPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors cursor-pointer"
+                        aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                      >
+                        {showCurrentPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
+                    {errors.otp && (
+                      <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive">
+                        {errors.otp}
+                      </span>
+                    )}
+                  </Field>
+                </div>
+              )}
+
+              {/* Writer Pen Name */}
+              <Field label="Writer Pen Name" hint="How your name will appear on stories.">
+                <Input
+                  placeholder="e.g. Maya Sen"
+                  disabled={isSubmitting}
+                  value={penName}
+                  onChange={(e) => {
+                    setPenName(e.target.value);
+                    if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: "" }));
+                  }}
+                  className={cn(
+                    "h-10 text-[0.875rem]",
+                    errors.fullName && "border-destructive focus:border-destructive focus:ring-destructive/20",
+                  )}
+                />
+                {penName.trim() && (
+                  <span className="mt-1 block text-[0.75rem] text-subtle truncate">
+                    Profile URL: tossatale.com/writers/{slugify(penName) || "your-name"}
+                  </span>
+                )}
+                {errors.fullName && (
+                  <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive">
+                    {errors.fullName}
+                  </span>
+                )}
+              </Field>
+
+              {/* Writer Password Note */}
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                <ShieldAlert className="size-4 shrink-0 text-amber-500 mt-0.5" />
+                <span>
+                  <strong>Important:</strong> Writers must authenticate with their email and password. Google Sign-In cannot be used for writer accounts.
+                </span>
+              </div>
+
+              {/* Writer Password & Confirm */}
+              <Field label="Writer Password" hint="At least 8 characters.">
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    disabled={isSubmitting}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors((prev) => ({ ...prev, password: "" }));
+                    }}
+                    className={cn(
+                      "pr-10 h-10 text-[0.875rem]",
+                      errors.password && "border-destructive focus:border-destructive focus:ring-destructive/20",
+                    )}
+                  />
+                  <button
+                    type="button"
+                    suppressHydrationWarning
+                    disabled={isSubmitting}
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors cursor-pointer"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive">
+                    {errors.password}
+                  </span>
+                )}
+              </Field>
+
+              <Field label="Confirm Writer Password">
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    disabled={isSubmitting}
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+                    }}
+                    className={cn(
+                      "pr-10 h-10 text-[0.875rem]",
+                      errors.confirmPassword && "border-destructive focus:border-destructive focus:ring-destructive/20",
+                    )}
+                  />
+                  <button
+                    type="button"
+                    suppressHydrationWarning
+                    disabled={isSubmitting}
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-heading focus:outline-none transition-colors cursor-pointer"
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  >
+                    {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <span className="mt-1 block font-sans text-[0.75rem] font-bold text-destructive">
+                    {errors.confirmPassword}
+                  </span>
+                )}
+              </Field>
+
+              {/* Optional Bio */}
+              <Field label="Writer Bio (Optional)" hint="A brief introduction for your readers.">
+                <textarea
+                  rows={2}
+                  placeholder="Tell readers about your storytelling journey..."
+                  disabled={isSubmitting}
+                  value={writerBio}
+                  onChange={(e) => setWriterBio(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[0.875rem] text-heading placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 focus:border-[#FF6B35] disabled:opacity-50 resize-none"
+                />
+              </Field>
+
+              {/* Confirmation Checkbox */}
+              <div className="pt-1">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none text-left">
+                  <input
+                    type="checkbox"
+                    suppressHydrationWarning
+                    checked={confirmMigration}
+                    onChange={(e) => {
+                      setConfirmMigration(e.target.checked);
+                      if (errors.consent) setErrors((prev) => ({ ...prev, consent: "" }));
+                    }}
+                    disabled={isSubmitting}
+                    className="size-4 mt-0.5 rounded border-slate-300 text-[#FF6B35] focus:ring-[#FF6B35] cursor-pointer shrink-0 accent-[#FF6B35]"
+                  />
+                  <span className="text-[0.8125rem] text-body leading-snug">
+                    I understand that my Reader account will be upgraded into a Writer account. A separate reader account will no longer exist under this email address.
+                  </span>
+                </label>
+                {errors.consent && (
+                  <span className="mt-1.5 block font-sans text-[0.75rem] font-bold text-destructive text-left">
+                    {errors.consent}
+                  </span>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                size="md"
+                disabled={isSubmitting}
+                className="w-full h-11 text-[0.875rem] mt-3 font-bold bg-[#FF6B35] hover:bg-[#e85b27] text-white border-none shadow-xs cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin text-white" />
+                    <span>Upgrading Account...</span>
+                  </>
+                ) : (
+                  "Upgrade Account & Enter Writer Studio →"
+                )}
+              </Button>
+
+              <button
+                type="button"
+                suppressHydrationWarning
+                onClick={() => handleModeSwitch("signin")}
+                className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-subtle hover:text-primary transition-colors py-1 cursor-pointer"
+              >
+                <ArrowLeft className="size-3.5" /> Back to Sign In
+              </button>
+            </form>
           ) : (
             <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
               {isSignup && (
@@ -1140,6 +1524,18 @@ function AuthPage() {
       <div className="w-full text-center text-[0.8125rem] text-subtle shrink-0 pt-4">
         © {new Date().getFullYear()} tossatale. All rights reserved.
       </div>
+
+      {/* Writer Google Blocked Modal */}
+      <WriterGoogleBlockModal
+        isOpen={showWriterGoogleBlockModal}
+        email={blockedGoogleEmail}
+        onClose={() => setShowWriterGoogleBlockModal(false)}
+        onSwitchToWriter={(migratedEmail) => {
+          setShowWriterGoogleBlockModal(false);
+          if (migratedEmail) setEmail(migratedEmail);
+          handleModeSwitch("signin");
+        }}
+      />
     </div>
   );
 }

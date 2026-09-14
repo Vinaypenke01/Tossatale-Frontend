@@ -684,8 +684,7 @@ const footerColumns = [
     title: "Writers",
     links: [
       { label: "Writers Directory", to: "/writers" },
-      { label: "Reader to Writer", to: "/auth?mode=signup" },
-      { label: "Help", to: "/faq" },
+      { label: "Reader to Writer", to: "/auth?flow=reader-to-writer" },
     ],
   },
   {
@@ -693,7 +692,7 @@ const footerColumns = [
     links: [
       { label: "About Us", to: "/about" },
       { label: "Contact Us", to: "/contact" },
-      { label: "FAQs", to: "/faq" },
+      { label: "Help & FAQs", to: "/faq" },
     ],
   },
   {
@@ -701,7 +700,7 @@ const footerColumns = [
     links: [
       { label: "Privacy Policy", to: "/privacy" },
       { label: "Terms of Service", to: "/terms" },
-      { label: "Submission Guidelines", to: "/contact" },
+      { label: "Submission Guidelines", to: "/submission-guidelines" },
     ],
   },
 ];

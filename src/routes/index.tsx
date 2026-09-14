@@ -34,17 +34,17 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "tossatale — Stories worth slowing down for" },
+      { title: "tossatale - We are Storytellers, always." },
       {
         name: "description",
         content:
-          "A premium storytelling ecosystem: longform stories, serials, essays and short films from curious writers. Read slowly, follow writers, build a library.",
+          "Discover stories, meet the writers behind them, and explore a world of storytelling through short stories, blogs, and films.",
       },
-      { property: "og:title", content: "tossatale — Stories worth slowing down for" },
+      { property: "og:title", content: "tossatale - We are Storytellers, always." },
       {
         property: "og:description",
         content:
-          "Longform stories, serials, essays and short films from a community of curious writers.",
+          "Discover stories, meet the writers behind them, and explore a world of storytelling through short stories, blogs, and films.",
       },
     ],
   }),
@@ -90,19 +90,28 @@ function Hero() {
   );
 }
 
+function SectionDivider() {
+  return (
+    <div className="bg-slate-50 dark:bg-black">
+      <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+        <div className="border-b border-black/10 dark:border-white/15" />
+      </div>
+    </div>
+  );
+}
+
 function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: boolean }) {
   const displayList = (stories && Array.isArray(stories) && stories.length > 0)
     ? stories.slice(0, 2)
     : [];
 
   return (
-    <section className="bg-white dark:bg-zinc-950 py-16 sm:py-20 lg:py-24">
+    <section className="bg-slate-50 dark:bg-black py-16 sm:py-20 lg:py-24">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
           <SectionHeading
             eyebrow="Featured"
             title="Featured stories"
-          // blurb="Selected longform narratives handpicked by our editorial desk."
           />
         </Reveal>
 
@@ -124,11 +133,9 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
                       <CategoryPill>{story.category?.name || story.category || "Featured"}</CategoryPill>
                     </div>
 
-                    <Link to="/stories/$slug" params={{ slug: story.slug }} className="block mt-4">
-                      <h2 className="line-clamp-1 truncate text-[clamp(1.35rem,2vw,1.75rem)] leading-snug text-heading font-display font-bold transition-colors group-hover:text-primary">
-                        {story.title}
-                      </h2>
-                    </Link>
+                    <h2 className="mt-4 line-clamp-1 truncate text-[clamp(1.35rem,2vw,1.75rem)] leading-snug text-heading font-display font-bold">
+                      {story.title}
+                    </h2>
                     <p className="mt-3.5 line-clamp-5 text-[0.9375rem] leading-relaxed text-body">
                       {story.subtitle || story.seo_description || "A longform story selected by our editorial team."}
                     </p>
@@ -148,7 +155,7 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
                             <span>{story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent"}</span>
                             <span>·</span>
                             <span className="inline-flex items-center gap-1">
-                              <Clock className="size-3" /> {story.estimated_reading_time || 5} min read
+                              <Clock className="size-3 text-emerald-500" /> {story.estimated_reading_time || 5} min read
                             </span>
                           </div>
                         </div>
@@ -163,6 +170,21 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
                         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
                       </Link>
                     </div>
+
+                    {/* Metadata Row: Colored icons with standard text counts */}
+                    <div className="mt-4 pt-3 border-t border-divider flex items-center justify-between text-[0.8125rem]">
+                      <div className="flex items-center gap-4">
+                        <span className="inline-flex items-center gap-1.5" title="Likes">
+                          <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
+                          <span className="font-bold text-black dark:text-white text-[0.8125rem]">{story.likes_count ?? story.likes ?? 0}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5" title="Views">
+                          <Eye className="size-3.5 text-blue-500" />
+                          <span className="font-bold text-black dark:text-white text-[0.8125rem]">{story.views_count ?? story.views ?? 0}</span>
+                        </span>
+                      </div>
+                      <span className="text-subtle text-[0.75rem]">Featured longform</span>
+                    </div>
                   </div>
                 </div>
               </Reveal>
@@ -176,7 +198,7 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
 
 function LatestStories({ stories, isLoading }: { stories?: any[]; isLoading?: boolean }) {
   return (
-    <section className="bg-slate-50 dark:bg-zinc-900/50 py-16 lg:py-20 border-y border-border/30">
+    <section className="bg-slate-50 dark:bg-black py-16 lg:py-20">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
           <SectionHeading
@@ -228,7 +250,7 @@ function LatestStories({ stories, isLoading }: { stories?: any[]; isLoading?: bo
 
 function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean }) {
   return (
-    <section className="bg-white dark:bg-zinc-950 py-16 lg:py-20 border-y border-border/30">
+    <section className="bg-slate-50 dark:bg-black py-16 lg:py-20">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
           <h2 className="font-display text-[1.5rem] sm:text-[1.75rem] font-bold text-heading">
@@ -270,27 +292,34 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
                       </span>
                     </Link>
 
-                    {/* Story Title */}
-                    <Link to="/stories/$slug" params={{ slug: story.slug }} className="block mt-1.5">
-                      <h3 className="line-clamp-1 truncate font-display text-[1.1875rem] font-bold text-heading group-hover:text-primary transition-colors">
+                    {/* Story Title - Only Read here redirects */}
+                    <div className="mt-1.5">
+                      <h3 className="line-clamp-1 truncate font-display text-[1.1875rem] font-bold text-heading">
                         {story.title}
                       </h3>
-                    </Link>
+                    </div>
 
-                    {/* Metadata & Read here */}
-                    <div className="mt-1.5 flex items-center gap-2 text-[0.75rem] text-subtle">
-                      <span>{story.estimated_reading_time || 5} min read</span>
-                      {story.rating && (
-                        <>
-                          <span>·</span>
-                          <span>Rating: {story.rating}</span>
-                        </>
-                      )}
-                      <span>·</span>
+                    {/* Metadata & Read here with colored icons */}
+                    <div className="mt-2.5 flex items-center justify-between gap-3 text-[0.75rem]">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center gap-1 text-subtle">
+                          <Clock className="size-3 text-emerald-500" />
+                          <span>{story.estimated_reading_time || 5}m</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1" title="Likes">
+                          <Heart className="size-3 text-rose-500 fill-rose-500/20" />
+                          <span className="font-bold text-black dark:text-white">{story.likes_count ?? story.likes ?? 0}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1" title="Views">
+                          <Eye className="size-3 text-blue-500" />
+                          <span className="font-bold text-black dark:text-white">{story.views_count ?? story.views ?? 0}</span>
+                        </span>
+                      </div>
+
                       <Link
                         to="/stories/$slug"
                         params={{ slug: story.slug }}
-                        className="group/read font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
+                        className="group/read font-sans text-[0.8125rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5 shrink-0"
                       >
                         <span>Read here</span>
                         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
@@ -309,7 +338,7 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
 
 function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean }) {
   return (
-    <section className="bg-white dark:bg-zinc-950 py-16 lg:py-20 border-y border-border/30">
+    <section className="bg-slate-50 dark:bg-black py-16 lg:py-20">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
           <SectionHeading
@@ -331,42 +360,45 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
           <div className="mt-10 grid gap-6 md:grid-cols-2">
             {blogs.slice(0, 4).map((b, i) => (
               <Reveal key={b.slug} delay={i * 70}>
-                <Link to="/blogs" className="block h-full">
-                  <div className="group flex h-full flex-col sm:flex-row items-center gap-5 p-5 rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1">
-                    <img
-                      src={b.cover_image || "/assets/cover-terrace.jpg"}
-                      alt=""
-                      loading="lazy"
-                      width={1200}
-                      height={800}
-                      className="h-36 w-full sm:w-44 sm:h-36 shrink-0 rounded-xl object-cover"
-                    />
-                    <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
-                      <div>
-                        <h3 className="text-[1.125rem] leading-snug font-display font-bold text-heading group-hover:text-primary transition-colors line-clamp-2">
-                          {b.title}
-                        </h3>
-                        <p className="mt-2 line-clamp-2 text-[0.875rem] text-body leading-relaxed">
-                          {b.excerpt || b.seo_description || "Blog article."}
-                        </p>
-                      </div>
+                <div className="group flex h-full flex-col sm:flex-row items-center gap-5 p-5 rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 border-none">
+                  <img
+                    src={b.cover_image || "/assets/cover-terrace.jpg"}
+                    alt=""
+                    loading="lazy"
+                    width={1200}
+                    height={800}
+                    className="h-36 w-full sm:w-44 sm:h-36 shrink-0 rounded-xl object-cover"
+                  />
+                  <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+                    <div>
+                      <h3 className="text-[1.125rem] leading-snug font-display font-bold text-heading line-clamp-2">
+                        {b.title}
+                      </h3>
+                      <p className="mt-2 line-clamp-2 text-[0.875rem] text-body leading-relaxed">
+                        {b.excerpt || b.seo_description || "Blog article."}
+                      </p>
+                    </div>
 
-                      <div className="mt-4 flex items-center justify-between pt-2 border-t border-divider">
-                        <p className="text-[0.75rem] text-subtle flex items-center gap-1.5">
-                          <span>{b.published_at ? new Date(b.published_at).toLocaleDateString() : "Recent"}</span>
-                          <span>·</span>
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="size-3" /> {b.reading_time || 4} min
-                          </span>
-                        </p>
-
-                        <span className="font-sans text-[0.8125rem] font-bold text-heading group-hover:text-[#FF6B35] transition-colors relative pb-0.5">
-                          Read here
+                    <div className="mt-4 flex items-center justify-between pt-2 border-t border-divider">
+                      <p className="text-[0.75rem] text-subtle flex items-center gap-1.5">
+                        <span>{b.published_at ? new Date(b.published_at).toLocaleDateString() : "Recent"}</span>
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="size-3 text-emerald-500" /> {b.reading_time || 4} min
                         </span>
-                      </div>
+                      </p>
+
+                      <Link
+                        to="/blogs/$slug"
+                        params={{ slug: b.slug }}
+                        className="group/read font-sans text-[0.8125rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
+                      >
+                        <span>Read here</span>
+                        <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
+                      </Link>
                     </div>
                   </div>
-                </Link>
+                </div>
               </Reveal>
             ))}
           </div>
@@ -378,7 +410,7 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
 
 function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boolean }) {
   return (
-    <section className="bg-slate-50 dark:bg-zinc-900/50 py-16 lg:py-20">
+    <section className="bg-slate-50 dark:bg-black py-16 lg:py-20">
       <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
         <Reveal>
           <SectionHeading
@@ -401,8 +433,8 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
           <div className="mt-10 grid gap-8 md:grid-cols-2">
             {videos.slice(0, 2).map((v, i) => (
               <Reveal key={v.slug || v.id || i} delay={i * 70}>
-                <Link to="/videos/$slug" params={{ slug: v.slug || "video" }} className="group block h-full">
-                  <div className="flex flex-col h-full rounded-2xl bg-surface p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1">
+                <div className="group block h-full">
+                  <div className="flex flex-col h-full rounded-2xl bg-surface p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 border-none">
                     <div className="relative overflow-hidden rounded-xl aspect-video w-full">
                       <img
                         src={v.thumbnail_url || coverBoat}
@@ -412,11 +444,16 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
                         height={800}
                         className="w-full h-full object-cover"
                       />
-                      <span className="absolute inset-0 grid place-items-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Link
+                        to="/videos/$slug"
+                        params={{ slug: v.slug || "video" }}
+                        className="absolute inset-0 grid place-items-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label={`Play ${v.title}`}
+                      >
                         <span className="grid size-14 place-items-center rounded-full bg-white text-primary shadow-lift">
                           <Play className="size-6 translate-x-0.5 fill-primary" />
                         </span>
-                      </span>
+                      </Link>
                       {v.duration && (
                         <span className="absolute right-3 bottom-3 rounded-full bg-heading/80 px-2.5 py-0.5 text-[0.75rem] font-bold text-white backdrop-blur">
                           {v.duration}
@@ -425,12 +462,21 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
                     </div>
 
                     <div className="mt-5 text-center flex-1 flex flex-col justify-between">
-                      <h3 className="text-[1.25rem] leading-snug font-display font-bold text-heading group-hover:text-primary transition-colors">
+                      <h3 className="text-[1.25rem] leading-snug font-display font-bold text-heading">
                         {v.title}
                       </h3>
+                      <div className="mt-3">
+                        <Link
+                          to="/videos/$slug"
+                          params={{ slug: v.slug || "video" }}
+                          className="font-sans text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          Watch film →
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               </Reveal>
             ))}
           </div>
@@ -442,10 +488,10 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
 
 function Newsletter() {
   return (
-    <section id="newsletter" className="bg-white dark:bg-zinc-950 py-16 sm:py-20 border-t border-border/30">
+    <section id="newsletter" className="bg-slate-50 dark:bg-black py-16 sm:py-20">
       <div className="mx-auto max-w-3xl px-5 lg:px-8 text-center">
         <Reveal>
-          <div className="rounded-3xl bg-slate-50 dark:bg-zinc-900 p-8 sm:p-12 shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
+          <div className="rounded-3xl bg-surface p-8 sm:p-12 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] border-none">
             <h2 className="mx-auto text-[clamp(1.5rem,2.5vw,2.2rem)] leading-tight font-display font-bold text-heading">
               Keep reading. Keep watching.
             </h2>
@@ -537,10 +583,15 @@ function Home() {
     <SiteLayout announcement={announcementData} footer={footerData}>
       <Hero />
       <FeaturedStories stories={featuredStoriesData} isLoading={isLoading} />
+      <SectionDivider />
       <LatestStories stories={latestStoriesData} isLoading={isLoading} />
+      <SectionDivider />
       <Trending stories={trendingStoriesData} isLoading={isLoading} />
+      <SectionDivider />
       <LatestBlogs blogs={blogsData} isLoading={isLoading} />
+      <SectionDivider />
       <VideoLibrary videos={videosData} isLoading={isLoading} />
+      <SectionDivider />
       <Newsletter />
     </SiteLayout>
   );

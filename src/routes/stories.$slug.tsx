@@ -418,7 +418,7 @@ function StoryDetail() {
       </div>
 
       <article>
-        <header className="relative overflow-hidden border-b border-primary/20 bg-gradient-to-b from-primary/15 via-primary/[0.08] to-primary/[0.03] dark:from-primary/20 dark:via-primary/10 dark:to-zinc-950/40 dark:border-primary/25 shadow-xs">
+        <header className="relative overflow-hidden bg-gradient-to-b from-primary/15 via-primary/[0.08] to-primary/[0.03] dark:from-primary/20 dark:via-primary/10 dark:to-zinc-950/40 shadow-md">
           {/* Brand primary atmospheric glow in both light & dark mode */}
           <div className="pointer-events-none absolute inset-0 bg-radial from-primary/20 via-transparent to-transparent" />
           <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 size-[650px] rounded-full bg-primary/15 blur-3xl" />
@@ -436,7 +436,6 @@ function StoryDetail() {
               </nav>
 
               <div className="flex items-center gap-3">
-                <CategoryPill>{story.category?.name || "General"}</CategoryPill>
                 <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle font-medium">
                   <Clock className="size-3.5" /> {story.estimated_reading_time || 5} min read
                 </span>
@@ -445,6 +444,11 @@ function StoryDetail() {
 
             <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-heading sm:text-5xl lg:text-[3.25rem] leading-[1.12]">
               {story.title}
+              {story.category?.name && (
+                <span className="font-normal text-subtle text-xl sm:text-2xl lg:text-3xl ml-2 sm:ml-3">
+                  / {story.category.name}
+                </span>
+              )}
             </h1>
             <p className="mt-2 font-display text-lg text-body sm:text-xl leading-relaxed">
               {story.subtitle || "A quiet piece of prose written for thoughtful readers."}
@@ -541,11 +545,8 @@ function StoryDetail() {
         <section className="border-t border-border bg-surface-alt/50 py-16">
           <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
             <h2 className="text-2xl font-display font-bold text-heading">
-              More stories in {story.category?.name || "this collection"}
+              Find more
             </h2>
-            <p className="mt-1 text-sm text-subtle">
-              Discover stories matching the same category and tags.
-            </p>
             <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {relatedStories.slice(0, 3).map((s: any) => (
                 <StoryCard key={s.slug} story={{

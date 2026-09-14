@@ -1,20 +1,39 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Bookmark, Clock, Edit3, Eye, EyeOff, FileText, Folder, Heart, ImagePlus, Plus, Send, Sparkles, Trash2 } from "lucide-react";
+import { createFileRoute, useBlocker } from "@tanstack/react-router";
+import { Bold, Bookmark, Clock, Edit3, Eye, EyeOff, FileText, Folder, Heading as HeadingIcon, Heart, Image as ImageIcon, ImagePlus, Italic, Link2, Plus, Quote, Send, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/tossa/AppShell";
 import { Badge, Button, CustomSelect, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { UnsavedChangesModal } from "@/components/tossa/UnsavedChangesModal";
 import { pageHead } from "@/lib/head";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+function serializeBlogState(
+  title: string,
+  subtitle: string,
+  body: string,
+  cat: string,
+  tags: string,
+  cover: string | null,
+) {
+  return JSON.stringify({
+    title: (title || "").trim(),
+    subtitle: (subtitle || "").trim(),
+    body: (body || "").trim(),
+    cat: (cat || "").trim(),
+    tags: (tags || "").trim(),
+    cover: cover || "",
+  });
+}
 
 export const Route = createFileRoute("/admin/blogs")({
   head: () =>
     pageHead(
       "Post a blog · tossatale admin",
-      "Compose and publish journal posts from the tossatale editorial desk.",
+      "Blog posts publish instantly.",
     ),
   component: AdminBlogs,
 });
@@ -38,6 +57,26 @@ function AdminBlogs() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
+
+  // Snapshot tracking for unsaved changes navigation blocker
+  const savedSnapshotRef = useRef<string>(serializeBlogState("", "", "", "", "", null));
+
+  const isDirty = useMemo(() => {
+    if (activeTab !== "editor") return false;
+    const current = serializeBlogState(title, subtitle, body, selectedCategory, tagsInput, coverImage);
+    return current !== savedSnapshotRef.current;
+  }, [activeTab, title, subtitle, body, selectedCategory, tagsInput, coverImage]);
+
+  const blocker = useBlocker({
+    shouldBlockFn: ({ current, next }) => {
+      if (current.pathname !== next.pathname && isDirty) {
+        return true;
+      }
+      return false;
+    },
+    withResolver: true,
+    enableBeforeUnload: () => isDirty,
+  });
 
   // Fetch Categories
   const { data: apiCategories } = useQuery({
@@ -110,10 +149,10 @@ function AdminBlogs() {
     }
   }, [minutes, isReadingTimeCustom]);
 
-  const handlePublish = async () => {
+  const handlePublish = async (): Promise<boolean> => {
     if (!title.trim() || !body.trim()) {
       toast.error("Title and content are required to publish a blog!");
-      return;
+      return false;
     }
     setIsPublishing(true);
     try {
@@ -122,7 +161,7 @@ function AdminBlogs() {
         subtitle: subtitle.trim(),
         excerpt: subtitle.trim(),
         content: body,
-        category_id: selectedCategory || categoriesList[0]?.id || null,
+        category_id: selectedCategory.trim() || "General",
         tags: tagsInput.trim(),
         reading_time: Number(readingTimeInput) || 5,
         cover_image: coverImage || "",
@@ -139,8 +178,10 @@ function AdminBlogs() {
 
       queryClient.invalidateQueries({ queryKey: ["admin-blogs-list"] });
       handleClearEditor();
+      return true;
     } catch (err: any) {
       toast.error("Failed to save blog post", { description: err.response?.data?.message || err.message });
+      return false;
     } finally {
       setIsPublishing(false);
     }
@@ -150,10 +191,14 @@ function AdminBlogs() {
     setActiveEditingSlug(post.slug || post.id);
     setTitle(post.title || "");
     setSubtitle(post.subtitle || post.excerpt || "");
-    setBody(post.content || (Array.isArray(post.body) ? post.body.join("\n\n") : ""));
-    setSelectedCategory(post.category?.id || post.category?.slug || "");
-    setCoverImage(post.cover_image || post.cover || null);
-    setTagsInput(post.tag || post.tags || "");
+    const initialContent = post.content || (Array.isArray(post.body) ? post.body.join("\n\n") : "") || "";
+    setBody(initialContent);
+    const catVal = post.category?.name || post.category?.slug || "";
+    setSelectedCategory(catVal);
+    const coverVal = post.cover_image || post.cover || null;
+    setCoverImage(coverVal);
+    const tagVal = post.tag || post.tags || "";
+    setTagsInput(tagVal);
     const savedRT = post.reading_time || post.readingTime;
     if (savedRT) {
       setReadingTimeInput(String(savedRT));
@@ -162,6 +207,16 @@ function AdminBlogs() {
       setIsReadingTimeCustom(false);
     }
     setIsFeatured(Boolean(post.is_featured));
+
+    savedSnapshotRef.current = serializeBlogState(
+      post.title || "",
+      post.subtitle || post.excerpt || "",
+      initialContent,
+      catVal,
+      tagVal,
+      coverVal,
+    );
+
     setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast.info(`Loaded "${post.title}" into editor.`);
@@ -183,14 +238,63 @@ function AdminBlogs() {
     setReadingTimeInput("1");
     setIsReadingTimeCustom(false);
     setIsFeatured(false);
+    savedSnapshotRef.current = serializeBlogState("", "", "", "", "", null);
     toast.info("Cleared editor canvas to compose new blog post.");
+  };
+
+  const handlePublishAndLeave = async () => {
+    const success = await handlePublish();
+    if (success) {
+      blocker.proceed?.();
+    }
+  };
+
+  const handleStay = () => {
+    blocker.reset?.();
+  };
+
+  const handleDiscardAndLeave = () => {
+    savedSnapshotRef.current = serializeBlogState(title, subtitle, body, selectedCategory, tagsInput, coverImage);
+    blocker.proceed?.();
+  };
+
+  const insertSnippet = (before: string, after: string = "", placeholder: string = "") => {
+    const textarea = document.getElementById("blog-body-textarea") as HTMLTextAreaElement | null;
+    if (!textarea) {
+      setBody((prev) => prev + before + placeholder + after);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end) || placeholder;
+    const replacement = before + selected + after;
+    const newBody = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+    setBody(newBody);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, start + before.length + selected.length);
+    }, 50);
+  };
+
+  const handleInsertLink = () => {
+    const url = window.prompt("Enter destination URL:", "https://");
+    if (!url) return;
+    const text = window.prompt("Enter link text (optional):", "") || url;
+    insertSnippet(`<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline">`, "</a>", text);
+  };
+
+  const handleInsertImage = () => {
+    const url = window.prompt("Enter image URL:", "https://");
+    if (!url) return;
+    const alt = window.prompt("Enter image caption/alt text (optional):", "Blog image") || "Blog image";
+    insertSnippet(`\n<figure class="my-6">\n  <img src="${url}" alt="${alt}" class="rounded-xl w-full max-h-[500px] object-cover" />\n  <figcaption class="mt-2 text-center text-xs text-subtle italic">${alt}</figcaption>\n</figure>\n\n`);
   };
 
   return (
     <AppShell
       role="admin"
       title="Post a blog"
-      blurb="Journal posts publish instantly under /blogs — no review queue, no waiting."
+      blurb="Blog posts publish instantly."
       actions={
         activeTab === "editor" ? (
           <>
@@ -203,8 +307,14 @@ function AdminBlogs() {
               {preview ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               {preview ? "Edit" : "Preview"}
             </Button>
-            <Button size="sm" onClick={handlePublish} disabled={isPublishing} className="gap-1.5">
+            <Button
+              size="sm"
+              onClick={handlePublish}
+              disabled={isPublishing}
+              className={cn("gap-1.5", isDirty && "ring-2 ring-primary/50 shadow-sm")}
+            >
               <Send className="size-4" /> {isPublishing ? "Publishing..." : activeEditingSlug ? "Update post" : "Publish post"}
+              {isDirty && <span className="size-1.5 rounded-full bg-white dark:bg-black animate-pulse" />}
             </Button>
           </>
         ) : (
@@ -321,12 +431,67 @@ function AdminBlogs() {
                     />
                   </Field>
 
-                  <Field label="Blog Content" hint="Prose body of the post">
+                  <Field
+                    label="Blog Content"
+                    hint={
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => insertSnippet("**", "**", "bold text")}
+                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-surface-alt hover:bg-surface-hover border border-border text-body"
+                          title="Bold"
+                        >
+                          <Bold className="size-3" /> Bold
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertSnippet("*", "*", "italic text")}
+                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-surface-alt hover:bg-surface-hover border border-border text-body"
+                          title="Italic"
+                        >
+                          <Italic className="size-3" /> Italic
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertSnippet("\n### ", "\n", "Section Heading")}
+                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-surface-alt hover:bg-surface-hover border border-border text-body"
+                          title="Heading"
+                        >
+                          <HeadingIcon className="size-3" /> Heading
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertSnippet("\n> ", "\n", "Inspiring quote or callout")}
+                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-surface-alt hover:bg-surface-hover border border-border text-body"
+                          title="Quote"
+                        >
+                          <Quote className="size-3" /> Quote
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleInsertLink}
+                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-bold bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary"
+                          title="Insert hyperlink"
+                        >
+                          <Link2 className="size-3" /> Insert Link
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleInsertImage}
+                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-bold bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary"
+                          title="Insert inline image"
+                        >
+                          <ImageIcon className="size-3" /> Insert Image
+                        </button>
+                      </div>
+                    }
+                  >
                     <Textarea
+                      id="blog-body-textarea"
                       value={body}
                       onChange={(e) => setBody(e.target.value)}
                       rows={13}
-                      placeholder="Write the post…"
+                      placeholder="Write the blog post here. Use formatting buttons above to add hyperlinks and images anywhere..."
                       className="font-sans text-[1rem] leading-relaxed"
                     />
                   </Field>
@@ -345,18 +510,19 @@ function AdminBlogs() {
             <Panel className="p-6 space-y-4">
               <h2 className="text-lg font-display font-bold text-heading">Post Controls</h2>
               
-              <Field label="Category">
-                <CustomSelect
+              <Field label="Category" hint="Type any custom category or select from suggestions">
+                <Input
+                  list="blog-category-options"
                   value={selectedCategory}
-                  onChange={(val) => setSelectedCategory(val)}
-                  options={[
-                    { label: "General", value: "" },
-                    ...categoriesList.map((c: any) => ({
-                      label: c.name,
-                      value: c.id || c.slug,
-                    })),
-                  ]}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  placeholder="e.g. Behind the Scenes, Craft, Film Review"
+                  className="h-11 text-[0.875rem]"
                 />
+                <datalist id="blog-category-options">
+                  {categoriesList.map((c: any) => (
+                    <option key={c.id || c.slug} value={c.name} />
+                  ))}
+                </datalist>
               </Field>
 
               <Field label="Tags" hint="Comma separated">
@@ -564,6 +730,20 @@ function AdminBlogs() {
           )}
         </Panel>
       )}
+
+      {/* Unsaved Blog Changes Navigation Blocker Modal */}
+      <UnsavedChangesModal
+        isOpen={blocker.status === "blocked"}
+        isSaving={isPublishing}
+        title="Unsaved Blog Post!"
+        badgeText="Blog Changes Not Published"
+        description="You have composed or edited blog content, cover image, or categories without publishing."
+        tipText="Click Publish & Continue to instantly publish your blog post before moving to another screen!"
+        saveButtonText="Publish & Continue"
+        onSaveAndLeave={handlePublishAndLeave}
+        onStay={handleStay}
+        onDiscardAndLeave={handleDiscardAndLeave}
+      />
     </AppShell>
   );
 }

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import {
   ArrowLeft,
   BookOpen,
@@ -17,6 +17,7 @@ import {
   Sparkles,
   Star,
   Tag as TagIcon,
+  Trash2,
   TrendingUp,
   UserCheck,
   UserX,
@@ -85,7 +86,9 @@ function WriterNotFound() {
 function AdminWriterDetail() {
   const loaderData = Route.useLoaderData();
   const queryClient = useQueryClient();
-  const writer = loaderData?.writer;
+  const router = useRouter();
+  const navigate = useNavigate();
+  const [writer, setWriter] = useState(loaderData?.writer);
 
   // Selected story for modal preview
   const [selectedStory, setSelectedStory] = useState<any | null>(null);
@@ -159,9 +162,11 @@ function AdminWriterDetail() {
       }
     },
     onSuccess: () => {
-      toast.success(writer.is_verified ? "Verification revoked" : "Writer verified successfully");
+      const nextVerified = !writer.is_verified;
+      setWriter((prev: any) => ({ ...prev, is_verified: nextVerified }));
+      toast.success(nextVerified ? "Writer verified successfully" : "Verification revoked");
       queryClient.invalidateQueries({ queryKey: ["admin-writers"] });
-      window.location.reload();
+      router.invalidate();
     },
     onError: (err: any) => {
       toast.error("Action failed", { description: err.message });
@@ -178,12 +183,29 @@ function AdminWriterDetail() {
       }
     },
     onSuccess: () => {
-      toast.success(writer.is_active ? "Writer deactivated" : "Writer activated successfully");
+      const nextActive = !writer.is_active;
+      setWriter((prev: any) => ({ ...prev, is_active: nextActive }));
+      toast.success(nextActive ? "Writer activated successfully" : "Writer deactivated");
       queryClient.invalidateQueries({ queryKey: ["admin-writers"] });
-      window.location.reload();
+      router.invalidate();
     },
     onError: (err: any) => {
       toast.error("Action failed", { description: err.message });
+    },
+  });
+
+  // Mutation for Delete Writer
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      return api.delete(`/admin/writers/${writer.slug}/`);
+    },
+    onSuccess: () => {
+      toast.success("Writer deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-writers"] });
+      navigate({ to: "/admin/writers" });
+    },
+    onError: (err: any) => {
+      toast.error("Failed to delete writer", { description: err.message });
     },
   });
 
@@ -387,6 +409,21 @@ function AdminWriterDetail() {
                   <span>Activate</span>
                 </>
               )}
+            </Button>
+
+            <Button
+              variant="ghostOutline"
+              size="sm"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to permanently delete the writer "${name}"? This action cannot be undone.`)) {
+                  deleteMutation.mutate();
+                }
+              }}
+              className="gap-1.5 text-destructive hover:bg-destructive/10 border-destructive/30"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Delete Writer</span>
             </Button>
           </div>
         </div>

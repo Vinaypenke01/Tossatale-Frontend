@@ -1,21 +1,36 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useBlocker } from "@tanstack/react-router";
 import { Edit2, FileVideo, Folder, Link2, Play, Plus, Send, Trash2, Youtube } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/tossa/AppShell";
 import { Badge, Button, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { UnsavedChangesModal } from "@/components/tossa/UnsavedChangesModal";
 import { videos as mockVideos } from "@/lib/data";
 import { pageHead } from "@/lib/head";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+function serializeVideoState(
+  url: string,
+  title: string,
+  categoryName: string,
+  notes: string,
+) {
+  return JSON.stringify({
+    url: (url || "").trim(),
+    title: (title || "").trim(),
+    cat: (categoryName || "").trim(),
+    notes: (notes || "").trim(),
+  });
+}
+
 export const Route = createFileRoute("/admin/videos")({
   head: () =>
     pageHead(
       "Post a YouTube video · tossatale admin",
-      "Paste a YouTube link, add editorial context, and publish it to the tossatale video library.",
+      "Add, edit, and organize YouTube videos for tossatale.",
     ),
   component: AdminVideos,
 });
@@ -32,9 +47,30 @@ function AdminVideos() {
 
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
+  const [categoryName, setCategoryName] = useState("Film");
   const [notes, setNotes] = useState("");
   const [activeEditingId, setActiveEditingId] = useState<string | number | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+
+  // Snapshot tracking for unsaved changes navigation blocker
+  const savedSnapshotRef = useRef<string>(serializeVideoState("", "", "Film", ""));
+
+  const isDirty = useMemo(() => {
+    if (activeTab !== "editor") return false;
+    const current = serializeVideoState(url, title, categoryName, notes);
+    return current !== savedSnapshotRef.current;
+  }, [activeTab, url, title, categoryName, notes]);
+
+  const blocker = useBlocker({
+    shouldBlockFn: ({ current, next }) => {
+      if (current.pathname !== next.pathname && isDirty) {
+        return true;
+      }
+      return false;
+    },
+    withResolver: true,
+    enableBeforeUnload: () => isDirty,
+  });
 
   const id = useMemo(() => youtubeId(url), [url]);
 
@@ -58,24 +94,26 @@ function AdminVideos() {
   const handleClearEditor = () => {
     setUrl("");
     setTitle("");
+    setCategoryName("Film");
     setNotes("");
     setActiveEditingId(null);
+    savedSnapshotRef.current = serializeVideoState("", "", "Film", "");
   };
 
-  const handlePublish = async () => {
+  const handlePublish = async (): Promise<boolean> => {
     if (!url.trim()) {
       toast.error("Please enter a YouTube video URL.");
-      return;
+      return false;
     }
     if (!id) {
       toast.error("Invalid YouTube URL", {
         description: "Please enter a valid YouTube link (e.g. https://www.youtube.com/watch?v=... or https://youtu.be/...)",
       });
-      return;
+      return false;
     }
     if (!title.trim() || title.trim().length < 2) {
       toast.error("Please provide a video title (at least 2 characters).");
-      return;
+      return false;
     }
 
     setIsPublishing(true);
@@ -84,6 +122,7 @@ function AdminVideos() {
         youtube_url: url.trim(),
         title: title.trim(),
         editorial_note: notes.trim(),
+        category_name: categoryName.trim() || "Film",
       };
 
       if (activeEditingId) {
@@ -97,10 +136,12 @@ function AdminVideos() {
       queryClient.invalidateQueries({ queryKey: ["admin-videos-list"] });
       handleClearEditor();
       setActiveTab("library");
+      return true;
     } catch (err: any) {
       toast.error("Failed to save video", {
         description: err.response?.data?.message || err.response?.data?.error || err.message || "An unexpected error occurred.",
       });
+      return false;
     } finally {
       setIsPublishing(false);
     }
@@ -108,9 +149,23 @@ function AdminVideos() {
 
   const handleEditVideo = (video: any) => {
     setActiveEditingId(video.id || video.slug);
-    setUrl(video.youtube_url || (video.youtube_id ? `https://www.youtube.com/watch?v=${video.youtube_id}` : ""));
-    setTitle(video.title || "");
-    setNotes(video.editorial_note || video.description || "");
+    const resolvedUrl = video.youtube_url || (video.youtube_id ? `https://www.youtube.com/watch?v=${video.youtube_id}` : "");
+    const resolvedTitle = video.title || "";
+    const resolvedCategory = video.category_name || video.category?.name || "Film";
+    const resolvedNotes = video.editorial_note || video.description || "";
+
+    setUrl(resolvedUrl);
+    setTitle(resolvedTitle);
+    setCategoryName(resolvedCategory);
+    setNotes(resolvedNotes);
+
+    savedSnapshotRef.current = serializeVideoState(
+      resolvedUrl,
+      resolvedTitle,
+      resolvedCategory,
+      resolvedNotes,
+    );
+
     setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -128,11 +183,27 @@ function AdminVideos() {
     }
   };
 
+  const handlePublishAndLeave = async () => {
+    const success = await handlePublish();
+    if (success) {
+      blocker.proceed?.();
+    }
+  };
+
+  const handleStay = () => {
+    blocker.reset?.();
+  };
+
+  const handleDiscardAndLeave = () => {
+    savedSnapshotRef.current = serializeVideoState(url, title, categoryName, notes);
+    blocker.proceed?.();
+  };
+
   return (
     <AppShell
       role="admin"
       title="Manage YouTube Videos"
-      blurb="Post, edit, and organize YouTube videos for the tossatale video library."
+      blurb="Add, edit, and organize YouTube videos for tossatale."
       actions={
         activeTab === "editor" ? (
           <div className="flex items-center gap-2">
@@ -141,8 +212,13 @@ function AdminVideos() {
                 Cancel Edit
               </Button>
             )}
-            <Button onClick={handlePublish} disabled={isPublishing}>
+            <Button
+              onClick={handlePublish}
+              disabled={isPublishing}
+              className={cn("gap-1.5", isDirty && "ring-2 ring-primary/50 shadow-sm")}
+            >
               <Send className="size-4" /> {isPublishing ? "Saving..." : activeEditingId ? "Update Video" : "Publish Video"}
+              {isDirty && <span className="size-1.5 rounded-full bg-white dark:bg-black animate-pulse" />}
             </Button>
           </div>
         ) : (
@@ -232,6 +308,15 @@ function AdminVideos() {
                 placeholder="Meera Raghavan on writing about family"
               />
             </Field>
+
+            <Field label="Category" hint="Custom category shown on public cards">
+              <Input
+                value={categoryName}
+                onChange={(e) => setCategoryName(e.target.value)}
+                placeholder="e.g. Short Film, Conversation, Behind the Scenes"
+              />
+            </Field>
+
             <Field label="Editorial note" hint="Shown under the player on /videos">
               <Textarea
                 value={notes}
@@ -327,6 +412,20 @@ function AdminVideos() {
           )}
         </div>
       )}
+
+      {/* Unsaved Video Changes Navigation Blocker Modal */}
+      <UnsavedChangesModal
+        isOpen={blocker.status === "blocked"}
+        isSaving={isPublishing}
+        title="Unsaved Video Details!"
+        badgeText="Video Not Saved"
+        description="You have entered or adjusted a YouTube URL, title, category, or notes without publishing."
+        tipText="Click Publish & Continue to instantly post your video before leaving this page!"
+        saveButtonText="Publish Video & Continue"
+        onSaveAndLeave={handlePublishAndLeave}
+        onStay={handleStay}
+        onDiscardAndLeave={handleDiscardAndLeave}
+      />
     </AppShell>
   );
 }

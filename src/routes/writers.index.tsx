@@ -70,7 +70,7 @@ function WritersIndex() {
             Meet our writers
           </h1>
           <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            Original voices writing about memory, places, speculative futures, love, and what matters.
+            The stories you read, the writers who create them. Get to know them beyond the page.
           </p>
         </div>
       </header>
@@ -90,7 +90,9 @@ function WritersIndex() {
         </div>
 
         {isLoading ? (
-          <WritersGridSkeleton count={6} />
+          <div className="mt-8">
+            <WritersGridSkeleton count={6} />
+          </div>
         ) : displayWriters.length === 0 ? (
           <Panel className="mt-8 p-12 text-center">
             <h3 className="font-display text-xl font-bold text-heading">No writers found</h3>
@@ -99,7 +101,7 @@ function WritersIndex() {
             </p>
           </Panel>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 sm:mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {displayWriters.map((w: any, i: number) => (
               <Reveal key={w.slug} delay={i * 60}>
                 <Panel hover className="flex h-[250px] flex-col justify-between p-6">

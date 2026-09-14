@@ -21,6 +21,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SeriesRouteImport } from './routes/series'
+import { Route as SubmissionGuidelinesRouteImport } from './routes/submission-guidelines'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UpcomingProjectsRouteImport } from './routes/upcoming-projects'
 import { Route as VideosRouteImport } from './routes/videos'
@@ -116,6 +117,11 @@ const SearchRoute = SearchRouteImport.update({
 const SeriesRoute = SeriesRouteImport.update({
   id: '/series',
   path: '/series',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubmissionGuidelinesRoute = SubmissionGuidelinesRouteImport.update({
+  id: '/submission-guidelines',
+  path: '/submission-guidelines',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -312,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
+  '/submission-guidelines': typeof SubmissionGuidelinesRoute
   '/terms': typeof TermsRoute
   '/upcoming-projects': typeof UpcomingProjectsRoute
   '/videos': typeof VideosRouteWithChildren
@@ -361,6 +368,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
+  '/submission-guidelines': typeof SubmissionGuidelinesRoute
   '/terms': typeof TermsRoute
   '/upcoming-projects': typeof UpcomingProjectsRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
@@ -410,6 +418,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/series': typeof SeriesRoute
+  '/submission-guidelines': typeof SubmissionGuidelinesRoute
   '/terms': typeof TermsRoute
   '/upcoming-projects': typeof UpcomingProjectsRoute
   '/videos': typeof VideosRouteWithChildren
@@ -462,6 +471,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/series'
+    | '/submission-guidelines'
     | '/terms'
     | '/upcoming-projects'
     | '/videos'
@@ -511,6 +521,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/series'
+    | '/submission-guidelines'
     | '/terms'
     | '/upcoming-projects'
     | '/admin/analytics'
@@ -559,6 +570,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/series'
+    | '/submission-guidelines'
     | '/terms'
     | '/upcoming-projects'
     | '/videos'
@@ -610,6 +622,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SearchRoute: typeof SearchRoute
   SeriesRoute: typeof SeriesRoute
+  SubmissionGuidelinesRoute: typeof SubmissionGuidelinesRoute
   TermsRoute: typeof TermsRoute
   UpcomingProjectsRoute: typeof UpcomingProjectsRoute
   VideosRoute: typeof VideosRouteWithChildren
@@ -726,6 +739,13 @@ declare module '@tanstack/react-router' {
       path: '/series'
       fullPath: '/series'
       preLoaderRoute: typeof SeriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/submission-guidelines': {
+      id: '/submission-guidelines'
+      path: '/submission-guidelines'
+      fullPath: '/submission-guidelines'
+      preLoaderRoute: typeof SubmissionGuidelinesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -1035,6 +1055,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SearchRoute: SearchRoute,
   SeriesRoute: SeriesRoute,
+  SubmissionGuidelinesRoute: SubmissionGuidelinesRoute,
   TermsRoute: TermsRoute,
   UpcomingProjectsRoute: UpcomingProjectsRoute,
   VideosRoute: VideosRouteWithChildren,

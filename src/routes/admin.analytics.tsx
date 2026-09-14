@@ -41,7 +41,6 @@ export const Route = createFileRoute("/admin/analytics")({
 function AdminAnalytics() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [sortBy, setSortBy] = useState<"likes" | "views" | "bookmarks" | "recent">("likes");
   const [selectedStory, setSelectedStory] = useState<any | null>(null);
 
   const { data: analyticsData, isLoading } = useQuery({
@@ -91,27 +90,15 @@ function AdminAnalytics() {
         return matchesSearch && matchesStatus;
       })
       .sort((a: any, b: any) => {
-        if (sortBy === "likes") {
-          const valA = Number(a.likes_count ?? a.likes ?? 0);
-          const valB = Number(b.likes_count ?? b.likes ?? 0);
-          if (valB !== valA) return valB - valA;
-          return Number(b.views_count ?? b.views ?? 0) - Number(a.views_count ?? a.views ?? 0);
-        }
-        if (sortBy === "views") {
-          const valA = Number(a.views_count ?? a.views ?? 0);
-          const valB = Number(b.views_count ?? b.views ?? 0);
-          if (valB !== valA) return valB - valA;
-          return Number(b.likes_count ?? b.likes ?? 0) - Number(a.likes_count ?? a.likes ?? 0);
-        }
-        if (sortBy === "bookmarks") {
-          const valA = Number(a.bookmarks_count ?? a.bookmarks ?? 0);
-          const valB = Number(b.bookmarks_count ?? b.bookmarks ?? 0);
-          if (valB !== valA) return valB - valA;
-          return Number(b.likes_count ?? b.likes ?? 0) - Number(a.likes_count ?? a.likes ?? 0);
-        }
+        const viewsA = Number(a.views_count ?? a.views ?? 0);
+        const viewsB = Number(b.views_count ?? b.views ?? 0);
+        if (viewsB !== viewsA) return viewsB - viewsA;
+        const likesA = Number(a.likes_count ?? a.likes ?? 0);
+        const likesB = Number(b.likes_count ?? b.likes ?? 0);
+        if (likesB !== likesA) return likesB - likesA;
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
-  }, [allStories, searchQuery, statusFilter, sortBy]);
+  }, [allStories, searchQuery, statusFilter]);
 
   const handleExportCSV = async () => {
     try {
@@ -128,7 +115,7 @@ function AdminAnalytics() {
     <AppShell
       role="admin"
       title="Platform & Story Analytics"
-      blurb="Real-time readership metrics, engagement rates, verified likes, bookmarks, and individual story performance."
+      blurb="Real-time readership metrics, engagement rates, reader likes, bookmarks, and individual story performance."
       actions={
         <Button variant="ghostOutline" onClick={handleExportCSV}>
           <Download className="size-4" /> Export CSV
@@ -139,7 +126,7 @@ function AdminAnalytics() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Total Views / Reads" value={Number(summary.total_views).toLocaleString()} />
         <StatCard label="Published Stories" value={Number(summary.total_published_stories).toLocaleString()} />
-        <StatCard label="Verified Likes" value={Number(summary.total_likes).toLocaleString()} />
+        <StatCard label="Total Likes" value={Number(summary.total_likes).toLocaleString()} />
         <StatCard label="Bookmarks / Saves" value={Number(summary.total_bookmarks || 0).toLocaleString()} />
         <StatCard label="Total Writers" value={Number(summary.total_writers).toLocaleString()} />
       </div>
@@ -282,46 +269,6 @@ function AdminAnalytics() {
                   {st === "ALL" ? "All" : st === "PENDING_REVIEW" ? "In Review" : st.charAt(0) + st.slice(1).toLowerCase()}
                 </button>
               ))}
-            </div>
-
-            {/* Sort Toggle */}
-            <div className="flex items-center rounded-xl bg-surface-alt p-1 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setSortBy("likes")}
-                className={cn(
-                  "rounded-lg px-3 py-1 transition-all",
-                  sortBy === "likes"
-                    ? "bg-surface text-primary font-bold shadow-xs border border-border/80"
-                    : "text-subtle hover:text-heading"
-                )}
-              >
-                Likes
-              </button>
-              <button
-                type="button"
-                onClick={() => setSortBy("views")}
-                className={cn(
-                  "rounded-lg px-3 py-1 transition-all",
-                  sortBy === "views"
-                    ? "bg-surface text-primary font-bold shadow-xs border border-border/80"
-                    : "text-subtle hover:text-heading"
-                )}
-              >
-                Views
-              </button>
-              <button
-                type="button"
-                onClick={() => setSortBy("bookmarks")}
-                className={cn(
-                  "rounded-lg px-3 py-1 transition-all",
-                  sortBy === "bookmarks"
-                    ? "bg-surface text-primary font-bold shadow-xs border border-border/80"
-                    : "text-subtle hover:text-heading"
-                )}
-              >
-                Saves
-              </button>
             </div>
           </div>
         </div>

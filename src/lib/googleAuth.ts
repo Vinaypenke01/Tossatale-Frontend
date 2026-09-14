@@ -60,6 +60,11 @@ export function renderGoogleButton(
     return;
   }
 
+  // Prevent re-rendering and screen flicker if already rendered
+  if (container.dataset.rendered === "true" && container.children.length > 0) {
+    return;
+  }
+
   try {
     container.innerHTML = "";
     (window as any).google.accounts.id.renderButton(container, {
@@ -69,6 +74,7 @@ export function renderGoogleButton(
       text: options.text || "signin_with",
       shape: options.shape || "pill",
     });
+    container.dataset.rendered = "true";
   } catch (e) {
     console.warn("Failed to render Google button:", e);
   }

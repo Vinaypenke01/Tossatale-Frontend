@@ -22,6 +22,7 @@ interface AuthContextType {
   login: (credentials: any) => Promise<any>;
   googleLogin: (idToken: string) => Promise<any>;
   register: (data: any) => Promise<any>;
+  upgradeToWriter: (data: any) => Promise<any>;
   verifyRegistrationOtp: (email: string, otp: string) => Promise<any>;
   resendRegistrationOtp: (email: string) => Promise<any>;
   logout: () => Promise<void>;
@@ -181,6 +182,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return await api.post("/auth/register/resend-otp/", { email });
   };
 
+  const upgradeToWriter = async (data: any) => {
+    const res = await api.post("/auth/upgrade-to-writer/", data);
+    if (res.success && res.data) {
+      const { tokens, user: userData } = res.data;
+      if (tokens?.access && tokens?.refresh) {
+        setAuthTokens(tokens.access, tokens.refresh);
+      }
+      if (userData) {
+        setUser(userData);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("tossatale_user_data", JSON.stringify(userData));
+          localStorage.setItem("tossatale_user_role", "writer");
+          window.dispatchEvent(new Event("storage"));
+        }
+      }
+    }
+    return res;
+  };
+
   const logout = async () => {
     try {
       const refresh = typeof window !== "undefined" ? localStorage.getItem("tossatale_refresh_token") : null;
@@ -210,6 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         googleLogin,
         register,
+        upgradeToWriter,
         verifyRegistrationOtp,
         resendRegistrationOtp,
         logout,

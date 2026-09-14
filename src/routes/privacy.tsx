@@ -6,7 +6,7 @@ export const Route = createFileRoute("/privacy")({
   head: () =>
     pageHead(
       "Privacy Policy — tossatale",
-      "How Tossatale collects, protects, processes, and respects reader and writer data across our storytelling platform.",
+      "How tossatale collects, protects, processes, and respects reader and writer data across our storytelling platform.",
     ),
   component: PrivacyPage,
 });
@@ -16,7 +16,7 @@ function PrivacyPage() {
     <SiteLayout>
       <div className="mx-auto max-w-[840px] px-5 py-20 lg:px-8">
         <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-primary uppercase">
-          Legal & Privacy
+          Legal &amp; Privacy
         </p>
         <h1 className="mt-3 text-[clamp(2.2rem,4.4vw,3.2rem)] font-display font-bold leading-tight text-heading">
           Privacy Policy
@@ -27,10 +27,10 @@ function PrivacyPage() {
 
         <div className="mt-8 rounded-2xl border border-border bg-surface p-6 sm:p-7 text-[1rem] leading-relaxed text-body shadow-paper">
           <p>
-            Welcome to <strong>Tossatale</strong> (&ldquo;Tossatale&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;). This Privacy Policy explains how we collect, use, store, protect, and share information when you access or use our digital storytelling platform, website, applications, stories, blogs, videos, and related services (collectively, the &ldquo;Platform&rdquo;).
+            Welcome to <strong>tossatale</strong> (&ldquo;tossatale&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;). This Privacy Policy explains how we collect, use, store, protect, and share information when you access or use our digital storytelling platform, website, applications, stories, blogs, videos, and related services (collectively, the &ldquo;Platform&rdquo;).
           </p>
           <p className="mt-3">
-            By using Tossatale, you acknowledge and agree to the collection and use of your information in accordance with this Privacy Policy. If you do not agree with this policy, please discontinue use of the Platform.
+            By using tossatale, you acknowledge and agree to the collection and use of your information in accordance with this Privacy Policy. If you do not agree with this policy, please discontinue use of the Platform.
           </p>
         </div>
 
@@ -73,7 +73,7 @@ function PrivacyPage() {
             <h2 className="text-[1.35rem] font-display font-bold text-heading">2. How We Use Your Information</h2>
             <p className="mt-3">We use collected information solely for legitimate operational purposes:</p>
             <ul className="mt-3 list-disc space-y-2 pl-6">
-              <li>To provide, operate, and maintain the Tossatale digital storytelling platform.</li>
+              <li>To provide, operate, and maintain the tossatale digital storytelling platform.</li>
               <li>To authenticate readers, writers, and administrators securely.</li>
               <li>To review, curate, format, and publish approved stories and series.</li>
               <li>To calculate aggregate engagement metrics (views, likes, bookmarks, reads) without exposing individual reader identities.</li>
@@ -113,7 +113,7 @@ function PrivacyPage() {
           <section className="border-b border-border pb-8">
             <h2 className="text-[1.35rem] font-display font-bold text-heading">5. Cookies &amp; Local Storage</h2>
             <p className="mt-3">
-              Tossatale uses essential cookies and local storage tokens exclusively for functional purposes:
+              tossatale uses essential cookies and local storage tokens exclusively for functional purposes:
             </p>
             <ul className="mt-3 list-disc space-y-2 pl-6">
               <li><strong>Authentication Tokens:</strong> Secure JWT / session cookies to maintain your logged-in state.</li>
@@ -148,7 +148,7 @@ function PrivacyPage() {
           <section className="border-b border-border pb-8">
             <h2 className="text-[1.35rem] font-display font-bold text-heading">8. Children&apos;s Privacy</h2>
             <p className="mt-3">
-              Tossatale is not directed to children under the age of consent under applicable Indian law without parental involvement. We do not knowingly collect personal data from minors without parental consent.
+              tossatale is not directed to children under the age of consent under applicable Indian law without parental involvement. We do not knowingly collect personal data from minors without parental consent.
             </p>
           </section>
 
@@ -167,7 +167,7 @@ function PrivacyPage() {
               If you have questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact:
             </p>
             <div className="mt-4 rounded-2xl border border-border bg-surface p-5 space-y-1">
-              <p className="font-bold text-heading">Tossatale Privacy &amp; Legal</p>
+              <p className="font-bold text-heading">tossatale Privacy &amp; Legal</p>
               <p className="text-sm">
                 Email:{" "}
                 <a href="mailto:hello@tossatale.com" className="text-primary font-bold hover:underline">
@@ -182,7 +182,7 @@ function PrivacyPage() {
               </p>
             </div>
             <p className="mt-8 text-center text-xs text-subtle font-medium">
-              By using Tossatale, you acknowledge that you have read, understood, and agreed to this Privacy Policy.
+              By using tossatale, you acknowledge that you have read, understood, and agreed to this Privacy Policy.
             </p>
           </section>
         </div>

@@ -69,7 +69,7 @@ function AboutPage() {
             We built a reading house, not a feed.
           </h1>
           <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            tossatale began in 2020, during the pandemic, with a simple belief that we all have stories to tell, and so do you.
+            Our journey began in 2020, during the pandemic, with a simple belief that we all have stories to tell, and so do you to.
           </p>
         </div>
       </header>
@@ -124,20 +124,9 @@ function AboutPage() {
         </dl>
       </section>
 
-      <section className="mx-auto max-w-[1240px] px-5 pb-16 lg:px-8">
-        <SectionHeading eyebrow="The people" title="Founder & Contributors" />
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {teamMembers.map((m) => (
-            <Panel key={m.name} className="flex items-center gap-4 p-6">
-              <Avatar useIcon size="lg" />
-              <div>
-                <h3 className="text-[1.1rem] font-bold text-heading">{m.name}</h3>
-                <p className="text-[0.8125rem] text-subtle">{m.role}</p>
-              </div>
-            </Panel>
-          ))}
-        </div>
-        <div className="mt-12 flex flex-wrap gap-3">
+      {/* Centered Actions */}
+      <section className="mx-auto max-w-[1240px] px-5 pb-24 lg:px-8">
+        <div className="flex flex-wrap items-center justify-center gap-4">
           <ButtonLink to="/contact" size="md">
             Let's talk
           </ButtonLink>

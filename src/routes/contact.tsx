@@ -25,9 +25,9 @@ export const Route = createFileRoute("/contact")({
 });
 
 const channels = [
-  { icon: PenLine, title: "Pitch a story", blurb: "We read every submission with care.", meta: "pitches@tossatale.com" },
-  { icon: Gift, title: "Giftcard help", blurb: "Everything about Gift cards.", meta: "support@tossatale.com" },
-  { icon: Lightbulb, title: "Any Suggestions", blurb: "Have a suggestion? Help us grow.", meta: "feedback@tossatale.com" },
+  { icon: PenLine, title: "Pitch a story", blurb: "We read every submission with care." },
+  { icon: Gift, title: "Giftcard help", blurb: "Everything about Gift cards." },
+  { icon: Lightbulb, title: "Any Suggestions", blurb: "Have a suggestion? Help us grow." },
 ];
 
 function ContactPage() {
@@ -63,20 +63,27 @@ function ContactPage() {
   return (
     <SiteLayout>
       <header className="border-b border-border paper-gradient">
-        <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
+        <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8">
           <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-primary uppercase">
             Contact
           </p>
           <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
             Have something to say? We’re listening
           </h1>
-          <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            Whether you have a story to share, a question to ask, or simply something to say - our team is listening. We’ll get back to you as soon as we can
+          <p className="mt-3 max-w-xl text-[1.0625rem] text-body">
+            Whether you have a story to share, a question to ask, or simply something to say - our team is listening. We’ll get back to you as soon as we can.
           </p>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-16 lg:grid-cols-[1.2fr_1fr] lg:px-8">
+      {/* Intro prompt above the form */}
+      <div className="mx-auto max-w-[1240px] px-5 pt-12 text-center lg:px-8">
+        <p className="mx-auto max-w-2xl text-[1.125rem] leading-relaxed text-body font-sans font-medium">
+          Have your own stories to share? Curious about any of our work? Feel free to send us a message, and we'll do our best to respond when we have a break in the meantime.
+        </p>
+      </div>
+
+      <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-12 lg:grid-cols-[1.2fr_1fr] lg:px-8">
         <Reveal>
           <Panel className="p-8 lg:p-10">
             {sent ? (
@@ -143,7 +150,7 @@ function ContactPage() {
           </Panel>
         </Reveal>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
           {channels.map((c, i) => (
             <Reveal key={c.title} delay={i * 80}>
               <Panel hover className="flex items-start gap-4 p-6">
@@ -153,25 +160,10 @@ function ContactPage() {
                 <div>
                   <h2 className="text-[1.1rem] font-bold text-heading">{c.title}</h2>
                   <p className="mt-1 text-[0.9375rem] text-body">{c.blurb}</p>
-                  <p className="mt-2 text-[0.875rem] font-bold text-primary">{c.meta}</p>
                 </div>
               </Panel>
             </Reveal>
           ))}
-
-          <Reveal delay={240}>
-            <Panel className="paper-gradient p-6 border-primary/20">
-              <h2 className="text-[1.1rem] font-bold text-heading">Press & Partnerships?</h2>
-              <p className="mt-2 text-[0.875rem] leading-relaxed text-body">
-                Looking for media interviews, festival screenings, or brand collaboration details?
-              </p>
-              <div className="mt-4">
-                <ButtonLink to="/faq" variant="ghostOutline" size="sm">
-                  View Press FAQ & Answers
-                </ButtonLink>
-              </div>
-            </Panel>
-          </Reveal>
         </div>
       </div>
     </SiteLayout>

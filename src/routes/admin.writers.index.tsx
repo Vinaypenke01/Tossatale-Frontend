@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Mail, Search, User, UserPlus, X } from "lucide-react";
+import { ChevronRight, Mail, Search, Trash2, User, UserCheck, UserPlus, UserX, X } from "lucide-react";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppShell, StatCard } from "@/components/tossa/AppShell";
@@ -43,13 +43,16 @@ function AdminWriters() {
     isActive: true,
   });
 
-  const { data: apiWriters, isLoading } = useQuery({
+  const { data: apiResponse, isLoading } = useQuery({
     queryKey: ["admin-writers", query],
     queryFn: async () => {
       const res = await api.get(`/admin/writers/${query ? `?search=${encodeURIComponent(query)}` : ""}`);
-      return res.data?.results || res.data || [];
+      return res.data;
     },
   });
+
+  const apiWriters = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : []);
+  const stats = apiResponse?.stats || {};
 
   const rows = (apiWriters && Array.isArray(apiWriters))
     ? apiWriters.map((w: any) => ({
@@ -60,6 +63,7 @@ function AdminWriters() {
         gender: w.gender || "OTHER",
         profilePhoto: w.profile_photo || "",
         verified: w.is_verified || false,
+        isActive: w.is_active !== false,
         role: w.role === "ADMIN" ? "Admin / Storyteller" : "Storyteller",
         userRole: w.role || "WRITER",
         location: "India",
@@ -68,6 +72,46 @@ function AdminWriters() {
         reads: w.total_reads ? `${w.total_reads}` : "0",
       }))
     : [];
+
+  const deleteWriterMutation = useMutation({
+    mutationFn: async (slug: string) => {
+      return await api.delete(`/admin/writers/${slug}/`);
+    },
+    onSuccess: () => {
+      toast.success("Writer deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-writers"] });
+    },
+    onError: (err: any) => {
+      toast.error("Failed to delete writer", { description: err.message });
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ slug, isActive }: { slug: string; isActive: boolean }) => {
+      if (isActive) {
+        return await api.post(`/admin/writers/${slug}/deactivate/`);
+      } else {
+        return await api.post(`/admin/writers/${slug}/activate/`);
+      }
+    },
+    onSuccess: (_, variables) => {
+      toast.success(variables.isActive ? "Writer deactivated" : "Writer activated successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-writers"] });
+    },
+    onError: (err: any) => {
+      toast.error("Action failed", { description: err.message });
+    },
+  });
+
+  const handleDeleteWriter = (w: any) => {
+    if (window.confirm(`Are you sure you want to permanently delete the writer "${w.name}"?`)) {
+      deleteWriterMutation.mutate(w.slug);
+    }
+  };
+
+  const handleToggleActive = (w: any) => {
+    toggleActiveMutation.mutate({ slug: w.slug, isActive: w.isActive });
+  };
 
   const handleEmailClick = (e: React.MouseEvent, writerName: string) => {
     e.stopPropagation();
@@ -149,10 +193,24 @@ function AdminWriters() {
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total writers" value={String(rows.length)} hint="registered" />
-        <StatCard label="Verified" value={String(rows.filter((r: any) => r.verified).length)} />
-        <StatCard label="Pending verification" value={String(rows.filter((r: any) => !r.verified).length)} hint="needs review" />
-        <StatCard label="Published this week" value="0" />
+        <StatCard
+          label="Total writers"
+          value={String(stats.total_writers ?? (apiResponse?.count ?? rows.length))}
+          hint="active storytellers"
+        />
+        <StatCard
+          label="Verified"
+          value={String(stats.total_verified ?? rows.filter((r: any) => r.verified).length)}
+        />
+        <StatCard
+          label="Pending verification"
+          value={String(stats.total_pending ?? rows.filter((r: any) => !r.verified).length)}
+          hint="needs review"
+        />
+        <StatCard
+          label="Published this week"
+          value={String(stats.published_this_week ?? 0)}
+        />
       </div>
 
       <Panel className="p-6">
@@ -230,8 +288,8 @@ function AdminWriters() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <Badge tone={w.verified ? "success" : "warning"}>
-                    {w.verified ? "Verified" : "Pending"}
+                  <Badge tone={w.isActive ? (w.verified ? "success" : "warning") : "neutral"}>
+                    {!w.isActive ? "Deactivated" : w.verified ? "Verified" : "Pending"}
                   </Badge>
 
                   <ButtonLink
@@ -243,6 +301,28 @@ function AdminWriters() {
                   >
                     <User className="size-3.5 mr-1" /> View details
                   </ButtonLink>
+
+                  <Button
+                    size="icon"
+                    variant="ghostOutline"
+                    aria-label={w.isActive ? `Deactivate ${w.name}` : `Activate ${w.name}`}
+                    title={w.isActive ? "Deactivate writer" : "Activate writer"}
+                    onClick={() => handleToggleActive(w)}
+                    className={cn(w.isActive ? "text-subtle hover:text-destructive" : "text-emerald-600")}
+                  >
+                    {w.isActive ? <UserX className="size-4" /> : <UserCheck className="size-4" />}
+                  </Button>
+
+                  <Button
+                    size="icon"
+                    variant="ghostOutline"
+                    aria-label={`Delete ${w.name}`}
+                    title="Delete writer"
+                    onClick={() => handleDeleteWriter(w)}
+                    className="text-subtle hover:text-destructive"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
 
                   <Button
                     size="icon"

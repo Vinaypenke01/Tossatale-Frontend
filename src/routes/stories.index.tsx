@@ -187,10 +187,17 @@ function StoriesIndex() {
           </div>
 
           <div className="flex flex-wrap gap-2 border-t border-divider pt-4">
-            <button type="button" onClick={() => handleCategoryChange("all")}>
-              <CategoryPill tone={activeCategory === "all" ? "solid" : "light"}>
-                All ({totalCategoryStoriesCount})
-              </CategoryPill>
+            <button
+              type="button"
+              onClick={() => handleCategoryChange("all")}
+              className={cn(
+                "inline-flex items-center rounded-full px-3.5 py-1 font-sans text-[0.6875rem] font-bold tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer shadow-xs",
+                activeCategory === "all"
+                  ? "bg-[#00bfa6] text-white ring-2 ring-[#00bfa6]/40"
+                  : "bg-[#00bfa6] text-white hover:bg-[#00a892]",
+              )}
+            >
+              All ({totalCategoryStoriesCount})
             </button>
             {categoriesList.map((c: any) => (
               <button key={c.slug} type="button" onClick={() => handleCategoryChange(c.slug)}>

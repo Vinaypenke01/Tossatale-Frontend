@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useBlocker } from '@tanstack/react-router'
 import {
   Bell,
   Check,
@@ -29,11 +29,12 @@ import {
   X,
   Youtube,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { UnsavedHomepageChangesModal } from "@/components/tossa/UnsavedHomepageChangesModal";
 
 import { AppShell } from "@/components/tossa/AppShell";
 import { Avatar, Badge, Button, CategoryPill, Field, Input, Panel, Textarea, VerifiedBadge, XIcon } from "@/components/tossa/kit";
@@ -98,6 +99,26 @@ function HomepageBuilder() {
 
   const [isSaving, setIsSaving] = useState(false);
 
+  // Snapshot tracking for unpublished changes detection
+  const savedSnapshotRef = useRef<string | null>(null);
+  const hasInitializedRef = useRef(false);
+
+  const serializeState = (
+    ann: AnnouncementSettings,
+    fw: FeaturedWritersSettings,
+    foot: SiteFooterSettings,
+    cont: SiteContactSettings,
+    slots: { featured: string[]; latest: string[]; trending: string[] },
+  ) => {
+    return JSON.stringify({
+      announcement: ann,
+      featuredWriters: fw,
+      footer: foot,
+      contact: cont,
+      storySlots: slots,
+    });
+  };
+
   // Fetch saved settings from backend API
   const { data: serverConfig, isLoading } = useQuery({
     queryKey: ["admin-homepage-builder-config"],
@@ -116,8 +137,9 @@ function HomepageBuilder() {
     queryKey: ["admin-homepage-stories-list"],
     queryFn: async () => {
       try {
-        const res = await api.get("/admin/stories/");
-        return res.data?.results || res.data?.data || res.data || [];
+        const res = await api.get("/admin/stories/?status=PUBLISHED&page_size=100");
+        // StandardPagination wraps data as: { success, message, data: { results: [...] } }
+        return res.data?.data?.results || res.data?.results || res.data?.data || res.data || [];
       } catch {
         return stories;
       }
@@ -129,24 +151,34 @@ function HomepageBuilder() {
     : stories;
 
   useEffect(() => {
+    let resolvedAnn = announcement;
+    let resolvedFw = featuredWriters;
+    let resolvedFoot = footer;
+    let resolvedCont = contact;
+
     if (serverConfig) {
       if (serverConfig.announcement && Object.keys(serverConfig.announcement).length > 0) {
-        setAnnouncement((prev) => ({ ...prev, ...serverConfig.announcement }));
+        resolvedAnn = { ...defaultAnnouncementSettings, ...serverConfig.announcement };
+        setAnnouncement(resolvedAnn);
       }
       if (serverConfig.featured_writers && Object.keys(serverConfig.featured_writers).length > 0) {
-        setFeaturedWriters((prev) => ({ ...prev, ...serverConfig.featured_writers }));
+        resolvedFw = { ...defaultFeaturedWritersSettings, ...serverConfig.featured_writers };
+        setFeaturedWriters(resolvedFw);
       }
       if (serverConfig.footer && Object.keys(serverConfig.footer).length > 0) {
-        setFooter((prev) => ({ ...prev, ...serverConfig.footer }));
+        resolvedFoot = { ...defaultFooterSettings, ...serverConfig.footer };
+        setFooter(resolvedFoot);
       }
       if (serverConfig.contact && Object.keys(serverConfig.contact).length > 0) {
-        setContact((prev) => ({ ...prev, ...serverConfig.contact }));
+        resolvedCont = { ...defaultContactSettings, ...serverConfig.contact };
+        setContact(resolvedCont);
       }
       if (serverConfig.hero_story_id) {
         setHeroStoryId(serverConfig.hero_story_id);
       }
     }
 
+    let resolvedSlots = storySlots;
     if (allStories && allStories.length > 0) {
       const serverSlots = serverConfig?.story_slots;
       const featIds = (serverSlots?.featured_story_ids && serverSlots.featured_story_ids.length > 0)
@@ -165,13 +197,43 @@ function HomepageBuilder() {
         ? serverSlots.trending_story_ids
         : allStories.slice(0, 6).map((s: any) => String(s.id || s.slug));
 
-      setStorySlots({
+      resolvedSlots = {
         featured: featFinal,
         latest: latIds,
         trending: trendIds,
-      });
+      };
+
+      setStorySlots(resolvedSlots);
+    }
+
+    if (!hasInitializedRef.current) {
+      savedSnapshotRef.current = serializeState(
+        resolvedAnn,
+        resolvedFw,
+        resolvedFoot,
+        resolvedCont,
+        resolvedSlots,
+      );
+      hasInitializedRef.current = true;
     }
   }, [allStories?.length, serverConfig]);
+
+  const isDirty = useMemo(() => {
+    if (!hasInitializedRef.current || !savedSnapshotRef.current) return false;
+    const current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+    return current !== savedSnapshotRef.current;
+  }, [announcement, featuredWriters, footer, contact, storySlots]);
+
+  const blocker = useBlocker({
+    shouldBlockFn: ({ current, next }) => {
+      if (current.pathname !== next.pathname && isDirty) {
+        return true;
+      }
+      return false;
+    },
+    withResolver: true,
+    enableBeforeUnload: () => isDirty,
+  });
 
   const handleToggleSectionStory = (storyId: string, section: "featured" | "latest" | "trending") => {
     setStorySlots((prev) => {
@@ -241,14 +303,57 @@ function HomepageBuilder() {
           trending_story_ids: storySlots.trending,
         },
       });
+      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
       queryClient.invalidateQueries({ queryKey: ["admin-homepage-builder-config"] });
-      queryClient.invalidateQueries({ queryKey: ["public-homepage-config"] });
+      queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
       toast.success("Homepage & Site Builder changes published live!");
     } catch {
+      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
       toast.success("Homepage & Site Builder settings updated!");
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handlePublishAndLeave = async () => {
+    setIsSaving(true);
+    try {
+      await api.patch("/admin/homepage/sections/", {
+        announcement,
+        featured_writers: featuredWriters,
+        footer,
+        contact,
+        story_slots: {
+          featured_story_ids: storySlots.featured,
+          latest_story_ids: storySlots.latest,
+          trending_story_ids: storySlots.trending,
+        },
+      });
+      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+      queryClient.invalidateQueries({ queryKey: ["admin-homepage-builder-config"] });
+      queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
+      toast.success("Homepage & Site Builder changes published live!");
+      blocker.proceed?.();
+    } catch {
+      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+      toast.success("Homepage & Site Builder settings updated!");
+      blocker.proceed?.();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleStay = () => {
+    blocker.reset?.();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    toast.info("Unpublished changes kept", {
+      description: "Click 'Publish changes' at the top right whenever you are ready.",
+    });
+  };
+
+  const handleDiscardAndLeave = () => {
+    savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+    blocker.proceed?.();
   };
 
   const handleReset = () => {
@@ -269,12 +374,45 @@ function HomepageBuilder() {
           <Button variant="ghostOutline" onClick={handleReset}>
             <RefreshCw className="size-4" /> Reset
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            <Save className="size-4" /> {isSaving ? "Publishing..." : "Publish changes"}
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className={cn(
+              "relative gap-1.5 transition-all cursor-pointer",
+              isDirty && "bg-[#FF6B35] hover:bg-[#e85b27] text-white border-none shadow-md ring-2 ring-[#FF6B35]/30 animate-pulse"
+            )}
+          >
+            {isDirty && (
+              <span className="absolute -top-1 -right-1 flex size-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex size-2.5 rounded-full bg-amber-500"></span>
+              </span>
+            )}
+            <Save className="size-4" /> {isSaving ? "Publishing..." : isDirty ? "Publish changes *" : "Publish changes"}
           </Button>
         </>
       }
     >
+      {/* Unpublished Changes Warning Banner */}
+      {isDirty && (
+        <div className="sticky top-3 z-30 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3.5 sm:px-5 text-amber-800 dark:text-amber-300 shadow-md backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
+            <span className="relative flex size-2.5 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex size-2.5 rounded-full bg-amber-500"></span>
+            </span>
+            <span>You have unpublished changes — remember to click <strong>"Publish changes"</strong> to make them live!</span>
+          </div>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="shrink-0 gap-1.5 bg-[#FF6B35] hover:bg-[#e85b27] text-white border-none shadow-xs text-xs font-bold cursor-pointer"
+          >
+            <Save className="size-3.5" /> Publish now
+          </Button>
+        </div>
+      )}
       {/* Overview Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {slots.map((s) => (
@@ -350,7 +488,7 @@ function HomepageBuilder() {
           onClick={() => setActiveTab("contact")}
           className={`flex items-center gap-2 border-b-2 px-5 py-3 font-sans text-[0.9375rem] font-bold transition-colors ${
             activeTab === "contact"
-              ? "border-transparent text-subtle hover:text-heading"
+              ? "border-primary text-primary-hover"
               : "border-transparent text-subtle hover:text-heading"
           }`}
         >
@@ -1111,6 +1249,15 @@ function HomepageBuilder() {
           </div>
         </div>
       )}
+
+      {/* Pop-up modal alerting user of unpublished changes when attempting navigation */}
+      <UnsavedHomepageChangesModal
+        isOpen={blocker.status === "blocked"}
+        isSaving={isSaving}
+        onPublishAndLeave={handlePublishAndLeave}
+        onStay={handleStay}
+        onDiscardAndLeave={handleDiscardAndLeave}
+      />
     </AppShell>
   );
 }

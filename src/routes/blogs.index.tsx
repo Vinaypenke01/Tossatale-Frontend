@@ -9,18 +9,18 @@ import { Pagination } from "@/components/tossa/Pagination";
 import { CategoryPill, Panel } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
 import { covers } from "@/lib/data";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/blogs/")({
   head: () => ({
     meta: [
-      { title: "Our Blogs — tossatale" },
+      { title: "Our blogs — tossatale" },
       {
         name: "description",
         content:
           "A place for curious minds, thoughtful ideas, and things worth discovering.",
       },
-      { property: "og:title", content: "Our Blogs — tossatale" },
+      { property: "og:title", content: "Our blogs — tossatale" },
       { property: "og:description", content: "A place for curious minds, thoughtful ideas, and things worth discovering." },
     ],
   }),
@@ -29,14 +29,26 @@ export const Route = createFileRoute("/blogs/")({
 
 function BlogsPage() {
   const [page, setPage] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   const { data: apiResponse, isLoading } = useQuery({
-    queryKey: ["public-blogs", page],
+    queryKey: ["public-blogs", page, selectedCategory],
     queryFn: async () => {
-      const res = await api.get(`/public/blogs/?page=${page}&page_size=12`);
+      const catParam = selectedCategory ? `&category=${encodeURIComponent(selectedCategory)}` : "";
+      const res = await api.get(`/public/blogs/?page=${page}&page_size=12${catParam}`);
       return res.data?.data || res.data || {};
     },
   });
+
+  const { data: categoriesData } = useQuery({
+    queryKey: ["public-blog-categories"],
+    queryFn: async () => {
+      const res = await api.get("/public/categories/");
+      const items = res.data?.results || res.data || [];
+      return items.filter((c: any) => c.category_type === "BLOG" || c.name);
+    },
+  });
+  const categoriesList = Array.isArray(categoriesData) ? categoriesData : [];
 
   const rawBlogs = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : []);
   const totalBlogsCount = apiResponse?.count || rawBlogs.length || 0;
@@ -59,13 +71,46 @@ function BlogsPage() {
   return (
     <SiteLayout>
       <header className="border-b border-border paper-gradient">
-        <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
+        <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8">
           <h1 className="text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
-            Our Blogs
+            Our blogs
           </h1>
-          <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
+          <p className="mt-3 max-w-xl text-[1.0625rem] text-body">
             A place for curious minds, thoughtful ideas, and things worth discovering.
           </p>
+
+          {/* Left-aligned compact category filter chips */}
+          {categoriesList.length > 0 && (
+            <div className="mt-6 flex flex-wrap items-center justify-start gap-2">
+              <button
+                type="button"
+                onClick={() => { setSelectedCategory(""); setPage(1); }}
+                className={cn(
+                  "rounded-full px-3.5 py-1 text-xs font-bold transition-all",
+                  selectedCategory === ""
+                    ? "bg-[#00bfa6] text-white shadow-xs"
+                    : "bg-surface text-body hover:bg-surface-hover border border-border"
+                )}
+              >
+                All
+              </button>
+              {categoriesList.map((cat: any) => (
+                <button
+                  key={cat.slug || cat.id}
+                  type="button"
+                  onClick={() => { setSelectedCategory(cat.slug); setPage(1); }}
+                  className={cn(
+                    "rounded-full px-3.5 py-1 text-xs font-bold transition-all",
+                    selectedCategory === cat.slug
+                      ? "bg-[#00bfa6] text-white shadow-xs"
+                      : "bg-surface text-body hover:bg-surface-hover border border-border"
+                  )}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 

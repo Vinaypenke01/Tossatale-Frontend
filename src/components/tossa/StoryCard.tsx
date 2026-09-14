@@ -134,24 +134,24 @@ export function StoryCard({
               aria-pressed={saved}
               onClick={handleBookmark}
               className={cn(
-                "grid size-8 place-items-center rounded-full text-subtle transition-all duration-200 hover:bg-primary-light hover:text-primary cursor-pointer",
-                saved && "bg-primary text-white hover:bg-primary/90 shadow-xs"
+                "grid size-8 place-items-center rounded-full transition-all duration-200 hover:bg-amber-500/10 cursor-pointer",
+                saved ? "bg-amber-500/20 text-amber-500" : "text-amber-500/80 hover:text-amber-600"
               )}
             >
-              <Bookmark className={cn("size-4 transition-transform", saved ? "fill-current text-white" : "text-subtle")} />
+              <Bookmark className={cn("size-4 transition-transform", saved ? "fill-amber-500 text-amber-500" : "text-amber-500")} />
             </button>
           </div>
 
-          <Link to="/stories/$slug" params={{ slug: story.slug }} className="block mt-2">
+          <div className="mt-2">
             <h3
               className={cn(
-                "line-clamp-2 leading-snug font-display font-bold text-heading transition-colors group-hover:text-primary",
+                "line-clamp-2 leading-snug font-display font-bold text-heading",
                 horizontal ? "text-[clamp(1.25rem,2vw,1.6rem)]" : "text-[1.1875rem]",
               )}
             >
               {story.title}
             </h3>
-          </Link>
+          </div>
           <p className="mt-2.5 line-clamp-2 text-[0.875rem] leading-relaxed text-body">{story.dek}</p>
         </div>
 
@@ -175,7 +175,7 @@ export function StoryCard({
               </span>
             </Link>
 
-            {/* Read here CTA */}
+            {/* Read here CTA - Only this link redirects */}
             <Link
               to="/stories/$slug"
               params={{ slug: story.slug }}
@@ -186,21 +186,21 @@ export function StoryCard({
             </Link>
           </div>
 
-          {/* Bottom Metadata Row: Heart (grey) with black count, View (grey) with black count, Clock with readTime */}
+          {/* Bottom Metadata Row: Colored icons with standard text counts */}
           <div className="flex items-center justify-between text-[0.8125rem] pt-1">
             <div className="flex items-center gap-4">
               <span className="inline-flex items-center gap-1.5" title="Likes">
-                <Heart className="size-3.5 text-subtle" />
+                <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
                 <span className="font-bold text-black dark:text-white text-[0.8125rem]">{likesCount}</span>
               </span>
               <span className="inline-flex items-center gap-1.5" title="Views">
-                <Eye className="size-3.5 text-subtle" />
+                <Eye className="size-3.5 text-blue-500" />
                 <span className="font-bold text-black dark:text-white text-[0.8125rem]">{views}</span>
               </span>
             </div>
 
             <span className="inline-flex items-center gap-1.5 text-subtle text-[0.75rem]">
-              <Clock className="size-3.5 text-subtle" />
+              <Clock className="size-3.5 text-emerald-500" />
               <span>{readTime} min read</span>
             </span>
           </div>

@@ -13,14 +13,13 @@ import { api } from "@/lib/api";
 export const Route = createFileRoute("/videos/")({
   head: () => ({
     meta: [
-      { title: "Video library — tossatale" },
+      { title: "Our Short films — tossatale" },
       {
         name: "description",
-        content:
-          "Short documentaries and writer conversations from tossatale — Field Notes and In the Room, shot the way we write.",
+        content: "Short films and visual storytelling from tossatale.",
       },
-      { property: "og:title", content: "Video library — tossatale" },
-      { property: "og:description", content: "Short films and writer conversations from tossatale." },
+      { property: "og:title", content: "Our Short films — tossatale" },
+      { property: "og:description", content: "Short films and visual storytelling from tossatale." },
     ],
   }),
   component: VideosIndexPage,
@@ -57,7 +56,7 @@ function VideosIndexPage() {
         return {
           slug: v.slug,
           title: v.title,
-          series: v.category?.name || v.series_name || "Documentary",
+          series: v.category_name || v.category?.name || "Film",
           duration: v.duration || "",
           views: v.views_count ? `${v.views_count}` : "0",
           cover: v.cover || v.thumbnail_url || `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`,
@@ -69,16 +68,13 @@ function VideosIndexPage() {
   return (
     <SiteLayout>
       <header className="border-b border-border paper-gradient">
-        <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
+        <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8">
           <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-primary uppercase">
             Watch
           </p>
-          <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
-            The video library
+          <h1 className="mt-2 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
+            Our Short films
           </h1>
-          <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            Short documentaries from the places our stories come from and unhurried conversations with writers.
-          </p>
         </div>
       </header>
 

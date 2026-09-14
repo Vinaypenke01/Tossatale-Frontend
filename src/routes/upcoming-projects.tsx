@@ -140,9 +140,20 @@ function UpcomingProjectsPage() {
                       <span className="text-[0.75rem] font-bold text-subtle uppercase tracking-wider">
                         Status: {project.status || "Production"}
                       </span>
-                      <Button variant="ghostOutline" size="sm">
-                        Notify Me
-                      </Button>
+                      {project.youtube_url ? (
+                        <a
+                          href={project.youtube_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+                        >
+                          <Video className="size-3.5" /> Watch Trailer
+                        </a>
+                      ) : (
+                        <span className="text-xs font-medium text-subtle">
+                          Trailer coming soon
+                        </span>
+                      )}
                     </div>
                   </div>
                 </Panel>
@@ -150,38 +161,6 @@ function UpcomingProjectsPage() {
             ))}
           </div>
         )}
-
-        <section className="mt-20">
-          <Panel className="grain p-8 lg:p-12 text-center ink-gradient text-white overflow-hidden relative">
-            <span className="pointer-events-none absolute -top-16 -left-10 size-48 animate-drift rounded-full bg-white/10 blur-2xl" />
-            <div className="max-w-2xl mx-auto relative z-10">
-              <span className="grid size-12 place-items-center rounded-2xl bg-white/15 mx-auto text-white">
-                <Video className="size-6" />
-              </span>
-              <h2 className="mt-4 text-[clamp(1.6rem,3vw,2.4rem)] font-display font-bold">
-                Have a script or short film pitch?
-              </h2>
-              <p className="mt-3 text-[1rem] text-white/85">
-                We collaborate with independent filmmakers and writers to bring moving stories to screen.
-              </p>
-              <form
-                className="mx-auto mt-6 flex max-w-sm flex-col gap-2 sm:flex-row"
-                onSubmit={handleNotifySubmit}
-              >
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email to get updates"
-                  className="h-10 border-white/25 bg-white/12 text-white placeholder:text-white/60 focus:ring-white/25 text-[0.875rem]"
-                />
-                <Button variant="inkOnDark" size="sm" className="h-10 shrink-0">
-                  Stay Updated
-                </Button>
-              </form>
-            </div>
-          </Panel>
-        </section>
       </div>
     </SiteLayout>
   );

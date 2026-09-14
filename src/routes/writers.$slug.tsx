@@ -124,22 +124,22 @@ function WriterProfile() {
     <SiteLayout>
       <header className="relative overflow-hidden border-b border-border ink-gradient grain">
         <span className="pointer-events-none absolute -top-20 left-1/4 size-72 animate-drift rounded-full bg-white/10 blur-3xl" />
-        <div className="relative mx-auto max-w-[1240px] px-5 py-20 lg:px-8">
-          <div className="flex flex-wrap items-end gap-7">
-            <Avatar initials={initials} size="xl" className="ring-4 ring-white/25 shadow-2xl" />
+        <div className="relative mx-auto max-w-[1240px] px-5 py-10 lg:py-12 lg:px-8">
+          <div className="flex flex-wrap items-center gap-5">
+            <Avatar initials={initials} size="lg" className="ring-2 ring-white/25 shadow-lg" />
             <div className="mr-auto">
-              <h1 className="flex flex-wrap items-center gap-3 text-[clamp(2rem,4vw,3rem)] font-display font-bold text-white">
+              <h1 className="flex flex-wrap items-center gap-2.5 text-[clamp(1.6rem,3vw,2.2rem)] font-display font-bold text-white">
                 {name}
                 {writer.is_verified && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 font-sans text-[0.75rem] font-bold text-white backdrop-blur">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 font-sans text-[0.75rem] font-bold text-white backdrop-blur">
                     <VerifiedBadge /> Verified writer
                   </span>
                 )}
               </h1>
-              <p className="mt-2 text-[1rem] text-white/75">
+              <p className="mt-1 text-[0.875rem] text-white/75">
                 @{writer.slug} · Storyteller
               </p>
-              <p className="mt-1 flex items-center gap-1.5 text-[0.875rem] text-white/65">
+              <p className="mt-0.5 flex items-center gap-1.5 text-[0.8125rem] text-white/65">
                 <MapPin className="size-3.5" /> India · tossatale author
               </p>
             </div>
@@ -149,32 +149,34 @@ function WriterProfile() {
                 onClick={handleSupportWriter}
                 disabled={isSupporting}
                 className={cn(
-                  "gap-2 px-5 py-2.5 transition-all duration-300 font-bold",
+                  "gap-2 px-4 py-2 text-xs transition-all duration-300 font-bold",
                   hasSupported && "bg-rose-500 text-white border-rose-400 hover:bg-rose-600 scale-105"
                 )}
               >
-                <Heart className={cn("size-4 transition-transform", hasSupported ? "fill-white text-white scale-125" : "fill-current text-white")} />
+                <Heart className={cn("size-3.5 transition-transform", hasSupported ? "fill-white text-white scale-125" : "fill-current text-white")} />
                 <span>{hasSupported ? "Supported!" : "Support Writer"}</span>
-                <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-[0.7rem]">
                   {supportCount}
                 </span>
               </Button>
             </div>
           </div>
 
-          <p className="mt-8 max-w-2xl text-[1.0625rem] leading-relaxed text-white/85">
-            {writer.bio || "Author publishing stories on tossatale."}
-          </p>
+          {writer.bio && (
+            <p className="mt-5 max-w-2xl text-[0.9375rem] leading-relaxed text-white/85">
+              {writer.bio}
+            </p>
+          )}
 
-          <dl className="mt-10 grid max-w-2xl grid-cols-2 gap-6 border-t border-white/20 pt-7 sm:grid-cols-3">
+          <dl className="mt-6 flex flex-wrap items-center gap-8 border-t border-white/15 pt-4 text-left">
             {[
               ["Stories", String(writer.total_stories || publishedStories.length)],
               ["Supporters", String(supportCount)],
               ["Total reads", String(writer.total_reads || 0)],
             ].map(([label, value]) => (
               <div key={label}>
-                <dt className="font-display text-[1.7rem] leading-none text-white">{value}</dt>
-                <dd className="mt-1.5 text-[0.6875rem] tracking-[0.16em] text-white/65 uppercase">
+                <dt className="font-display text-[1.25rem] leading-none font-bold text-white">{value}</dt>
+                <dd className="mt-1 text-[0.6875rem] tracking-[0.14em] text-white/65 uppercase">
                   {label}
                 </dd>
               </div>
@@ -183,65 +185,60 @@ function WriterProfile() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-16 lg:grid-cols-[1fr_320px] lg:px-8">
+      <div className="mx-auto max-w-[1240px] px-5 py-12 lg:px-8">
         <div>
-          <h2 className="text-[1.7rem] font-display font-bold text-heading">Published stories</h2>
+          <h2 className="text-[1.5rem] font-display font-bold text-heading">Published stories</h2>
           {isStoriesLoading ? (
-            <div className="mt-7 grid gap-6 md:grid-cols-2">
+            <div className="mt-6 space-y-4">
               {[1, 2].map((idx) => (
                 <StoryCardSkeleton key={idx} />
               ))}
             </div>
           ) : publishedStories.length === 0 ? (
-            <EmptySectionFallback
-              icon="write"
-              title="No Stories Published Yet"
-              description="This writer has not published any public stories yet."
-            />
+            <div className="mt-6">
+              <EmptySectionFallback
+                icon="write"
+                title="No Stories Published Yet"
+                description="This writer has not published any public stories yet."
+              />
+            </div>
           ) : (
-            <div className="mt-7 grid gap-6 md:grid-cols-2">
-              {publishedStories.map((s: any, i: number) => (
-                <Reveal key={s.slug} delay={i * 60}>
-                  <StoryCard story={{
-                    slug: s.slug,
-                    title: s.title,
-                    dek: s.subtitle || s.seo_description || "A longform story.",
-                    writer: s.writer?.slug || writer.slug,
-                    writerName: name,
-                    category: s.category?.name || "General",
-                    date: s.published_at ? new Date(s.published_at).toLocaleDateString() : "Recent",
-                    readingTime: s.estimated_reading_time || 5,
-                    cover: s.cover_image || coverLane,
-                    views: s.views_count || 0,
-                    likes: s.likes_count || 0,
-                  } as any} />
-                </Reveal>
+            <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-surface shadow-xs">
+              {publishedStories.map((s: any) => (
+                <div key={s.slug} className="p-5 sm:p-6 transition-colors hover:bg-surface-hover/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-xs text-subtle mb-1.5">
+                      <span className="font-bold text-primary">{s.category?.name || "Story"}</span>
+                      <span>·</span>
+                      <span>{s.estimated_reading_time || 5} min read</span>
+                      <span>·</span>
+                      <span>{s.published_at ? new Date(s.published_at).toLocaleDateString() : "Recent"}</span>
+                    </div>
+                    <h3 className="font-display text-lg font-bold text-heading leading-snug">
+                      {s.title}
+                    </h3>
+                    {(s.subtitle || s.dek) && (
+                      <p className="mt-1 text-sm text-body line-clamp-2">
+                        {s.subtitle || s.dek}
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0 pt-2 sm:pt-0">
+                    <ButtonLink
+                      to="/stories/$slug"
+                      params={{ slug: s.slug }}
+                      variant="ghostOutline"
+                      size="sm"
+                      className="text-xs font-bold text-primary hover:bg-primary hover:text-white"
+                    >
+                      Read here →
+                    </ButtonLink>
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </div>
-
-        <aside className="space-y-6">
-          <Panel className="paper-gradient p-6">
-            <h3 className="text-[1.05rem] font-display font-bold text-heading">Support {name}</h3>
-            <p className="mt-2 text-[0.9375rem] text-body">
-              Show your appreciation for {name}'s stories and essays on tossatale. 100% free and open to all readers.
-            </p>
-            <div className="mt-5">
-              <Button
-                onClick={handleSupportWriter}
-                disabled={isSupporting}
-                className={cn(
-                  "w-full gap-2 py-2.5 font-bold transition-all",
-                  hasSupported && "bg-rose-500 hover:bg-rose-600 text-white"
-                )}
-              >
-                <Heart className={cn("size-4", hasSupported ? "fill-white" : "fill-current")} />
-                <span>{hasSupported ? "Supported!" : `Support Writer (${supportCount})`}</span>
-              </Button>
-            </div>
-          </Panel>
-        </aside>
       </div>
     </SiteLayout>
   );

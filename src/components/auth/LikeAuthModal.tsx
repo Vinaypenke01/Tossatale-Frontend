@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { X, Heart, Sparkles } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/AuthContext";
 import { api } from "@/lib/api";
@@ -78,7 +79,7 @@ export function LikeAuthModal({
             renderGoogleButton(btnDiv, {
               theme: "outline",
               size: "large",
-              width: 320,
+              width: 280,
               text: "continue_with",
               shape: "pill",
             });
@@ -87,7 +88,7 @@ export function LikeAuthModal({
       });
     };
 
-    const timer = setTimeout(initGoogle, 150);
+    const timer = setTimeout(initGoogle, 50);
     return () => clearTimeout(timer);
   }, [isOpen, storyId]);
 
@@ -97,11 +98,11 @@ export function LikeAuthModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
       onClick={handleDismiss}
     >
       <div
-        className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-border/80 bg-surface p-7 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 text-center"
+        className="relative w-full max-w-xs overflow-hidden rounded-2xl border border-border bg-surface p-6 shadow-2xl text-center"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -109,37 +110,26 @@ export function LikeAuthModal({
           type="button"
           onClick={handleDismiss}
           aria-label="Close"
-          className="absolute right-4 top-4 grid size-8 place-items-center rounded-full text-subtle hover:bg-surface-alt hover:text-heading transition-colors"
+          className="absolute right-3.5 top-3.5 grid size-7 place-items-center rounded-full text-subtle hover:bg-surface-alt hover:text-heading transition-colors"
         >
           <X className="size-4" />
         </button>
 
-        {/* Floating Heart Icon */}
-        <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive shadow-paper mb-5">
-          <Heart className="size-8 fill-destructive" />
-        </div>
-
-        {/* Heading & Subtitle */}
-        <h3 className="font-display text-2xl font-bold text-heading tracking-tight">
-          Sign in to like this story
+        <h3 className="font-display text-lg font-bold text-heading pt-2 pb-5">
+          Please sign in
         </h3>
-        <p className="mt-2 text-xs text-subtle leading-relaxed">
-          Sign in to appreciate <span className="font-semibold text-heading">"{storyTitle}"</span> and save it to your personal reading bookmarks.
-        </p>
 
-        {/* Google OAuth 1-Click Button */}
-        <div className="mt-7 flex flex-col items-center justify-center">
-          <div id="google-modal-btn-container" className="min-h-[44px] flex items-center justify-center" />
-          <div className="mt-3 flex items-center justify-center gap-1.5 text-[0.7rem] text-subtle font-medium">
-            <Sparkles className="size-3 text-primary" />
-            <span>Instant reader access — no password needed</span>
-          </div>
+        {/* Sign In Options */}
+        <div className="flex flex-col items-center justify-center gap-3">
+          <div id="google-modal-btn-container" className="min-h-[44px] flex items-center justify-center w-full" />
+          <Link
+            to="/auth"
+            onClick={onClose}
+            className="w-full rounded-full border border-border bg-surface-alt px-4 py-2.5 text-xs font-bold text-body hover:bg-surface-hover hover:text-heading transition-colors inline-block"
+          >
+            Sign in with email
+          </Link>
         </div>
-
-        {/* Footer Note */}
-        <p className="mt-6 text-[0.6875rem] text-subtle/70">
-          By signing in, you agree to our Terms of Service & Privacy Policy.
-        </p>
       </div>
     </div>
   );

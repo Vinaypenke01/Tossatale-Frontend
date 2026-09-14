@@ -245,7 +245,7 @@ function FaqPage() {
               Contact Support
             </ButtonLink>
             <ButtonLink to="/about" variant="ghostOutline">
-              About Tossatale
+              Get to Know Us
             </ButtonLink>
           </div>
         </div>

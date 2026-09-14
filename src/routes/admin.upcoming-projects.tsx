@@ -59,11 +59,12 @@ function AdminUpcomingProjects() {
   const [expectedRelease, setExpectedRelease] = useState("");
   const [description, setDescription] = useState("");
   const [coverImage, setCoverImage] = useState("");
+  const [promoUrl, setPromoUrl] = useState("");
 
   const [activeEditingId, setActiveEditingId] = useState<string | number | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // Fetch upcoming projects from API with fallback
+  // Fetch upcoming projects from API
   const { data: apiProjects, isLoading } = useQuery({
     queryKey: ["admin-upcoming-projects-list"],
     queryFn: async () => {
@@ -71,20 +72,19 @@ function AdminUpcomingProjects() {
         const res = await api.get("/admin/videos/?upcoming=true");
         return res.data?.results || res.data?.data || res.data || [];
       } catch {
-        return DEFAULT_PROJECTS;
+        return [];
       }
     },
   });
 
-  const projectsList = (apiProjects && Array.isArray(apiProjects) && apiProjects.length > 0)
-    ? apiProjects
-    : DEFAULT_PROJECTS;
+  const projectsList = Array.isArray(apiProjects) ? apiProjects : [];
 
   const handleClearEditor = () => {
     setTitle("");
     setExpectedRelease("");
     setDescription("");
     setCoverImage("");
+    setPromoUrl("");
     setActiveEditingId(null);
   };
 
@@ -117,6 +117,7 @@ function AdminUpcomingProjects() {
         expected_release: expectedRelease.trim() || "Coming Soon",
         description: description.trim(),
         cover_image: coverImage,
+        youtube_url: promoUrl.trim(),
         is_upcoming: true,
       };
 
@@ -147,6 +148,7 @@ function AdminUpcomingProjects() {
     setExpectedRelease(project.expected_release || "");
     setDescription(project.description || project.logline || "");
     setCoverImage(project.cover_image || project.thumbnail_url || "");
+    setPromoUrl(project.youtube_url || "");
     setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -154,9 +156,12 @@ function AdminUpcomingProjects() {
   const handleDeleteProject = async (project: any) => {
     if (!confirm(`Are you sure you want to remove "${project.title}"?`)) return;
     try {
-      await api.delete(`/admin/videos/${project.id || project.slug}/`);
+      if (project.id || project.slug) {
+        await api.delete(`/admin/videos/${project.id || project.slug}/`);
+      }
       toast.success("Project Removed", { description: `"${project.title}" removed.` });
       queryClient.invalidateQueries({ queryKey: ["admin-upcoming-projects-list"] });
+      queryClient.invalidateQueries({ queryKey: ["public-upcoming-projects"] });
     } catch (err: any) {
       toast.error("Failed to remove project", {
         description: err.response?.data?.message || err.message || "An error occurred while deleting.",
@@ -293,7 +298,16 @@ function AdminUpcomingProjects() {
               />
             </Field>
 
-            {/* 4. Content / Description */}
+            {/* 4. Promo / Trailer Link */}
+            <Field label="Promo / Trailer Link (Optional)" hint="YouTube video link for exclusive teasers or trailers">
+              <Input
+                value={promoUrl}
+                onChange={(e) => setPromoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=... or teaser link"
+              />
+            </Field>
+
+            {/* 5. Content / Description */}
             <Field label="Content / Description">
               <Textarea
                 value={description}

@@ -1,11 +1,12 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useBlocker } from "@tanstack/react-router";
 import { AlertCircle, Bookmark, Clock, Edit3, Eye, EyeOff, FileText, Folder, Heart, PenLine, Plus, RefreshCw, Save, Send, Share2, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/tossa/AppShell";
 import { Badge, Button, CustomSelect, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { UnsavedChangesModal } from "@/components/tossa/UnsavedChangesModal";
 import { type Story } from "@/lib/data";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -42,19 +43,41 @@ export function StoryEditor({
     String((story as any)?.estimated_reading_time || (story as any)?.reading_time || "1")
   );
 
+  // Snapshot tracking for unsaved story changes
+  const savedSnapshotRef = useRef<string | null>(null);
+  const hasInitializedRef = useRef(false);
+
+  const serializeStoryState = (
+    t: string,
+    d: string,
+    b: string,
+    cat: string,
+    tags: string,
+  ) => {
+    return JSON.stringify({
+      title: t.trim(),
+      dek: d.trim(),
+      body: b.trim(),
+      category: cat,
+      tags: tags.trim(),
+    });
+  };
+
   useEffect(() => {
     if (story) {
       setTitle(story.title || "");
       setDek(story.dek || (story as any).subtitle || "");
       const resolvedBody = (story as any).content || (story as any).plain_text_content || (Array.isArray((story as any).body) ? (story as any).body.join("\n\n") : (story as any).body) || "";
       setBody(resolvedBody);
-      setSelectedCategory(story.categorySlug || (story as any).category?.id || (story as any).category?.slug || "");
+      const catVal = story.categorySlug || (story as any).category?.id || (story as any).category?.slug || "";
+      setSelectedCategory(catVal);
       setActiveEditingSlug(story.slug || (story as any).id || null);
       setRejectionFeedback((story as any).rejection_feedback || (story as any).feedback || "");
       const revs = (story as any).reviews ? (story as any).reviews.filter((r: any) => r.decision === "REJECTED") : [];
       setRejectionReviews(revs);
+      const initialTagsVal = story.tags ? (Array.isArray(story.tags) ? story.tags.map((t: any) => t.name || t).join(", ") : "") : "";
       if (story.tags) {
-        setTagsInput(Array.isArray(story.tags) ? story.tags.map((t: any) => t.name || t).join(", ") : "");
+        setTagsInput(initialTagsVal);
       }
       const savedRT = (story as any).estimated_reading_time || (story as any).reading_time;
       if (savedRT) {
@@ -63,8 +86,40 @@ export function StoryEditor({
       } else {
         setIsReadingTimeCustom(false);
       }
+
+      savedSnapshotRef.current = serializeStoryState(
+        story.title || "",
+        story.dek || (story as any).subtitle || "",
+        resolvedBody,
+        catVal,
+        initialTagsVal,
+      );
+      hasInitializedRef.current = true;
+    } else if (!hasInitializedRef.current) {
+      savedSnapshotRef.current = serializeStoryState("", "", "", "", "");
+      hasInitializedRef.current = true;
     }
   }, [story]);
+
+  const isDirty = useMemo(() => {
+    if (activeTab !== "editor") return false;
+    if (!hasInitializedRef.current || !savedSnapshotRef.current) {
+      return Boolean(title.trim() || body.trim());
+    }
+    const current = serializeStoryState(title, dek, body, selectedCategory, tagsInput);
+    return current !== savedSnapshotRef.current;
+  }, [activeTab, title, dek, body, selectedCategory, tagsInput]);
+
+  const blocker = useBlocker({
+    shouldBlockFn: ({ current, next }) => {
+      if (current.pathname !== next.pathname && isDirty) {
+        return true;
+      }
+      return false;
+    },
+    withResolver: true,
+    enableBeforeUnload: () => isDirty,
+  });
 
   // Category creation modal/inline form state
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
@@ -163,27 +218,28 @@ export function StoryEditor({
     }
   };
 
-  const handleSave = async (status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED") => {
+  const handleSave = async (status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED"): Promise<boolean> => {
     if (!title.trim() || title.trim().length < 2) {
       toast.error("Please provide a story title (at least 2 characters).");
-      return;
+      return false;
     }
 
     if (status !== "DRAFT" && (!body.trim() || body.trim().length < 100)) {
       toast.error("Story body is too short for submission", {
         description: "Story content must be at least 100 characters to submit for review.",
       });
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
     try {
       const endpoint = isAdmin ? "/admin/stories/" : "/writer/stories/";
+      const effectiveCategory = selectedCategory || categoriesList[0]?.id || categoriesList[0]?.slug;
       const payload = {
         title: title.trim(),
         subtitle: dek.trim(),
         content: body,
-        category: selectedCategory || categoriesList[0]?.id || categoriesList[0]?.slug,
+        category: effectiveCategory,
         tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
         reading_time: Number(readingTimeInput) || 5,
         estimated_reading_time: Number(readingTimeInput) || 5,
@@ -219,15 +275,21 @@ export function StoryEditor({
         setBody("");
         setTagsInput("");
         setReadingTimeInput("5");
+        savedSnapshotRef.current = serializeStoryState("", "", "", "", "");
+      } else {
+        // Saved as draft: update baseline snapshot so form is clean
+        savedSnapshotRef.current = serializeStoryState(title, dek, body, selectedCategory, tagsInput);
       }
 
       queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
       queryClient.invalidateQueries({ queryKey: ["writer-stories"] });
+      return true;
     } catch (err: any) {
       toast.error("Failed to save story", {
         description: err.response?.data?.message || err.response?.data?.error || err.message || "An unexpected error occurred.",
       });
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -242,12 +304,21 @@ export function StoryEditor({
     setBody(initialContent);
     setReadingTimeInput(String(st.estimated_reading_time || st.reading_time || 5));
     setRejectionFeedback(st.rejection_feedback || st.feedback || "");
-    if (st.category?.slug || st.category?.id) {
-      setSelectedCategory(st.category.slug || st.category.id);
+    const catVal = st.category?.slug || st.category?.id || "";
+    if (catVal) {
+      setSelectedCategory(catVal);
     }
-    if (st.tags && Array.isArray(st.tags)) {
-      setTagsInput(st.tags.map((t: any) => t.name || t).join(", "));
+    const tagsVal = st.tags && Array.isArray(st.tags) ? st.tags.map((t: any) => t.name || t).join(", ") : "";
+    if (tagsVal) {
+      setTagsInput(tagsVal);
     }
+    savedSnapshotRef.current = serializeStoryState(
+      st.title || "",
+      st.subtitle || st.seo_description || "",
+      initialContent,
+      catVal,
+      tagsVal,
+    );
     setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast.info(`Loaded "${st.title}" into editor.`);
@@ -261,12 +332,22 @@ export function StoryEditor({
         if (fullStory.content) setBody(fullStory.content);
         if (fullStory.title) setTitle(fullStory.title);
         if (fullStory.subtitle || fullStory.dek) setDek(fullStory.subtitle || fullStory.dek);
-        if (fullStory.category?.slug || fullStory.category?.id) {
-          setSelectedCategory(fullStory.category.slug || fullStory.category.id);
+        const resolvedCat = fullStory.category?.slug || fullStory.category?.id || catVal;
+        if (resolvedCat) {
+          setSelectedCategory(resolvedCat);
         }
+        let resolvedTags = tagsVal;
         if (fullStory.tags && Array.isArray(fullStory.tags)) {
-          setTagsInput(fullStory.tags.map((t: any) => t.name || t).join(", "));
+          resolvedTags = fullStory.tags.map((t: any) => t.name || t).join(", ");
+          setTagsInput(resolvedTags);
         }
+        savedSnapshotRef.current = serializeStoryState(
+          fullStory.title || st.title || "",
+          fullStory.subtitle || fullStory.dek || st.subtitle || "",
+          fullStory.content || initialContent,
+          resolvedCat,
+          resolvedTags,
+        );
       }
     } catch {
       // Keep existing populated data
@@ -288,7 +369,24 @@ export function StoryEditor({
     setReadingTimeInput("5");
     setRejectionFeedback("");
     setRejectionReviews([]);
+    savedSnapshotRef.current = serializeStoryState("", "", "", "", "");
     toast.info("Cleared editor canvas to write new story.");
+  };
+
+  const handleSaveAndLeave = async () => {
+    const success = await handleSave("DRAFT");
+    if (success) {
+      blocker.proceed?.();
+    }
+  };
+
+  const handleStay = () => {
+    blocker.reset?.();
+  };
+
+  const handleDiscardAndLeave = () => {
+    savedSnapshotRef.current = serializeStoryState(title, dek, body, selectedCategory, tagsInput);
+    blocker.proceed?.();
   };
 
   return (
@@ -305,7 +403,7 @@ export function StoryEditor({
               : story
                 ? "Revise, then resubmit. Editors see a diff of what changed."
                 : isAdmin
-                  ? "Editorial desk drafting — publish straight to the library or submit for review."
+                  ? "Write, manage, and publish stories directly."
                   : "Start with a sentence you'd read twice. Everything saves as you type."
       }
       actions={
@@ -325,9 +423,10 @@ export function StoryEditor({
               size="sm"
               disabled={isSubmitting}
               onClick={() => handleSave("DRAFT")}
-              className="gap-1.5"
+              className={cn("gap-1.5", isDirty && "ring-2 ring-primary/50 text-primary font-semibold")}
             >
               <Save className="size-4" /> Save draft
+              {isDirty && <span className="size-1.5 rounded-full bg-primary animate-pulse" />}
             </Button>
             <Button
               variant="primary"
@@ -481,16 +580,17 @@ export function StoryEditor({
                   )}
                 </div>
 
-                <Field label="Story Title" hint="Max 255 characters. Make it evocative.">
+                <Field label="Story Title" hint="Max 60 characters. Make it evocative.">
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    maxLength={60}
                     placeholder="The Map Beneath the Floorboards"
                     className="font-display text-[1.125rem] font-bold h-12"
                   />
                 </Field>
 
-                <Field label="Subtitle / Dek" hint="One or two sentences to set the tone.">
+                <Field label="Synopsis" hint="One or two sentences to set the tone.">
                   <Textarea
                     value={dek}
                     onChange={(e) => setDek(e.target.value)}
@@ -656,7 +756,7 @@ export function StoryEditor({
                 {isAdmin ? "Admin Stories Desk" : "Your Stories Desk"}
               </h2>
               <p className="mt-0.5 text-[0.875rem] text-subtle">
-                Manage stories authored — edit content or delete entries.
+                Manage your stories: edit content or delete entries.
               </p>
             </div>
             <Button variant="primary" size="sm" onClick={() => setActiveTab("editor")} className="gap-1.5">
@@ -878,6 +978,20 @@ export function StoryEditor({
           )}
         </Panel>
       )}
+
+      {/* Unsaved Story Navigation Protection Modal */}
+      <UnsavedChangesModal
+        isOpen={blocker.status === "blocked"}
+        isSaving={isSubmitting}
+        title="Unsaved Story Changes!"
+        badgeText="Story Changes Not Saved"
+        description="You have composed or edited story text, title, or metadata without saving a draft or submitting."
+        tipText="Save as draft now to preserve all your paragraphs, title, and edits before leaving!"
+        saveButtonText="Save Draft & Continue"
+        onSaveAndLeave={handleSaveAndLeave}
+        onStay={handleStay}
+        onDiscardAndLeave={handleDiscardAndLeave}
+      />
     </AppShell>
   );
 }
