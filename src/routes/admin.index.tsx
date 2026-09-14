@@ -157,10 +157,12 @@ function AdminOverview() {
         setCountdown((c) => c - 1);
       }, 1000);
       return () => clearTimeout(countdownTimerRef.current);
-    } else if (countdown === 0 && pendingToggle !== null) {
+    }
+    if (countdown === 0 && pendingToggle !== null) {
       toggleMaintenanceMutation.mutate(pendingToggle);
       setPendingToggle(null);
     }
+    return undefined;
   }, [countdown, pendingToggle]);
 
   const storiesList = queueData && Array.isArray(queueData) ? queueData : [];

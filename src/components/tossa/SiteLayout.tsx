@@ -333,7 +333,7 @@ export function AnnouncementBar({
   announcement?: AnnouncementSettings | undefined;
 }) {
   const { data: homepageData } = useQuery({
-    queryKey: ["public-homepage-config"],
+    queryKey: ["public-homepage"],
     queryFn: async () => {
       try {
         const res = await api.get("/public/homepage/");
@@ -342,6 +342,7 @@ export function AnnouncementBar({
         return {};
       }
     },
+    staleTime: 1000 * 60 * 5,
     enabled: !propAnnouncement,
   });
 
@@ -707,7 +708,7 @@ const footerColumns = [
 
 export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings | undefined } = {}) {
   const { data: homepageData } = useQuery({
-    queryKey: ["public-homepage-config"],
+    queryKey: ["public-homepage"],
     queryFn: async () => {
       try {
         const res = await api.get("/public/homepage/");
@@ -716,6 +717,7 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
         return {};
       }
     },
+    staleTime: 1000 * 60 * 5,
     enabled: !propFooter,
   });
 
