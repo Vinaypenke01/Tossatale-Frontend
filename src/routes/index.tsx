@@ -71,7 +71,7 @@ function Hero() {
             <span className="font-sans text-[0.6875rem] sm:text-[0.8125rem] font-extrabold tracking-[0.25em] text-white/90 uppercase">
               NEW STORIES. MORE OFTEN.
             </span>
-            <h1 className="mt-2 sm:mt-4 text-[clamp(1.5rem,4.5vw,4.8rem)] leading-tight text-white font-display font-bold whitespace-nowrap">
+            <h1 className="mt-2 sm:mt-4 text-[clamp(1.35rem,4.5vw,4.8rem)] leading-tight text-white font-display font-bold sm:whitespace-nowrap break-words">
               We are Storytellers, always.
             </h1>
             <div className="mt-4 sm:mt-8">
@@ -106,8 +106,8 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
     : [];
 
   return (
-    <section className="bg-slate-50 dark:bg-black py-16 sm:py-20 lg:py-24">
-      <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+    <section className="bg-slate-50 dark:bg-black py-12 sm:py-16 lg:py-24 overflow-hidden">
+      <div className="mx-auto max-w-[1240px] px-4 sm:px-5 lg:px-8">
         <Reveal>
           <SectionHeading
             eyebrow="Featured"
@@ -124,37 +124,37 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
             description="Selected longform narratives handpicked by our editorial desk will appear here."
           />
         ) : (
-          <div className="mt-10 grid gap-8 md:grid-cols-2">
+          <div className="mt-8 sm:mt-10 grid gap-6 sm:gap-8 md:grid-cols-2">
             {displayList.map((story, i) => (
               <Reveal key={story.slug || i} delay={i * 70}>
-                <div className="group flex flex-col justify-between h-full rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 p-7 lg:p-9 border-none">
+                <div className="group flex flex-col justify-between h-full rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-7 lg:p-9 border-none">
                   <div>
                     <div className="flex items-center gap-2.5">
                       <CategoryPill>{story.category?.name || story.category || "Featured"}</CategoryPill>
                     </div>
 
-                    <h2 className="mt-4 line-clamp-1 truncate text-[clamp(1.35rem,2vw,1.75rem)] leading-snug text-heading font-display font-bold">
+                    <h2 className="mt-3.5 sm:mt-4 line-clamp-2 text-[clamp(1.2rem,2vw,1.75rem)] leading-snug text-heading font-display font-bold break-words">
                       {story.title}
                     </h2>
-                    <p className="mt-3.5 line-clamp-5 text-[0.9375rem] leading-relaxed text-body">
+                    <p className="mt-2.5 sm:mt-3.5 line-clamp-4 text-[0.875rem] sm:text-[0.9375rem] leading-relaxed text-body break-words">
                       {story.subtitle || story.seo_description || "A longform story selected by our editorial team."}
                     </p>
                   </div>
 
-                  <div className="mt-8 border-t border-divider pt-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="size-9 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.8125rem] grid place-items-center shrink-0">
+                  <div className="mt-6 sm:mt-8 border-t border-divider pt-4 sm:pt-5">
+                    <div className="flex items-center justify-between gap-2.5 sm:gap-3">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                        <div className="size-8 sm:size-9 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.75rem] sm:text-[0.8125rem] grid place-items-center shrink-0">
                           {((story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2)).toUpperCase()}
                         </div>
-                        <div className="min-w-0">
-                          <p className="flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-heading truncate">
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-1.5 font-sans text-[0.8125rem] sm:text-[0.875rem] font-bold text-heading truncate">
                             {story.writer?.name || story.writer?.user?.full_name || "Author"} {story.writer?.is_verified && <VerifiedBadge />}
                           </p>
-                          <div className="flex items-center gap-2 text-[0.75rem] text-subtle mt-0.5">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.6875rem] sm:text-[0.75rem] text-subtle mt-0.5">
                             <span>{story.published_at ? new Date(story.published_at).toLocaleDateString() : "Recent"}</span>
                             <span>·</span>
-                            <span className="inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 shrink-0">
                               <Clock className="size-3 text-emerald-500" /> {story.estimated_reading_time || 5} min read
                             </span>
                           </div>
@@ -164,26 +164,26 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
                       <Link
                         to="/stories/$slug"
                         params={{ slug: story.slug }}
-                        className="group/read shrink-0 font-sans text-[0.875rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
+                        className="group/read shrink-0 font-sans text-[0.8125rem] sm:text-[0.875rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5 whitespace-nowrap"
                       >
-                        <span>Read here</span>
+                        <span>Read story</span>
                         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
                       </Link>
                     </div>
 
                     {/* Metadata Row: Colored icons with standard text counts */}
-                    <div className="mt-4 pt-3 border-t border-divider flex items-center justify-between text-[0.8125rem]">
-                      <div className="flex items-center gap-4">
+                    <div className="mt-3.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-divider flex items-center justify-between text-[0.75rem] sm:text-[0.8125rem]">
+                      <div className="flex items-center gap-3.5 sm:gap-4">
                         <span className="inline-flex items-center gap-1.5" title="Likes">
                           <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
-                          <span className="font-bold text-black dark:text-white text-[0.8125rem]">{story.likes_count ?? story.likes ?? 0}</span>
+                          <span className="font-bold text-black dark:text-white text-[0.75rem] sm:text-[0.8125rem]">{story.likes_count ?? story.likes ?? 0}</span>
                         </span>
                         <span className="inline-flex items-center gap-1.5" title="Views">
                           <Eye className="size-3.5 text-blue-500" />
-                          <span className="font-bold text-black dark:text-white text-[0.8125rem]">{story.views_count ?? story.views ?? 0}</span>
+                          <span className="font-bold text-black dark:text-white text-[0.75rem] sm:text-[0.8125rem]">{story.views_count ?? story.views ?? 0}</span>
                         </span>
                       </div>
-                      <span className="text-subtle text-[0.75rem]">Featured longform</span>
+                      <span className="text-subtle text-[0.6875rem] sm:text-[0.75rem] shrink-0">Must Read</span>
                     </div>
                   </div>
                 </div>
@@ -250,12 +250,14 @@ function LatestStories({ stories, isLoading }: { stories?: any[]; isLoading?: bo
 
 function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean }) {
   return (
-    <section className="bg-slate-50 dark:bg-black py-16 lg:py-20">
-      <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
+    <section className="bg-slate-50 dark:bg-black py-16 lg:py-20 overflow-hidden">
+      <div className="mx-auto max-w-[1240px] px-4 sm:px-5 lg:px-8">
         <Reveal>
-          <h2 className="font-display text-[1.5rem] sm:text-[1.75rem] font-bold text-heading">
-            Trending stories
-          </h2>
+          <SectionHeading
+            eyebrow="Popular now"
+            title="Trending stories"
+            blurb="The most-read, liked, and bookmarked pieces across tossatale."
+          />
         </Reveal>
 
         {isLoading ? (
@@ -267,40 +269,46 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
             description="As community readers explore and bookmark stories, top trending longform pieces will display here."
           />
         ) : (
-          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+          <div className="mt-8 sm:mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {stories.slice(0, 6).map((story, i) => (
-              <Reveal key={story.slug || i} delay={i * 50}>
-                <div className="group flex items-start gap-4">
-                  {/* Big Number (01, 02, ...) */}
-                  <span className="font-sans text-[2.1rem] font-black leading-none text-slate-300 dark:text-zinc-700 shrink-0 select-none w-10">
+              <Reveal key={story.slug || i} delay={i * 50} className="h-full">
+                <div className="group flex items-start gap-4 sm:gap-5 rounded-2xl bg-surface p-5 sm:p-6 border border-border/80 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 h-full">
+                  {/* Big Number */}
+                  <span className="font-sans text-[2.1rem] sm:text-[2.25rem] font-black leading-none text-slate-300 dark:text-zinc-700 shrink-0 select-none w-10 group-hover:text-primary transition-colors">
                     {String(i + 1).padStart(2, "0")}
                   </span>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Author Avatar & Name */}
-                    <Link
-                      to="/writers/$slug"
-                      params={{ slug: story.writer?.slug || "writer" }}
-                      className="flex items-center gap-2 group/author w-max max-w-full"
-                    >
-                      <div className="size-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.625rem] grid place-items-center shrink-0">
-                        {((story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2)).toUpperCase()}
-                      </div>
-                      <span className="font-sans text-[0.8125rem] font-bold text-heading truncate group-hover/author:text-primary transition-colors">
-                        {story.writer?.name || story.writer?.user?.full_name || "Author"}
-                      </span>
-                    </Link>
+                  <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+                    <div>
+                      {/* Author */}
+                      <Link
+                        to="/writers/$slug"
+                        params={{ slug: story.writer?.slug || "writer" }}
+                        className="flex items-center gap-2 group/author w-max max-w-full"
+                      >
+                        <div className="size-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.625rem] grid place-items-center shrink-0">
+                          {((story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2)).toUpperCase()}
+                        </div>
+                        <span className="font-sans text-[0.8125rem] font-bold text-heading truncate group-hover/author:text-primary transition-colors">
+                          {story.writer?.name || story.writer?.user?.full_name || "Author"}
+                        </span>
+                        {story.writer?.is_verified && <VerifiedBadge />}
+                      </Link>
 
-                    {/* Story Title - Only Read here redirects */}
-                    <div className="mt-1.5">
-                      <h3 className="line-clamp-1 truncate font-display text-[1.1875rem] font-bold text-heading">
-                        {story.title}
-                      </h3>
+                      {/* Title — single line */}
+                      <div className="mt-1.5">
+                        <h3
+                          className="truncate font-display text-[1.0625rem] sm:text-[1.125rem] font-bold text-heading leading-snug"
+                          title={story.title}
+                        >
+                          {story.title}
+                        </h3>
+                      </div>
                     </div>
 
-                    {/* Metadata & Read here with colored icons */}
-                    <div className="mt-2.5 flex items-center justify-between gap-3 text-[0.75rem]">
+                    {/* Metadata & Read story */}
+                    <div className="mt-3 flex items-center justify-between gap-3 text-[0.75rem]">
                       <div className="flex items-center gap-3">
                         <span className="inline-flex items-center gap-1 text-subtle">
                           <Clock className="size-3 text-emerald-500" />
@@ -321,7 +329,7 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
                         params={{ slug: story.slug }}
                         className="group/read font-sans text-[0.8125rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5 shrink-0"
                       >
-                        <span>Read here</span>
+                        <span>Read story</span>
                         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
                       </Link>
                     </div>
@@ -393,7 +401,7 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
                         params={{ slug: b.slug }}
                         className="group/read font-sans text-[0.8125rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
                       >
-                        <span>Read here</span>
+                        <span>Read story</span>
                         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
                       </Link>
                     </div>
@@ -434,7 +442,7 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
             {videos.slice(0, 2).map((v, i) => (
               <Reveal key={v.slug || v.id || i} delay={i * 70}>
                 <div className="group block h-full">
-                  <div className="flex flex-col h-full rounded-2xl bg-surface p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 border-none">
+                  <div className="flex flex-col h-full rounded-2xl bg-surface p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 border-none">
                     <div className="relative overflow-hidden rounded-xl aspect-video w-full">
                       <img
                         src={v.thumbnail_url || coverBoat}

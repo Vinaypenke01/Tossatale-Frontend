@@ -65,12 +65,7 @@ export const Route = createFileRoute("/admin/homepage-builder")({
   component: HomepageBuilder,
 });
 
-const slots = [
-  { name: "Hero spotlight", capacity: 1, count: 1 },
-  { name: "Featured writers", capacity: 6, count: 5 },
-  { name: "Featured row", capacity: 3, count: 3 },
-  { name: "Trending row", capacity: 6, count: 6 },
-];
+
 
 function HomepageBuilder() {
   const queryClient = useQueryClient();
@@ -149,6 +144,58 @@ function HomepageBuilder() {
   const allStories = (apiStoriesList && Array.isArray(apiStoriesList) && apiStoriesList.length > 0)
     ? apiStoriesList
     : stories;
+
+  // Fetch writers from live API
+  const { data: apiWritersData } = useQuery({
+    queryKey: ["admin-homepage-writers-list"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/admin/writers/?page_size=100");
+        return res.data?.data?.results || res.data?.results || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const allWriters = useMemo(() => {
+    const list = (apiWritersData && Array.isArray(apiWritersData) && apiWritersData.length > 0)
+      ? apiWritersData
+      : writers;
+    return list.map((w: any) => ({
+      slug: w.slug,
+      name: w.name || w.user?.full_name || "Writer",
+      initials: (w.name || w.user?.full_name || "W").substring(0, 2).toUpperCase(),
+      role: w.role || (w.is_verified ? "Verified Storyteller" : "Contributing Writer"),
+      stories: w.stories_count ?? w.published_stories_count ?? 0,
+      followers: w.followers_count ?? 0,
+      verified: Boolean(w.is_verified ?? w.verified),
+      profilePhoto: w.profile_photo || "",
+    }));
+  }, [apiWritersData]);
+
+  const overviewSlots = useMemo(() => [
+    {
+      name: "Hero spotlight",
+      capacity: 1,
+      count: heroStoryId ? 1 : (allStories.length > 0 ? 1 : 0),
+    },
+    {
+      name: "Featured writers",
+      capacity: 6,
+      count: featuredWriters.featuredSlugs.length,
+    },
+    {
+      name: "Featured row",
+      capacity: 2,
+      count: storySlots.featured.length,
+    },
+    {
+      name: "Trending row",
+      capacity: 6,
+      count: storySlots.trending.length,
+    },
+  ], [heroStoryId, allStories.length, featuredWriters.featuredSlugs.length, storySlots.featured.length, storySlots.trending.length]);
 
   useEffect(() => {
     let resolvedAnn = announcement;
@@ -415,7 +462,7 @@ function HomepageBuilder() {
       )}
       {/* Overview Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {slots.map((s) => (
+        {overviewSlots.map((s) => (
           <Panel key={s.name} className="p-5">
             <p className="font-sans text-[0.6875rem] font-black tracking-[0.18em] text-subtle uppercase">
               {s.name}
@@ -668,70 +715,80 @@ function HomepageBuilder() {
                   Writers Directory — Select Writers to Feature
                 </h3>
                 <ul className="divide-y divide-border rounded-2xl border border-border bg-surface overflow-hidden">
-                  {writers.map((w) => {
-                    const isFeatured = featuredWriters.featuredSlugs.includes(w.slug);
-                    const featuredIndex = featuredWriters.featuredSlugs.indexOf(w.slug);
+                  {allWriters.length === 0 ? (
+                    <li className="p-6 text-center text-subtle text-sm">
+                      No writers found. Create or approve writers first.
+                    </li>
+                  ) : (
+                    allWriters.map((w) => {
+                      const isFeatured = featuredWriters.featuredSlugs.includes(w.slug);
+                      const featuredIndex = featuredWriters.featuredSlugs.indexOf(w.slug);
 
-                    return (
-                      <li
-                        key={w.slug}
-                        className={`flex items-center justify-between gap-4 p-4 transition-colors ${
-                          isFeatured ? "bg-primary-light/40" : "hover:bg-surface-alt"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <Avatar initials={w.initials} size="md" />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-sans text-[0.9375rem] font-bold text-heading truncate">
-                                {w.name}
-                              </span>
-                              {w.verified && <VerifiedBadge />}
-                              {isFeatured && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-sans text-[0.625rem] font-extrabold text-primary uppercase">
-                                  <Star className="size-3 fill-primary" />
-                                  Slot #{featuredIndex + 1}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[0.8125rem] text-subtle truncate">
-                              {w.role} · {w.stories} stories · {w.followers} followers
-                            </p>
-                          </div>
-                        </div>
-
-                        <Button
-                          size="sm"
-                          variant={isFeatured ? "primary" : "ghostOutline"}
-                          onClick={() => {
-                            if (isFeatured) {
-                              setFeaturedWriters({
-                                ...featuredWriters,
-                                featuredSlugs: featuredWriters.featuredSlugs.filter((s: string) => s !== w.slug),
-                              });
-                              toast.info(`Removed ${w.name} from featured writers carousel`);
-                            } else {
-                              setFeaturedWriters({
-                                ...featuredWriters,
-                                featuredSlugs: [...featuredWriters.featuredSlugs, w.slug],
-                              });
-                              toast.success(`Featured ${w.name} on homepage carousel!`);
-                            }
-                          }}
+                      return (
+                        <li
+                          key={w.slug}
+                          className={`flex items-center justify-between gap-4 p-4 transition-colors ${
+                            isFeatured ? "bg-primary-light/40" : "hover:bg-surface-alt"
+                          }`}
                         >
-                          {isFeatured ? (
-                            <>
-                              <Check className="size-4" /> Featured
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="size-4" /> Feature on homepage
-                            </>
-                          )}
-                        </Button>
-                      </li>
-                    );
-                  })}
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <Avatar initials={w.initials} size="md" />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-sans text-[0.9375rem] font-bold text-heading truncate">
+                                  {w.name}
+                                </span>
+                                {w.verified && <VerifiedBadge />}
+                                {isFeatured && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-sans text-[0.625rem] font-extrabold text-primary uppercase">
+                                    <Star className="size-3 fill-primary" />
+                                    Slot #{featuredIndex + 1}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[0.8125rem] text-subtle truncate">
+                                {w.role} · {w.stories} stories · {w.followers} followers
+                              </p>
+                            </div>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant={isFeatured ? "primary" : "ghostOutline"}
+                            onClick={() => {
+                              if (isFeatured) {
+                                setFeaturedWriters({
+                                  ...featuredWriters,
+                                  featuredSlugs: featuredWriters.featuredSlugs.filter((s: string) => s !== w.slug),
+                                });
+                                toast.info(`Removed ${w.name} from featured writers carousel`);
+                              } else {
+                                if (featuredWriters.featuredSlugs.length >= 6) {
+                                  toast.error("Maximum 6 featured writers allowed! Remove one first.");
+                                  return;
+                                }
+                                setFeaturedWriters({
+                                  ...featuredWriters,
+                                  featuredSlugs: [...featuredWriters.featuredSlugs, w.slug],
+                                });
+                                toast.success(`Featured ${w.name} on homepage carousel!`);
+                              }
+                            }}
+                          >
+                            {isFeatured ? (
+                              <>
+                                <Check className="size-4" /> Featured
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="size-4" /> Feature on homepage
+                              </>
+                            )}
+                          </Button>
+                        </li>
+                      );
+                    })
+                  )}
                 </ul>
               </div>
 
@@ -744,11 +801,11 @@ function HomepageBuilder() {
                   onClick={() =>
                     setFeaturedWriters({
                       ...featuredWriters,
-                      featuredSlugs: writers.map((w) => w.slug),
+                      featuredSlugs: allWriters.slice(0, 6).map((w) => w.slug),
                     })
                   }
                 >
-                  Feature All Writers
+                  Feature All Writers (up to 6)
                 </Button>
               </div>
             </div>
@@ -786,7 +843,7 @@ function HomepageBuilder() {
                 ) : (
                   <div className="space-y-3">
                     {featuredWriters.featuredSlugs.map((slug: string, idx: number) => {
-                      const w = writerBySlug(slug);
+                      const w = allWriters.find((item) => item.slug === slug);
                       if (!w) return null;
                       return (
                         <div

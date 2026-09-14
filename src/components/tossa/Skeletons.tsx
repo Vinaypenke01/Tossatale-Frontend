@@ -160,34 +160,42 @@ export function StoryCardSkeleton() {
 }
 
 /**
- * Trending Stories Skeleton Rows — 3 Columns x 2 Rows with Big Numerals
+ * Trending Stories Skeleton Cards — 3 Columns x 2 Rows with Big Numerals
  */
 export function TrendingStoriesSkeletonRows() {
   return (
-    <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+    <div className="mt-8 sm:mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {[1, 2, 3, 4, 5, 6].map((num) => (
-        <div key={num} className="flex items-start gap-4">
-          {/* Big Faint Number */}
-          <span className="font-sans text-[2.1rem] font-black leading-none text-slate-200 dark:text-zinc-800 shrink-0 select-none w-10">
+        <div
+          key={num}
+          className="flex items-start gap-4 sm:gap-5 rounded-2xl bg-surface p-5 sm:p-6 border border-border/80 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] h-full"
+        >
+          {/* Rank Number */}
+          <span className="font-sans text-[2.1rem] sm:text-[2.25rem] font-black leading-none text-slate-200 dark:text-zinc-800 shrink-0 select-none w-10">
             {String(num).padStart(2, "0")}
           </span>
 
-          {/* Content Placeholder */}
-          <div className="flex-1 min-w-0 space-y-2">
-            {/* Author Avatar + Name */}
-            <div className="flex items-center gap-2">
-              <Skeleton className="size-5 rounded-full" />
-              <Skeleton className="h-3.5 w-28" />
+          {/* Content */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+            <div>
+              {/* Author */}
+              <div className="flex items-center gap-2">
+                <Skeleton className="size-5 rounded-full" />
+                <Skeleton className="h-3.5 w-24" />
+              </div>
+
+              {/* Title — single line */}
+              <Skeleton className="h-4 w-4/5 mt-2.5" />
             </div>
 
-            {/* Story Title */}
-            <Skeleton className="h-5 w-5/6" />
-
-            {/* Metadata Row */}
-            <div className="flex items-center gap-2 pt-1">
-              <Skeleton className="h-3 w-16" />
-              <span className="text-slate-300 dark:text-zinc-700">·</span>
-              <Skeleton className="h-3 w-14" />
+            {/* Meta & Read here */}
+            <div className="mt-3 flex items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-2.5">
+                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-3 w-8" />
+              </div>
+              <Skeleton className="h-3.5 w-16" />
             </div>
           </div>
         </div>
