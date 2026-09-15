@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/tossa/AppShell";
 import { Badge, Button, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { Pagination } from "@/components/tossa/Pagination";
 import { UnsavedChangesModal } from "@/components/tossa/UnsavedChangesModal";
 import { videos as mockVideos } from "@/lib/data";
 import { pageHead } from "@/lib/head";
@@ -44,6 +45,7 @@ function youtubeId(url: string) {
 function AdminVideos() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"editor" | "library">("editor");
+  const [page, setPage] = useState(1);
 
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
@@ -75,21 +77,22 @@ function AdminVideos() {
   const id = useMemo(() => youtubeId(url), [url]);
 
   // Fetch uploaded videos from backend API
-  const { data: apiVideos, isLoading } = useQuery({
-    queryKey: ["admin-videos-list"],
+  const { data: apiVideosResponse, isLoading } = useQuery({
+    queryKey: ["admin-videos-list", page],
     queryFn: async () => {
       try {
-        const res = await api.get("/admin/videos/");
-        return res.data?.results || res.data?.data || res.data || [];
+        const res = await api.get(`/admin/videos/?page=${page}&page_size=12`);
+        return res.data;
       } catch {
         return mockVideos;
       }
     },
   });
 
-  const videosList = (apiVideos && Array.isArray(apiVideos) && apiVideos.length > 0)
-    ? apiVideos
-    : mockVideos;
+  const rawVideos = apiVideosResponse?.results || (Array.isArray(apiVideosResponse?.data?.results) ? apiVideosResponse.data.results : (Array.isArray(apiVideosResponse?.data) ? apiVideosResponse.data : (Array.isArray(apiVideosResponse) ? apiVideosResponse : [])));
+  const videosList = (Array.isArray(rawVideos) && rawVideos.length > 0) ? rawVideos : mockVideos;
+  const totalVideosCount = apiVideosResponse?.count ?? apiVideosResponse?.data?.count ?? (Array.isArray(videosList) ? videosList.length : 0);
+  const totalPages = Math.ceil(totalVideosCount / 12) || 1;
 
   const handleClearEditor = () => {
     setUrl("");
@@ -408,6 +411,22 @@ function AdminVideos() {
                   </Panel>
                 );
               })}
+            </div>
+          )}
+
+          {/* Video Library Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 border-t border-border pt-4">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                totalCount={totalVideosCount}
+                pageSize={12}
+                onPageChange={(p) => {
+                  setPage(p);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
             </div>
           )}
         </div>

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/tossa/AppShell";
 import { Badge, Button, CustomSelect, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { Pagination } from "@/components/tossa/Pagination";
 import { UnsavedChangesModal } from "@/components/tossa/UnsavedChangesModal";
 import { pageHead } from "@/lib/head";
 import { api } from "@/lib/api";
@@ -42,6 +43,7 @@ function AdminBlogs() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"editor" | "library">("editor");
   const [activeEditingSlug, setActiveEditingSlug] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   // Form State (Cleaned up: SEO title/desc removed, Tags added)
   const [title, setTitle] = useState("");
@@ -89,14 +91,16 @@ function AdminBlogs() {
   const categoriesList = Array.isArray(apiCategories) ? apiCategories : [];
 
   // Fetch Published & Draft Blogs
-  const { data: apiBlogs } = useQuery({
-    queryKey: ["admin-blogs-list"],
+  const { data: apiBlogsResponse } = useQuery({
+    queryKey: ["admin-blogs-list", page],
     queryFn: async () => {
-      const res = await api.get("/admin/blogs/");
-      return res.data?.results || res.data || [];
+      const res = await api.get(`/admin/blogs/?page=${page}&page_size=12`);
+      return res.data;
     },
   });
-  const blogsList = Array.isArray(apiBlogs) ? apiBlogs : [];
+  const blogsList = apiBlogsResponse?.results || (Array.isArray(apiBlogsResponse?.data?.results) ? apiBlogsResponse.data.results : (Array.isArray(apiBlogsResponse?.data) ? apiBlogsResponse.data : (Array.isArray(apiBlogsResponse) ? apiBlogsResponse : [])));
+  const totalBlogsCount = apiBlogsResponse?.count ?? apiBlogsResponse?.data?.count ?? (Array.isArray(blogsList) ? blogsList.length : 0);
+  const totalPages = Math.ceil(totalBlogsCount / 12) || 1;
 
   // Delete Blog Mutation
   const deleteBlogMutation = useMutation({
@@ -759,6 +763,22 @@ function AdminBlogs() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Library Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 border-t border-border pt-4">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                totalCount={totalBlogsCount}
+                pageSize={12}
+                onPageChange={(p) => {
+                  setPage(p);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
             </div>
           )}
         </Panel>

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppShell, StatCard } from "@/components/tossa/AppShell";
 import { Avatar, Badge, Button, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { Pagination } from "@/components/tossa/Pagination";
 import { pageHead } from "@/lib/head";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -21,6 +22,7 @@ const filters = ["All", "In review", "Published", "Rejected"] as const;
 function ReviewQueue() {
   const [filter, setFilter] = useState<string>("All");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [readingStory, setReadingStory] = useState<any | null>(null);
   const [rejectingStory, setRejectingStory] = useState<any | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
@@ -31,19 +33,22 @@ function ReviewQueue() {
     setExpandedHistories((prev) => ({ ...prev, [storyId]: !prev[storyId] }));
   };
 
-  const { data: apiQueue, isLoading } = useQuery({
-    queryKey: ["admin-review-queue", filter],
+  const { data: apiResponse, isLoading } = useQuery({
+    queryKey: ["admin-review-queue", filter, page],
     queryFn: async () => {
-      let statusQuery = "";
-      if (filter === "Published") statusQuery = "?status=PUBLISHED";
-      else if (filter === "In review") statusQuery = "?status=PENDING_REVIEW";
-      else if (filter === "Rejected") statusQuery = "?status=REJECTED";
-      else if (filter === "All") statusQuery = "?status=ALL";
+      let statusQuery = "status=ALL";
+      if (filter === "Published") statusQuery = "status=PUBLISHED";
+      else if (filter === "In review") statusQuery = "status=PENDING_REVIEW";
+      else if (filter === "Rejected") statusQuery = "status=REJECTED";
 
-      const res = await api.get(`/admin/reviews/queue/${statusQuery}`);
-      return res.data?.results || res.data || [];
+      const res = await api.get(`/admin/reviews/queue/?${statusQuery}&page=${page}&page_size=12`);
+      return res.data;
     },
   });
+
+  const apiQueue = apiResponse?.results || (Array.isArray(apiResponse?.data?.results) ? apiResponse.data.results : (Array.isArray(apiResponse?.data) ? apiResponse.data : (Array.isArray(apiResponse) ? apiResponse : [])));
+  const totalReviewsCount = apiResponse?.count ?? apiResponse?.data?.count ?? (Array.isArray(apiQueue) ? apiQueue.length : 0);
+  const totalPages = Math.ceil(totalReviewsCount / 12) || 1;
 
   const approveMutation = useMutation({
     mutationFn: async (storyId: string) => {
@@ -151,7 +156,10 @@ function ReviewQueue() {
                 key={f}
                 type="button"
                 suppressHydrationWarning
-                onClick={() => setFilter(f)}
+                onClick={() => {
+                  setFilter(f);
+                  setPage(1);
+                }}
                 className={cn(
                   "rounded-full border px-3.5 py-1.5 font-sans text-[0.8125rem] font-bold transition-colors",
                   filter === f
@@ -165,7 +173,10 @@ function ReviewQueue() {
           </div>
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
             placeholder="Filter queue by title or writer…"
             className="w-full md:w-72 text-sm"
           />
@@ -322,6 +333,22 @@ function ReviewQueue() {
               );
             })}
           </ul>
+        )}
+
+        {/* Review Queue Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-6 border-t border-border pt-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalReviewsCount}
+              pageSize={12}
+              onPageChange={(p) => {
+                setPage(p);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          </div>
         )}
       </Panel>
 

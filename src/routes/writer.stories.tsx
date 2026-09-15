@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/tossa/AppShell";
 import { Badge, ButtonLink, Panel, Button } from "@/components/tossa/kit";
+import { Pagination } from "@/components/tossa/Pagination";
 import { pageHead } from "@/lib/head";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -19,6 +20,7 @@ const tabs = ["All", "Drafts", "In review", "Rejected", "Published"] as const;
 
 function MyStories() {
   const [tab, setTab] = useState<string>("All");
+  const [page, setPage] = useState(1);
   const [viewingStory, setViewingStory] = useState<any | null>(null);
   const [expandedHistories, setExpandedHistories] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
@@ -27,13 +29,23 @@ function MyStories() {
     setExpandedHistories((prev) => ({ ...prev, [storyId]: !prev[storyId] }));
   };
 
-  const { data: apiStories, isLoading } = useQuery({
-    queryKey: ["writer-stories"],
+  const { data: apiResponse, isLoading } = useQuery({
+    queryKey: ["writer-stories", tab, page],
     queryFn: async () => {
-      const res = await api.get("/writer/stories/");
-      return res.data?.results || res.data || [];
+      let statusParam = "";
+      if (tab === "Drafts") statusParam = "&status=DRAFT";
+      else if (tab === "In review") statusParam = "&status=PENDING_REVIEW";
+      else if (tab === "Rejected") statusParam = "&status=REJECTED";
+      else if (tab === "Published") statusParam = "&status=PUBLISHED";
+
+      const res = await api.get(`/writer/stories/?page=${page}&page_size=12${statusParam}`);
+      return res.data;
     },
   });
+
+  const apiStories = apiResponse?.results || (Array.isArray(apiResponse?.data?.results) ? apiResponse.data.results : (Array.isArray(apiResponse?.data) ? apiResponse.data : (Array.isArray(apiResponse) ? apiResponse : [])));
+  const totalCount = apiResponse?.count ?? apiResponse?.data?.count ?? (Array.isArray(apiStories) ? apiStories.length : 0);
+  const totalPages = Math.ceil(totalCount / 12) || 1;
 
   const submitMutation = useMutation({
     mutationFn: async (storyId: string) => {
@@ -120,7 +132,10 @@ function MyStories() {
           <button
             key={t}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => {
+              setTab(t);
+              setPage(1);
+            }}
             className={cn(
               "rounded-full border px-4 py-2 font-sans text-[0.875rem] font-bold transition-colors",
               tab === t
@@ -297,6 +312,22 @@ function MyStories() {
               );
             })}
           </ul>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="border-t border-border p-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={12}
+              onPageChange={(p) => {
+                setPage(p);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          </div>
         )}
       </Panel>
 
