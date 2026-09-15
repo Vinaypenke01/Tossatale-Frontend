@@ -1,14 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, BookOpen, Eye, Heart, Sparkles } from "lucide-react";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
 import { WritersGridSkeleton } from "@/components/tossa/Skeletons";
+import { Pagination } from "@/components/tossa/Pagination";
 import {
   Avatar,
-  ButtonLink,
-  CategoryPill,
   Input,
   Panel,
   VerifiedBadge,
@@ -33,29 +33,38 @@ export const Route = createFileRoute("/writers/")({
 
 function WritersIndex() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
-  const { data: apiWriters, isLoading } = useQuery({
-    queryKey: ["public-writers", search],
+  const { data: apiResponse, isLoading } = useQuery({
+    queryKey: ["public-writers", search, page],
     queryFn: async () => {
-      const res = await api.get(`/public/writers/${search ? `?search=${encodeURIComponent(search)}` : ""}`);
-      return res.data?.results || res.data || [];
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      params.set("page_size", "12");
+      const res = await api.get(`/public/writers/?${params.toString()}`);
+      return res.data;
     },
   });
 
-  const displayWriters = (apiWriters && Array.isArray(apiWriters))
-    ? apiWriters.map((w: any) => ({
+  const rawResults = apiResponse?.data?.results || apiResponse?.results || (Array.isArray(apiResponse?.data) ? apiResponse.data : (Array.isArray(apiResponse) ? apiResponse : []));
+  const totalWritersCount = apiResponse?.data?.count ?? apiResponse?.count ?? (Array.isArray(apiResponse) ? apiResponse.length : 0);
+  const totalPages = Math.ceil(totalWritersCount / 12) || 1;
+
+  const displayWriters = (rawResults && Array.isArray(rawResults))
+    ? rawResults.map((w: any) => ({
         slug: w.slug,
         name: w.name || w.user?.full_name || "Writer",
         initials: (w.name || w.user?.full_name || "W").substring(0, 2).toUpperCase(),
         handle: `@${w.slug}`,
         gender: w.gender || "OTHER",
         photo: w.profile_photo || "",
-        verified: w.is_verified || false,
-        role: w.bio ? w.bio.slice(0, 30) : "Storyteller",
-        location: w.location || "tossatale",
+        verified: Boolean(w.is_verified),
+        bio: w.bio || "Storyteller & writer on tossatale.",
+        role: w.is_verified ? "Verified Storyteller" : "Storyteller",
         stories: w.total_stories || 0,
-        followers: w.total_followers ? `${w.total_followers}` : "0",
-        reads: w.total_reads ? `${w.total_reads}` : "0",
+        followers: w.total_supports ?? w.total_likes ?? 0,
+        reads: w.total_reads || 0,
       }))
     : [];
 
@@ -79,13 +88,16 @@ function WritersIndex() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search writers by name or bio…"
             aria-label="Search writers"
             className="sm:max-w-xs"
           />
           <p className="text-[0.875rem] text-subtle font-medium">
-            {displayWriters.length} active writers
+            {totalWritersCount} active writer{totalWritersCount === 1 ? "" : "s"}
           </p>
         </div>
 
@@ -103,57 +115,107 @@ function WritersIndex() {
         ) : (
           <div className="mt-8 sm:mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {displayWriters.map((w: any, i: number) => (
-              <Reveal key={w.slug} delay={i * 60}>
-                <Panel hover className="flex h-[250px] flex-col justify-between p-6">
-                  <div>
-                    <div className="flex items-start gap-4">
-                      <Avatar initials={w.initials} gender={w.gender} src={w.photo} size="lg" />
-                      <div className="min-w-0 flex-1">
-                        <h2 className="flex items-center gap-2 text-[1.15rem] font-display font-bold text-heading truncate">
-                          {w.name}
-                          {w.verified && <VerifiedBadge />}
-                        </h2>
-                        <p className="text-[0.8125rem] text-subtle truncate">{w.handle}</p>
-                        <p className="text-[0.75rem] text-subtle/80 truncate">{w.location}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <CategoryPill>{w.role}</CategoryPill>
-                    </div>
-                  </div>
+              <Reveal key={w.slug} delay={i * 50} className="h-full">
+                <div className="group relative flex flex-col justify-between h-full rounded-3xl bg-surface border border-border/70 dark:border-zinc-800/80 p-6 sm:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)] dark:hover:shadow-[0_16px_36px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                  {/* Decorative background hover glow */}
+                  <div className="absolute -top-20 -right-20 size-44 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl pointer-events-none group-hover:bg-primary/15 transition-all duration-500" />
 
                   <div>
-                    <dl className="grid grid-cols-3 gap-2 border-t border-divider pt-4 text-center">
-                      {[
-                        ["Stories", String(w.stories)],
-                        ["Followers", String(w.followers)],
-                        ["Reads", String(w.reads)],
-                      ].map(([label, value]) => (
-                        <div key={label}>
-                          <dt className="font-display text-[1.1rem] font-bold text-heading">{value}</dt>
-                          <dd className="text-[0.6875rem] tracking-[0.14em] text-subtle uppercase">
-                            {label}
-                          </dd>
+                    {/* Top Profile Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <Link to="/writers/$slug" params={{ slug: w.slug }} className="shrink-0 relative group/avatar">
+                          <Avatar
+                            initials={w.initials}
+                            gender={w.gender}
+                            src={w.photo}
+                            size="lg"
+                            className="ring-2 ring-border/80 dark:ring-zinc-700 group-hover/avatar:ring-primary/50 transition-all shadow-xs"
+                          />
+                        </Link>
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            to="/writers/$slug"
+                            params={{ slug: w.slug }}
+                            className="group/name flex items-center gap-1.5 font-display text-[1.125rem] sm:text-[1.1875rem] font-bold text-heading truncate hover:text-primary transition-colors"
+                          >
+                            <span className="truncate">{w.name}</span>
+                            {w.verified && <VerifiedBadge />}
+                          </Link>
+                          <p className="text-[0.8125rem] text-subtle font-medium truncate mt-0.5">{w.handle}</p>
                         </div>
-                      ))}
-                    </dl>
-                    <div className="mt-4">
-                      <ButtonLink
+                      </div>
+
+                      {/* Status / Role Tag */}
+                      <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-sans text-[0.6875rem] font-bold tracking-wide">
+                        {w.verified ? "Verified" : "Author"}
+                      </span>
+                    </div>
+
+                    {/* Bio excerpt */}
+                    <p className="mt-4 text-[0.875rem] text-body line-clamp-2 leading-relaxed min-h-[2.5rem]">
+                      {w.bio}
+                    </p>
+                  </div>
+
+                  {/* Bottom Section: Stats & Action */}
+                  <div className="mt-6">
+                    {/* Stats row with 3 clean pods */}
+                    <div className="grid grid-cols-3 gap-2 py-3 px-2 rounded-2xl bg-surface-alt/60 dark:bg-zinc-900/60 border border-border/40 text-center">
+                      <div className="flex flex-col items-center">
+                        <span className="font-display text-[1.0625rem] sm:text-[1.125rem] font-bold text-heading">
+                          {w.stories}
+                        </span>
+                        <span className="text-[0.6875rem] font-semibold text-subtle flex items-center gap-1 mt-0.5">
+                          <BookOpen className="size-3 text-emerald-500" /> Stories
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center border-x border-border/40">
+                        <span className="font-display text-[1.0625rem] sm:text-[1.125rem] font-bold text-heading">
+                          {w.followers}
+                        </span>
+                        <span className="text-[0.6875rem] font-semibold text-subtle flex items-center gap-1 mt-0.5">
+                          <Heart className="size-3 text-rose-500" /> Likes
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="font-display text-[1.0625rem] sm:text-[1.125rem] font-bold text-heading">
+                          {w.reads}
+                        </span>
+                        <span className="text-[0.6875rem] font-semibold text-subtle flex items-center gap-1 mt-0.5">
+                          <Eye className="size-3 text-blue-500" /> Reads
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* View Profile Action Link */}
+                    <div className="mt-3.5">
+                      <Link
                         to="/writers/$slug"
                         params={{ slug: w.slug }}
-                        variant="soft"
-                        size="sm"
-                        className="w-full"
+                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl font-sans text-[0.875rem] font-bold transition-all duration-200 bg-surface border border-border hover:bg-primary hover:text-white hover:border-primary dark:bg-zinc-800/80 dark:border-zinc-700 dark:hover:bg-primary dark:hover:border-primary text-heading shadow-xs group/btn"
                       >
-                        View profile
-                      </ButtonLink>
+                        <span>View Profile</span>
+                        <ArrowRight className="size-4 group-hover/btn:translate-x-1 transition-transform" />
+                      </Link>
                     </div>
                   </div>
-                </Panel>
+                </div>
               </Reveal>
             ))}
           </div>
         )}
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalWritersCount}
+          pageSize={12}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            window.scrollTo({ top: 300, behavior: "smooth" });
+          }}
+        />
       </div>
     </SiteLayout>
   );

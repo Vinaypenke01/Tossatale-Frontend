@@ -426,22 +426,48 @@ export function VideosGridSkeleton({ count = 6 }: { count?: number }) {
 /**
  * Writers Grid Skeleton (for /writers)
  */
-export function WritersGridSkeleton({ count = 8 }: { count?: number }) {
+export function WritersGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mt-8">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex flex-col items-center text-center p-6 rounded-2xl bg-surface border border-border/40 shadow-xs"
+          className="flex flex-col justify-between rounded-3xl bg-surface border border-border/70 dark:border-zinc-800/80 p-6 sm:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
         >
-          <Skeleton className="size-20 rounded-full mb-3" />
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-3.5 w-20 mt-1" />
-          <Skeleton className="h-3 w-full mt-3" />
-          <Skeleton className="h-3 w-3/4 mt-1" />
-          <div className="w-full mt-5 pt-4 border-t border-border/40 flex justify-around">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-4 w-12" />
+          <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3.5">
+                <Skeleton className="size-12 rounded-2xl" />
+                <div className="space-y-1.5">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-3.5 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </div>
+            <div className="mt-4 space-y-1.5">
+              <Skeleton className="h-3.5 w-full" />
+              <Skeleton className="h-3.5 w-3/4" />
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="grid grid-cols-3 gap-2 py-3 px-2 rounded-2xl bg-surface-alt/60 dark:bg-zinc-900/60 border border-border/40">
+              <div className="flex flex-col items-center gap-1">
+                <Skeleton className="h-4 w-6" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+              <div className="flex flex-col items-center gap-1 border-x border-border/40">
+                <Skeleton className="h-4 w-6" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <Skeleton className="h-4 w-6" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+            </div>
+
+            <Skeleton className="h-10 w-full rounded-xl mt-3.5" />
           </div>
         </div>
       ))}

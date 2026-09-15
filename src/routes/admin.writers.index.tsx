@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppShell, StatCard } from "@/components/tossa/AppShell";
 import { Avatar, Badge, Button, ButtonLink, Input, Panel, VerifiedBadge } from "@/components/tossa/kit";
+import { Pagination } from "@/components/tossa/Pagination";
 import { pageHead } from "@/lib/head";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/admin/writers/")({
 function AdminWriters() {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [isAddWriterOpen, setIsAddWriterOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,15 +46,21 @@ function AdminWriters() {
   });
 
   const { data: apiResponse, isLoading } = useQuery({
-    queryKey: ["admin-writers", query],
+    queryKey: ["admin-writers", query, page],
     queryFn: async () => {
-      const res = await api.get(`/admin/writers/${query ? `?search=${encodeURIComponent(query)}` : ""}`);
+      const params = new URLSearchParams();
+      if (query) params.set("search", query);
+      params.set("page", String(page));
+      params.set("page_size", "12");
+      const res = await api.get(`/admin/writers/?${params.toString()}`);
       return res.data;
     },
   });
 
-  const apiWriters = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : []);
-  const stats = apiResponse?.stats || {};
+  const apiWriters = apiResponse?.data?.results || apiResponse?.results || (Array.isArray(apiResponse?.data) ? apiResponse.data : (Array.isArray(apiResponse) ? apiResponse : []));
+  const totalWritersCount = apiResponse?.data?.count ?? apiResponse?.count ?? (Array.isArray(apiResponse) ? apiResponse.length : 0);
+  const totalPages = Math.ceil(totalWritersCount / 12) || 1;
+  const stats = apiResponse?.stats || apiResponse?.data?.stats || {};
 
   const rows = (apiWriters && Array.isArray(apiWriters))
     ? apiWriters.map((w: any) => ({
@@ -220,7 +228,10 @@ function AdminWriters() {
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-subtle" />
             <Input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
               placeholder="Search writers by name..."
               className="pl-11"
             />
@@ -346,6 +357,17 @@ function AdminWriters() {
             ))}
           </ul>
         )}
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalWritersCount}
+          pageSize={12}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
       </Panel>
 
       {/* Add Writer Modal */}
