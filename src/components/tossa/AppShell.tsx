@@ -159,7 +159,7 @@ export function AppShell({
             <img
               src={fullLogo}
               alt="tossatale"
-              className="h-9 w-auto max-w-[150px] object-contain dark:brightness-0 dark:invert"
+              className="h-9 w-auto max-w-[150px] object-contain"
             />
           </Link>
         </div>
@@ -188,7 +188,7 @@ export function AppShell({
             <img
               src={fullLogo}
               alt="tossatale"
-              className="h-10 w-auto max-w-[170px] object-contain dark:brightness-0 dark:invert transition-opacity hover:opacity-90"
+              className="h-10 w-auto max-w-[170px] object-contain transition-opacity hover:opacity-90"
             />
           </Link>
           <button

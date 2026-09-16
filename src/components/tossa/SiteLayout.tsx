@@ -254,26 +254,20 @@ function UserProfileDropdown({
   );
 }
 
-function Wordmark({ onDark = false }: { onDark?: boolean }) {
+function Wordmark() {
   return (
     <Link to="/" className="inline-flex items-center py-0.5">
       {/* Mobile & Tablet Compact Logo */}
       <img
         src={faviconLogo}
         alt="tossatale"
-        className={cn(
-          "size-9 sm:size-10 object-contain lg:hidden transition-opacity hover:opacity-90 shadow-xs",
-          onDark && "brightness-0 invert",
-        )}
+        className="size-9 sm:size-10 object-contain lg:hidden transition-opacity hover:opacity-90 shadow-xs"
       />
       {/* Desktop Full Logo */}
       <img
         src={logo}
         alt="tossatale"
-        className={cn(
-          "hidden lg:block h-11 sm:h-12 w-auto max-w-[190px] object-contain transition-opacity hover:opacity-90",
-          onDark && "brightness-0 invert",
-        )}
+        className="hidden lg:block h-11 sm:h-12 w-auto max-w-[190px] object-contain transition-opacity hover:opacity-90"
       />
     </Link>
   );

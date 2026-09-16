@@ -3,6 +3,8 @@ import {
   ArrowRight,
   Bookmark,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Copy,
   Facebook,
@@ -12,11 +14,14 @@ import {
   Linkedin,
   Mail,
   MessageCircle,
+  Pause,
+  Play,
   Send,
   Share2,
   X,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import useEmblaCarousel from "embla-carousel-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -352,7 +357,7 @@ function StoryDetail() {
   const { data: relatedStories } = useQuery({
     queryKey: ["public-stories-related", story?.id, categoryParam, tagParam],
     queryFn: async () => {
-      let endpoint = "/public/stories/";
+      let endpoint = "/public/stories/?page_size=12";
       const queryParams = new URLSearchParams();
       if (categoryParam) {
         queryParams.append("category", categoryParam);
@@ -360,7 +365,7 @@ function StoryDetail() {
         queryParams.append("tag", tagParam);
       }
       if (queryParams.toString()) {
-        endpoint += `?${queryParams.toString()}`;
+        endpoint += `&${queryParams.toString()}`;
       }
       const res = await api.get(endpoint);
       let items = res.data?.results || res.data || [];
@@ -368,14 +373,14 @@ function StoryDetail() {
       // Exclude active story
       items = items.filter((item: any) => item.slug !== story?.slug && item.id !== story?.id);
 
-      // Fallback if fewer than 3 items found
-      if (items.length < 3) {
-        const fallbackRes = await api.get("/public/stories/");
+      // Fallback if fewer than 8 items found
+      if (items.length < 8) {
+        const fallbackRes = await api.get("/public/stories/?page_size=12");
         const fallbackItems = fallbackRes.data?.results || fallbackRes.data || [];
         for (const fbItem of fallbackItems) {
           if (fbItem.slug !== story?.slug && fbItem.id !== story?.id && !items.some((it: any) => it.id === fbItem.id)) {
             items.push(fbItem);
-            if (items.length >= 3) break;
+            if (items.length >= 8) break;
           }
         }
       }
@@ -544,29 +549,150 @@ function StoryDetail() {
       {relatedStories && relatedStories.length > 0 && (
         <section className="border-t border-border bg-surface-alt/50 py-16">
           <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
-            <h2 className="text-2xl font-display font-bold text-heading">
-              Find more
-            </h2>
-            <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {relatedStories.slice(0, 3).map((s: any) => (
-                <StoryCard key={s.slug} story={{
-                  slug: s.slug,
-                  title: s.title,
-                  dek: s.subtitle || s.seo_description || "A longform story.",
-                  writer: s.writer?.slug || "writer",
-                  writerName: s.writer?.name || s.writer?.user?.full_name || "Author",
-                  category: s.category?.name || "General",
-                  date: formatDate(s.published_at, "Recent"),
-                  readingTime: s.estimated_reading_time || 5,
-                  cover: s.cover_image || coverLane,
-                  views: s.views_count || 0,
-                  likes: s.likes_count || 0,
-                } as any} />
-              ))}
-            </div>
+            <FindMoreCarousel stories={relatedStories} />
           </div>
         </section>
       )}
     </SiteLayout>
+  );
+}
+
+function FindMoreCarousel({ stories }: { stories: any[] }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: stories.length > 1,
+    align: "start",
+  });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
+  const scrollTo = useCallback((index: number) => emblaApi && emblaApi.scrollTo(index), [emblaApi]);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    setScrollSnaps(emblaApi.scrollSnapList());
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi, onSelect]);
+
+  // Auto carousel rotation with pause on hover/touch
+  useEffect(() => {
+    if (!emblaApi || isPaused || isHovered || stories.length <= 1) return;
+    const interval = setInterval(() => {
+      emblaApi.scrollNext();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [emblaApi, isPaused, isHovered, stories.length]);
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setIsHovered(false)}
+    >
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-display font-bold text-heading">
+            Find more
+          </h2>
+          <p className="text-sm text-subtle mt-1 hidden sm:block">
+            Discover more stories tailored to thoughtful readers
+          </p>
+        </div>
+
+        {/* Manual controls: Prev / Next Buttons & Auto-play toggle */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPaused(!isPaused)}
+            title={isPaused ? "Resume auto carousel" : "Pause auto carousel"}
+            aria-label={isPaused ? "Resume auto carousel" : "Pause auto carousel"}
+            className="hidden sm:inline-flex size-9 items-center justify-center rounded-full border border-border bg-surface text-subtle hover:text-heading hover:border-primary/50 transition-colors shadow-xs"
+          >
+            {isPaused ? <Play className="size-3.5 fill-current" /> : <Pause className="size-3.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={scrollPrev}
+            aria-label="Previous story"
+            className="size-9 sm:size-10 inline-flex items-center justify-center rounded-full border border-border bg-surface text-heading hover:bg-surface-alt hover:border-primary/50 transition-all shadow-xs active:scale-95"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={scrollNext}
+            aria-label="Next story"
+            className="size-9 sm:size-10 inline-flex items-center justify-center rounded-full border border-border bg-surface text-heading hover:bg-surface-alt hover:border-primary/50 transition-all shadow-xs active:scale-95"
+          >
+            <ChevronRight className="size-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Carousel Viewport */}
+      <div className="overflow-hidden -mx-4 px-4 py-2" ref={emblaRef}>
+        <div className="flex -ml-4 sm:-ml-6 touch-pan-y">
+          {stories.map((s: any, idx: number) => (
+            <div
+              key={s.slug || idx}
+              className="min-w-0 flex-[0_0_88%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] pl-4 sm:pl-6 select-none"
+            >
+              <div className="h-full">
+                <StoryCard
+                  story={{
+                    slug: s.slug,
+                    title: s.title,
+                    dek: s.subtitle || s.seo_description || "A longform story.",
+                    writer: s.writer?.slug || "writer",
+                    writerName: s.writer?.name || s.writer?.user?.full_name || "Author",
+                    category: s.category?.name || "General",
+                    date: formatDate(s.published_at, "Recent"),
+                    readingTime: s.estimated_reading_time || 5,
+                    cover: s.cover_image || coverLane,
+                    views: s.views_count || 0,
+                    likes: s.likes_count || 0,
+                  } as any}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Dot Indicators */}
+      {scrollSnaps.length > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          {scrollSnaps.map((_, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => scrollTo(index)}
+              aria-label={`Go to slide ${index + 1}`}
+              className={cn(
+                "h-2 rounded-full transition-all duration-300",
+                index === selectedIndex
+                  ? "w-7 bg-primary"
+                  : "w-2 bg-border hover:bg-subtle"
+              )}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

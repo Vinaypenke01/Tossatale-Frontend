@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Clock, Eye, Heart, Mail, Play } from "lucide-react";
+import { ArrowRight, Clock, Eye, Heart, Mail, Play, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -496,17 +496,36 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
 
 function Newsletter() {
   return (
-    <section id="newsletter" className="bg-slate-50 dark:bg-black py-16 sm:py-20">
-      <div className="mx-auto max-w-3xl px-5 lg:px-8 text-center">
+    <section id="newsletter" className="relative overflow-hidden bg-slate-50 dark:bg-black py-14 sm:py-20">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <div className="rounded-3xl bg-surface p-8 sm:p-12 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] border-none">
-            <h2 className="mx-auto text-[clamp(1.5rem,2.5vw,2.2rem)] leading-tight font-display font-bold text-heading">
-              Keep reading. Keep watching.
-            </h2>
-            <p className="mx-auto mt-3 max-w-md text-[0.9375rem] leading-relaxed text-body">
-              Get updates on new stories, short films, and upcoming releases directly in your inbox.
-            </p>
-            <NewsletterForm />
+          <div className="relative overflow-hidden rounded-3xl border border-border/80 dark:border-zinc-800/80 bg-surface/90 dark:bg-zinc-900/90 p-6 sm:p-12 md:p-14 shadow-lg backdrop-blur-md text-center">
+            {/* Ambient atmospheric brand glows */}
+            <div className="pointer-events-none absolute -top-24 -right-24 size-64 rounded-full bg-primary/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-24 -left-24 size-64 rounded-full bg-[#FF6B35]/15 blur-3xl" />
+
+            <div className="relative z-10 max-w-xl mx-auto">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary mb-4">
+                <Sparkles className="size-3.5 text-primary" />
+                <span>Weekly Dispatch</span>
+              </div>
+
+              <h2 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-heading leading-tight">
+                Keep reading. Keep watching.
+              </h2>
+              <p className="mt-3 text-sm sm:text-base leading-relaxed text-body">
+                Get handpicked longform stories, essays, and short films delivered directly to your inbox every week.
+              </p>
+
+              <div className="mt-7 sm:mt-8">
+                <NewsletterForm />
+              </div>
+
+              <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 text-xs text-subtle">
+                <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
+                <span>No spam, zero clutter. Unsubscribe anytime in one click.</span>
+              </div>
+            </div>
           </div>
         </Reveal>
       </div>
@@ -536,28 +555,42 @@ function NewsletterForm() {
   };
 
   return (
-    <form className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row" onSubmit={handleSubmit} suppressHydrationWarning>
+    <form className="w-full" onSubmit={handleSubmit} suppressHydrationWarning>
       <label className="sr-only" htmlFor="newsletter-email">
         Email address
       </label>
-      <Input
-        id="newsletter-email"
-        type="email"
-        placeholder="Enter your email address"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        suppressHydrationWarning
-        className="h-11 bg-white dark:bg-zinc-800 border-border text-heading placeholder:text-subtle text-[0.875rem] rounded-xl flex-1"
-      />
-      <button
-        type="submit"
-        suppressHydrationWarning
-        disabled={isSubmitting}
-        className="h-11 shrink-0 rounded-xl bg-[#FF6B35] hover:bg-[#e85b27] text-white font-bold px-6 text-[0.875rem] shadow-xs transition-all hover:shadow-md cursor-pointer inline-flex items-center justify-center gap-2"
-      >
-        <Mail className="size-4" /> {isSubmitting ? "Submitting..." : "Subscribe"}
-      </button>
+      <div className="flex flex-col sm:flex-row items-stretch gap-3">
+        <div className="relative flex-1">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-subtle">
+            <Mail className="size-4.5" />
+          </div>
+          <input
+            id="newsletter-email"
+            type="email"
+            placeholder="Enter your email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            suppressHydrationWarning
+            className="h-12 sm:h-13 w-full rounded-2xl border border-border dark:border-zinc-700/80 bg-surface-alt/70 dark:bg-zinc-800/80 pl-11 pr-4 text-sm sm:text-base text-heading placeholder:text-subtle/70 transition-all focus:border-primary focus:bg-surface focus:outline-none focus:ring-4 focus:ring-primary/15"
+          />
+        </div>
+        <button
+          type="submit"
+          suppressHydrationWarning
+          disabled={isSubmitting}
+          className="h-12 sm:h-13 shrink-0 rounded-2xl bg-[#FF6B35] hover:bg-[#e85b27] text-white font-bold px-7 text-sm sm:text-base shadow-sm transition-all hover:shadow-md cursor-pointer inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60"
+        >
+          {isSubmitting ? (
+            "Submitting..."
+          ) : (
+            <>
+              <span>Subscribe</span>
+              <ArrowRight className="size-4" />
+            </>
+          )}
+        </button>
+      </div>
     </form>
   );
 }

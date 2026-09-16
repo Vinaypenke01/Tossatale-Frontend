@@ -39,7 +39,7 @@ function AdminOverview() {
     queryKey: ["admin-overview-queue"],
     queryFn: async () => {
       const res = await api.get("/admin/reviews/queue/");
-      return res.data?.results || res.data || [];
+      return res.data;
     },
   });
 
@@ -165,7 +165,22 @@ function AdminOverview() {
     return undefined;
   }, [countdown, pendingToggle]);
 
-  const storiesList = queueData && Array.isArray(queueData) ? queueData : [];
+  const storiesList = Array.isArray(queueData?.data?.results)
+    ? queueData.data.results
+    : Array.isArray(queueData?.results)
+      ? queueData.results
+      : Array.isArray(queueData?.data)
+        ? queueData.data
+        : Array.isArray(queueData)
+          ? queueData
+          : [];
+
+  const awaitingReviewCount =
+    queueData?.data?.stats?.total_in_queue ??
+    queueData?.stats?.total_in_queue ??
+    queueData?.data?.count ??
+    queueData?.count ??
+    storiesList.length;
 
   return (
     <AppShell
@@ -263,7 +278,7 @@ function AdminOverview() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Awaiting review"
-          value={String(storiesList.length)}
+          value={String(awaitingReviewCount)}
           hint="Needs your attention"
         />
         <StatCard

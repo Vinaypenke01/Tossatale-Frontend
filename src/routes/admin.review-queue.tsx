@@ -131,9 +131,11 @@ function ReviewQueue() {
       }).filter((r: any) => r.title.toLowerCase().includes(query.toLowerCase()))
     : [];
 
-  const inReviewCount = rows.filter((r) => r.rawStatus === "PENDING_REVIEW").length;
-  const rejectedCount = rows.filter((r) => r.rawStatus === "REJECTED").length;
-  const publishedCount = rows.filter((r) => r.rawStatus === "PUBLISHED").length;
+  const stats = apiResponse?.data?.stats || apiResponse?.stats || {};
+  const inQueueCount = stats.total_in_queue ?? (filter === "In review" ? totalReviewsCount : rows.filter((r) => r.rawStatus === "PENDING_REVIEW").length);
+  const rejectedCount = stats.total_rejected ?? (filter === "Rejected" ? totalReviewsCount : rows.filter((r) => r.rawStatus === "REJECTED").length);
+  const publishedCount = stats.total_published ?? (filter === "Published" ? totalReviewsCount : rows.filter((r) => r.rawStatus === "PUBLISHED").length);
+  const totalSubmissionsCount = stats.total_submissions ?? (filter === "All" ? totalReviewsCount : rows.length);
 
   return (
     <AppShell
@@ -142,10 +144,10 @@ function ReviewQueue() {
       blurb="Every submission, in the order it arrived. Read, leave editorial feedback, approve or track rejection histories."
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="In queue" value={String(inReviewCount)} hint="pending editorial review" />
+        <StatCard label="In queue" value={String(inQueueCount)} hint="pending editorial review" />
         <StatCard label="Rejected" value={String(rejectedCount)} hint="needs author revision" />
         <StatCard label="Published" value={String(publishedCount)} hint="live in library" />
-        <StatCard label="Total Submissions" value={String(rows.length)} hint="all states" />
+        <StatCard label="Total Submissions" value={String(totalSubmissionsCount)} hint="all states" />
       </div>
 
       <Panel className="p-6">
