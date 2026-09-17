@@ -1,6 +1,7 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { Bookmark, Clock, Eye, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Avatar, CategoryPill, VerifiedBadge } from "@/components/tossa/kit";
 import { writerBySlug, type Story } from "@/lib/data";
@@ -17,6 +18,8 @@ export function StoryCard({
   story: Story;
   layout?: "vertical" | "horizontal" | "compact";
 }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
   const writerObj = writerBySlug(story.writer);
   const authorName = (story as any).writerName || (story as any).writer?.name || (story as any).writer?.user?.full_name || writerObj?.name || "Author";
@@ -69,6 +72,12 @@ export function StoryCard({
         setSaved(false);
         toast.success("Removed from Bookmarks");
       }
+      router.invalidate();
+      queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
+      queryClient.invalidateQueries({ queryKey: ["public-stories"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-bookmarks"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-history"] });
     } catch (err: any) {
       if (err.message?.toLowerCase()?.includes("already bookmarked")) {
         setSaved(true);
@@ -115,11 +124,17 @@ export function StoryCard({
         onLikeSuccess={(newCount) => {
           setLiked(true);
           setLikesCount(typeof newCount === "number" ? newCount : (likesCount + 1));
+          router.invalidate();
+          queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
+          queryClient.invalidateQueries({ queryKey: ["public-stories"] });
+          queryClient.invalidateQueries({ queryKey: ["reader-bookmarks"] });
+          queryClient.invalidateQueries({ queryKey: ["reader-dashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["reader-history"] });
         }}
       />
       <article
         className={cn(
-          "group flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-6 border-none",
+          "group flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-6",
           horizontal && "sm:p-6",
         )}
       >
@@ -163,9 +178,7 @@ export function StoryCard({
               params={{ slug: story.writer }}
               className="flex items-center gap-2.5 min-w-0"
             >
-              <div className="size-7.5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.75rem] grid place-items-center shrink-0">
-                {authorInitials}
-              </div>
+              <Avatar src={authorPhoto} size="xs" />
               <span className="min-w-0">
                 <span className="flex items-center gap-1.5 font-sans text-[0.8125rem] font-bold text-heading truncate">
                   {authorName}
@@ -190,8 +203,8 @@ export function StoryCard({
           <div className="flex items-center justify-between text-[0.8125rem] pt-1">
             <div className="flex items-center gap-4">
               <span className="inline-flex items-center gap-1.5" title="Likes">
-                <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
-                <span className="font-bold text-black dark:text-white text-[0.8125rem]">{likesCount}</span>
+                <Heart className={cn("size-3.5 transition-colors", liked ? "text-rose-500 fill-rose-500" : "text-rose-500/60 fill-rose-500/20")} />
+                <span className={cn("font-bold text-[0.8125rem]", liked ? "text-rose-600 dark:text-rose-400" : "text-black dark:text-white")}>{likesCount}</span>
               </span>
               <span className="inline-flex items-center gap-1.5" title="Views">
                 <Eye className="size-3.5 text-blue-500" />

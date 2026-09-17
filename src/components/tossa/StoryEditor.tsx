@@ -1,5 +1,32 @@
 import { Link, useBlocker } from "@tanstack/react-router";
-import { AlertCircle, Bookmark, Clock, Edit3, Eye, EyeOff, FileText, Folder, Heart, PenLine, Plus, RefreshCw, Save, Send, Share2, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  Bookmark,
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Edit3,
+  Eye,
+  EyeOff,
+  FileText,
+  Folder,
+  GripVertical,
+  Heart,
+  Info,
+  Layers,
+  PenLine,
+  Plus,
+  RefreshCw,
+  Save,
+  Send,
+  Share2,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -7,6 +34,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/tossa/AppShell";
 import { Badge, Button, CustomSelect, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
 import { UnsavedChangesModal } from "@/components/tossa/UnsavedChangesModal";
+import { ChaptersWorkspace } from "@/components/tossa/ChaptersWorkspace";
 import { type Story } from "@/lib/data";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -20,12 +48,34 @@ export function StoryEditor({
 }) {
   const isAdmin = role === "admin";
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"editor" | "library" | "drafts">("editor");
+  const [activeTab, setActiveTab] = useState<"editor" | "chapters" | "library" | "drafts">("editor");
 
   const [title, setTitle] = useState(story?.title ?? "");
   const [dek, setDek] = useState(story?.dek ?? (story as any)?.subtitle ?? "");
   const initialBody = (story as any)?.content || (story as any)?.plain_text_content || (Array.isArray((story as any)?.body) ? (story as any).body.join("\n\n") : (story as any)?.body) || "";
   const [body, setBody] = useState(initialBody);
+  const [isMultiChapter, setIsMultiChapter] = useState(
+    Boolean(story?.is_multi_chapter || (story as any)?.chapters?.length > 0)
+  );
+  const [seriesStatus, setSeriesStatus] = useState<"ONGOING" | "COMPLETED">(
+    (story as any)?.series_status || "ONGOING"
+  );
+  const [isChangingSeriesStatus, setIsChangingSeriesStatus] = useState(false);
+  const [seriesSelectorOpen, setSeriesSelectorOpen] = useState(false);
+  const [activeSeriesAlertModal, setActiveSeriesAlertModal] = useState<{
+    isOpen: boolean;
+    activeStory: any;
+  } | null>(null);
+
+  const [chapters, setChapters] = useState<any[]>(
+    (story as any)?.chapters || []
+  );
+  const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
+  const [chapterTitleInput, setChapterTitleInput] = useState("");
+  const [chapterContentInput, setChapterContentInput] = useState("");
+  const [isSavingChapter, setIsSavingChapter] = useState(false);
+  const [showSeriesMeta, setShowSeriesMeta] = useState(true);
+
   const [preview, setPreview] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(story?.categorySlug ?? (story as any)?.category?.id ?? (story as any)?.category?.slug ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,6 +103,7 @@ export function StoryEditor({
     b: string,
     cat: string,
     tags: string,
+    mc: boolean,
   ) => {
     return JSON.stringify({
       title: t.trim(),
@@ -60,6 +111,7 @@ export function StoryEditor({
       body: b.trim(),
       category: cat,
       tags: tags.trim(),
+      is_multi_chapter: mc,
     });
   };
 
@@ -69,6 +121,18 @@ export function StoryEditor({
       setDek(story.dek || (story as any).subtitle || "");
       const resolvedBody = (story as any).content || (story as any).plain_text_content || (Array.isArray((story as any).body) ? (story as any).body.join("\n\n") : (story as any).body) || "";
       setBody(resolvedBody);
+      const isMulti = Boolean(story.is_multi_chapter || (story as any).chapters?.length > 0);
+      setIsMultiChapter(isMulti);
+      setSeriesStatus((story as any).series_status || "ONGOING");
+      if (isMulti) {
+        setActiveTab("chapters");
+      }
+      const initialChs = (story as any).chapters || [];
+      setChapters(initialChs);
+      if (initialChs.length > 0) {
+        setChapterTitleInput(initialChs[0]?.title || "");
+        setChapterContentInput(initialChs[0]?.content || "");
+      }
       const catVal = story.categorySlug || (story as any).category?.id || (story as any).category?.slug || "";
       setSelectedCategory(catVal);
       setActiveEditingSlug(story.slug || (story as any).id || null);
@@ -93,22 +157,23 @@ export function StoryEditor({
         resolvedBody,
         catVal,
         initialTagsVal,
+        isMulti,
       );
       hasInitializedRef.current = true;
     } else if (!hasInitializedRef.current) {
-      savedSnapshotRef.current = serializeStoryState("", "", "", "", "");
+      savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false);
       hasInitializedRef.current = true;
     }
   }, [story]);
 
   const isDirty = useMemo(() => {
-    if (activeTab !== "editor") return false;
+    if (activeTab !== "editor" && activeTab !== "chapters") return false;
     if (!hasInitializedRef.current || !savedSnapshotRef.current) {
-      return Boolean(title.trim() || body.trim());
+      return Boolean(title.trim() || body.trim() || chapterTitleInput.trim() || chapterContentInput.trim());
     }
-    const current = serializeStoryState(title, dek, body, selectedCategory, tagsInput);
+    const current = serializeStoryState(title, dek, body, selectedCategory, tagsInput, isMultiChapter);
     return current !== savedSnapshotRef.current;
-  }, [activeTab, title, dek, body, selectedCategory, tagsInput]);
+  }, [activeTab, title, dek, body, selectedCategory, tagsInput, isMultiChapter, chapterTitleInput, chapterContentInput]);
 
   const blocker = useBlocker({
     shouldBlockFn: ({ current, next }) => {
@@ -120,6 +185,325 @@ export function StoryEditor({
     withResolver: true,
     enableBeforeUnload: () => isDirty,
   });
+
+  // Query chapters for active story
+  const { data: chaptersData, refetch: refetchChapters } = useQuery({
+    queryKey: ["story-chapters", activeEditingSlug, role],
+    queryFn: async () => {
+      if (!activeEditingSlug) return [];
+      const endpoint = isAdmin
+        ? `/admin/stories/${activeEditingSlug}/chapters/`
+        : `/writer/stories/${activeEditingSlug}/chapters/`;
+      const res: any = await api.get(endpoint);
+      if (Array.isArray(res)) return res;
+      if (Array.isArray(res?.data)) return res.data;
+      if (Array.isArray(res?.data?.results)) return res.data.results;
+      if (Array.isArray(res?.data?.data)) return res.data.data;
+      if (Array.isArray(res?.results)) return res.results;
+      return [];
+    },
+    enabled: !!activeEditingSlug,
+  });
+
+  // Query active ongoing series for writer
+  const { data: activeOngoingSeriesData, refetch: refetchActiveOngoingSeries } = useQuery({
+    queryKey: ["writer-active-ongoing-series", role],
+    queryFn: async () => {
+      const endpoint = isAdmin
+        ? "/admin/stories/active-series/"
+        : "/writer/stories/active-series/";
+      const res: any = await api.get(endpoint);
+      const unwrapped = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+      if (unwrapped && typeof unwrapped === "object" && !Array.isArray(unwrapped) && (unwrapped.id || unwrapped.slug)) {
+        return unwrapped;
+      }
+      return null;
+    },
+  });
+
+  // Query all multi-chapter series authored by writer
+  const { data: allSeriesData, refetch: refetchAllSeries } = useQuery({
+    queryKey: ["writer-all-series", role],
+    queryFn: async () => {
+      const endpoint = isAdmin
+        ? "/admin/stories/series/"
+        : "/writer/stories/series/";
+      const res: any = await api.get(endpoint);
+      if (Array.isArray(res)) return res;
+      if (Array.isArray(res?.data)) return res.data;
+      if (Array.isArray(res?.data?.results)) return res.data.results;
+      if (Array.isArray(res?.data?.data)) return res.data.data;
+      if (Array.isArray(res?.results)) return res.results;
+      return [];
+    },
+  });
+
+  // Auto-load ongoing series if user enters Chapters workspace without a loaded story
+  useEffect(() => {
+    if (activeTab === "chapters" && !activeEditingSlug && activeOngoingSeriesData) {
+      handleEditStory(activeOngoingSeriesData);
+    }
+  }, [activeTab, activeEditingSlug, activeOngoingSeriesData]);
+
+  const handleToggleSeriesStatus = async (newStatus: "ONGOING" | "COMPLETED") => {
+    if (!activeEditingSlug) {
+      setSeriesStatus(newStatus);
+      toast.info(`Series status set to ${newStatus === "COMPLETED" ? "Completed" : "Ongoing"}.`);
+      return;
+    }
+    setIsChangingSeriesStatus(true);
+    try {
+      const endpoint = isAdmin
+        ? `/admin/stories/${activeEditingSlug}/series-status/`
+        : `/writer/stories/${activeEditingSlug}/series-status/`;
+      await api.post(endpoint, { series_status: newStatus });
+      setSeriesStatus(newStatus);
+      toast.success(
+        newStatus === "COMPLETED"
+          ? `"${title || "Series"}" marked as Completed! Narrative arc finalized.`
+          : `"${title || "Series"}" reopened as Ongoing.`
+      );
+      await Promise.all([
+        refetchActiveOngoingSeries(),
+        refetchAllSeries(),
+        queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] }),
+        queryClient.invalidateQueries({ queryKey: ["writer-stories"] }),
+      ]);
+    } catch (err: any) {
+      toast.error("Could not update series status", {
+        description: err.response?.data?.message || err.response?.data?.error || err.message,
+      });
+    } finally {
+      setIsChangingSeriesStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    if (chaptersData && Array.isArray(chaptersData)) {
+      setChapters(chaptersData);
+      if (chaptersData.length > 0) {
+        setIsMultiChapter(true);
+        const safeIdx = activeChapterIndex < chaptersData.length ? activeChapterIndex : 0;
+        if (chaptersData[safeIdx]) {
+          setChapterTitleInput(chaptersData[safeIdx].title || "");
+          setChapterContentInput(chaptersData[safeIdx].content || "");
+        }
+      }
+    }
+  }, [chaptersData]);
+
+  const handleSelectChapter = (idx: number) => {
+    // Keep current chapter edits synchronized in local state before switching
+    setChapters((prev) => {
+      const updated = [...prev];
+      if (updated[activeChapterIndex]) {
+        updated[activeChapterIndex] = {
+          ...updated[activeChapterIndex],
+          title: chapterTitleInput,
+          content: chapterContentInput,
+        };
+      }
+      return updated;
+    });
+    setActiveChapterIndex(idx);
+    const ch = chapters[idx];
+    setChapterTitleInput(ch?.title || "");
+    setChapterContentInput(ch?.content || "");
+  };
+
+  const handleStartSeries = async () => {
+    if (!title.trim() || title.trim().length < 2) {
+      toast.error("Series Title is mandatory (at least 2 characters).");
+      return;
+    }
+    if (!dek.trim() || dek.trim().length < 3) {
+      toast.error("Series Synopsis / Premise is mandatory.");
+      return;
+    }
+
+    if (
+      !activeEditingSlug &&
+      activeOngoingSeriesData &&
+      activeOngoingSeriesData.slug !== activeEditingSlug
+    ) {
+      setActiveSeriesAlertModal({
+        isOpen: true,
+        activeStory: activeOngoingSeriesData,
+      });
+      return;
+    }
+
+    const saveRes = await handleSave("DRAFT");
+    if (saveRes?.success) {
+      toast.success(
+        activeEditingSlug
+          ? `Series details for "${title}" updated successfully!`
+          : `Series "${title}" started! You can now write chapters.`
+      );
+      if (chapters.length === 0) {
+        handleAddNewChapter();
+      }
+    }
+  };
+
+  const handleSaveCurrentChapter = async (targetStatus: "DRAFT" | "PENDING_REVIEW" = "DRAFT") => {
+    if (!title.trim() || title.trim().length < 2) {
+      toast.error("Series Title is mandatory. Please provide a title.");
+      return;
+    }
+    if (!dek.trim() || dek.trim().length < 3) {
+      toast.error("Series Synopsis / Premise is mandatory. Please provide a synopsis.");
+      return;
+    }
+
+    let currentSlug = activeEditingSlug;
+    if (!currentSlug) {
+      const saveRes = await handleSave("DRAFT");
+      if (!saveRes?.success || !saveRes.slug) {
+        toast.error("Could not create series draft. Please check required fields.");
+        return;
+      }
+      currentSlug = saveRes.slug;
+    }
+
+    if (!chapterTitleInput.trim()) {
+      toast.error("Please provide a chapter title.");
+      return;
+    }
+    if (!chapterContentInput.trim()) {
+      toast.error("Please provide chapter content.");
+      return;
+    }
+
+    setIsSavingChapter(true);
+    try {
+      const activeChapter = chapters[activeChapterIndex];
+      const endpointPrefix = isAdmin ? "/admin/stories" : "/writer/stories";
+
+      let savedChapterId = activeChapter?.id;
+      if (activeChapter && activeChapter.id) {
+        // Update existing chapter
+        const res = await api.patch(`${endpointPrefix}/${currentSlug}/chapters/${activeChapter.id}/`, {
+          title: chapterTitleInput.trim(),
+          content: chapterContentInput,
+          status: targetStatus,
+        });
+        savedChapterId = res.data?.data?.id || activeChapter.id;
+      } else {
+        // Create new chapter
+        const res = await api.post(`${endpointPrefix}/${currentSlug}/chapters/`, {
+          title: chapterTitleInput.trim(),
+          content: chapterContentInput,
+          order: chapters.length + 1,
+          status: targetStatus,
+        });
+        savedChapterId = res.data?.data?.id;
+      }
+
+      if (targetStatus === "PENDING_REVIEW" && savedChapterId) {
+        try {
+          await api.post(`${endpointPrefix}/${currentSlug}/chapters/${savedChapterId}/submit/`);
+        } catch {
+          // Handled if already pending
+        }
+        toast.success(`Chapter "${chapterTitleInput}" submitted for editorial review!`);
+      } else {
+        toast.success(`Chapter "${chapterTitleInput}" saved as draft.`);
+      }
+
+      await refetchChapters();
+      queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] });
+      queryClient.invalidateQueries({ queryKey: ["writer-stories"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
+    } catch (err: any) {
+      toast.error("Failed to save chapter", {
+        description: err.response?.data?.message || err.message,
+      });
+    } finally {
+      setIsSavingChapter(false);
+    }
+  };
+
+  const handleAddNewChapter = () => {
+    if (!title.trim() || title.trim().length < 2) {
+      toast.error("Please provide a Series Title first (mandatory).");
+      return;
+    }
+    if (!dek.trim() || dek.trim().length < 3) {
+      toast.error("Please provide a Series Synopsis / Premise first (mandatory).");
+      return;
+    }
+    const newOrder = chapters.length + 1;
+    const newCh = {
+      order: newOrder,
+      title: `Chapter ${newOrder}`,
+      content: "",
+      word_count: 0,
+      estimated_reading_time: 1,
+    };
+    const updated = [...chapters, newCh];
+    setChapters(updated);
+    setActiveChapterIndex(updated.length - 1);
+    setChapterTitleInput(newCh.title);
+    setChapterContentInput("");
+    toast.info(`Drafting new Chapter ${newOrder}. Enter content and click "Save Chapter".`);
+  };
+
+  const handleDeleteChapter = async (idx: number) => {
+    const ch = chapters[idx];
+    if (!ch) return;
+    if (!window.confirm(`Are you sure you want to delete "${ch.title || `Chapter ${ch.order}`}"?`)) {
+      return;
+    }
+
+    if (ch.id && activeEditingSlug) {
+      try {
+        const endpointPrefix = isAdmin ? "/admin/stories" : "/writer/stories";
+        await api.delete(`${endpointPrefix}/${activeEditingSlug}/chapters/${ch.id}/`);
+        toast.success("Chapter deleted successfully.");
+        await refetchChapters();
+      } catch (err: any) {
+        toast.error("Failed to delete chapter", { description: err.message });
+      }
+    } else {
+      const updated = chapters.filter((_, i) => i !== idx);
+      setChapters(updated);
+      const nextIdx = Math.max(0, idx - 1);
+      setActiveChapterIndex(nextIdx);
+      setChapterTitleInput(updated[nextIdx]?.title || "");
+      setChapterContentInput(updated[nextIdx]?.content || "");
+    }
+  };
+
+  const handleReorderChapter = async (idx: number, direction: "up" | "down") => {
+    if (
+      (direction === "up" && idx === 0) ||
+      (direction === "down" && idx === chapters.length - 1)
+    ) {
+      return;
+    }
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    const newChapters = [...chapters];
+    const temp = newChapters[idx];
+    newChapters[idx] = newChapters[targetIdx];
+    newChapters[targetIdx] = temp;
+    setChapters(newChapters);
+    setActiveChapterIndex(targetIdx);
+
+    // If activeEditingSlug and chapters have IDs, send reorder API request
+    if (activeEditingSlug && newChapters.every((c) => c.id)) {
+      try {
+        const endpointPrefix = isAdmin ? "/admin/stories" : "/writer/stories";
+        await api.post(`${endpointPrefix}/${activeEditingSlug}/chapters/reorder/`, {
+          ordered_ids: newChapters.map((c) => c.id),
+        });
+        toast.success("Chapters reordered!");
+        await refetchChapters();
+      } catch (err: any) {
+        toast.error("Failed to reorder chapters", { description: err.message });
+      }
+    }
+  };
 
   // Category creation modal/inline form state
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
@@ -182,12 +566,32 @@ export function StoryEditor({
     return Math.max(1, Math.ceil(words / 220));
   }, [words]);
 
+  const totalChapterWords = useMemo(() => {
+    return chapters.reduce((acc, c, idx) => {
+      if (idx === activeChapterIndex && chapterContentInput) {
+        return acc + chapterContentInput.trim().split(/\s+/).filter(Boolean).length;
+      }
+      const count = c.word_count || (c.content ? c.content.trim().split(/\s+/).filter(Boolean).length : 0);
+      return acc + count;
+    }, 0);
+  }, [chapters, activeChapterIndex, chapterContentInput]);
+
+  const totalSeriesWords = useMemo(() => {
+    const dekWords = dek ? dek.trim().split(/\s+/).filter(Boolean).length : 0;
+    return totalChapterWords + dekWords;
+  }, [totalChapterWords, dek]);
+
+  const totalSeriesMinutes = useMemo(() => {
+    if (totalSeriesWords === 0) return 1;
+    return Math.max(1, Math.ceil(totalSeriesWords / 220));
+  }, [totalSeriesWords]);
+
   // Auto-fill reading time input if user hasn't manually set a custom value
   useEffect(() => {
     if (!isReadingTimeCustom) {
-      setReadingTimeInput(String(minutes || 1));
+      setReadingTimeInput(String(isMultiChapter ? totalSeriesMinutes : minutes || 1));
     }
-  }, [minutes, isReadingTimeCustom]);
+  }, [minutes, totalSeriesMinutes, isMultiChapter, isReadingTimeCustom]);
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,17 +622,30 @@ export function StoryEditor({
     }
   };
 
-  const handleSave = async (status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED"): Promise<boolean> => {
+  const handleSave = async (status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED"): Promise<{ success: boolean; slug?: string | undefined }> => {
     if (!title.trim() || title.trim().length < 2) {
-      toast.error("Please provide a story title (at least 2 characters).");
-      return false;
+      toast.error(isMultiChapter ? "Series Title is mandatory (at least 2 characters)." : "Please provide a story title (at least 2 characters).");
+      return { success: false };
     }
 
-    if (status !== "DRAFT" && (!body.trim() || body.trim().length < 100)) {
-      toast.error("Story body is too short for submission", {
-        description: "Story content must be at least 100 characters to submit for review.",
-      });
-      return false;
+    if (isMultiChapter && (!dek.trim() || dek.trim().length < 3)) {
+      toast.error("Series Synopsis / Premise is mandatory.");
+      return { success: false };
+    }
+
+    if (status !== "DRAFT") {
+      if (!isMultiChapter && (!body.trim() || body.trim().length < 100)) {
+        toast.error("Story body is too short for submission", {
+          description: "Story content must be at least 100 characters to submit for review.",
+        });
+        return { success: false };
+      }
+      if (isMultiChapter && chapters.length === 0 && (!body.trim() || body.trim().length < 100)) {
+        toast.error("Please add at least one chapter before submitting your series.", {
+          description: "Switch to the Chapters tab to write and save your first chapter.",
+        });
+        return { success: false };
+      }
     }
 
     setIsSubmitting(true);
@@ -241,31 +658,85 @@ export function StoryEditor({
         content: body,
         category: effectiveCategory,
         tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
-        reading_time: Number(readingTimeInput) || 5,
-        estimated_reading_time: Number(readingTimeInput) || 5,
+        reading_time: Number(readingTimeInput) || (isMultiChapter ? totalSeriesMinutes : 5),
+        estimated_reading_time: Number(readingTimeInput) || (isMultiChapter ? totalSeriesMinutes : 5),
+        is_multi_chapter: isMultiChapter,
+        series_status: isMultiChapter ? seriesStatus : "ONGOING",
         status: status,
       };
 
+      let resolvedSlug: string | null = activeEditingSlug || story?.slug || null;
       const targetSlug = activeEditingSlug || story?.slug;
       if (targetSlug) {
         const res = await api.patch(`${endpoint}${targetSlug}/`, payload);
         const updatedStory = res.data?.data || res.data;
-        if (updatedStory?.slug || updatedStory?.id) {
-          setActiveEditingSlug(updatedStory.slug || updatedStory.id);
+        const newSlug = updatedStory?.slug || updatedStory?.id;
+        if (newSlug) {
+          resolvedSlug = String(newSlug);
+          setActiveEditingSlug(resolvedSlug);
         }
-        toast.success(status === "DRAFT" ? "Draft Updated!" : "Story Updated!", {
-          description: `"${title}" has been saved successfully.`,
-        });
       } else {
         const res = await api.post(endpoint, payload);
         const createdStory = res.data?.data || res.data;
-        if (createdStory?.slug || createdStory?.id) {
-          setActiveEditingSlug(createdStory.slug || createdStory.id);
+        const newSlug = createdStory?.slug || createdStory?.id;
+        if (newSlug) {
+          resolvedSlug = String(newSlug);
+          setActiveEditingSlug(resolvedSlug);
         }
-        toast.success(status === "DRAFT" ? "Draft Saved!" : "Story Submitted!", {
-          description: status === "DRAFT" ? `"${title}" saved as draft. You can continue writing.` : `"${title}" submitted for editorial review.`,
-        });
       }
+
+      // If in chapters workspace or multi-chapter mode, automatically persist/update active chapter draft
+      if (resolvedSlug && isMultiChapter && (chapterTitleInput.trim() || chapterContentInput.trim())) {
+        try {
+          const endpointPrefix = isAdmin ? "/admin/stories" : "/writer/stories";
+          const activeChapter = chapters[activeChapterIndex];
+          if (activeChapter && activeChapter.id) {
+            await api.patch(`${endpointPrefix}/${resolvedSlug}/chapters/${activeChapter.id}/`, {
+              title: chapterTitleInput.trim() || `Chapter ${activeChapterIndex + 1}`,
+              content: chapterContentInput,
+            });
+          } else {
+            const chRes = await api.post(`${endpointPrefix}/${resolvedSlug}/chapters/`, {
+              title: chapterTitleInput.trim() || `Chapter ${chapters.length + 1}`,
+              content: chapterContentInput,
+              order: (activeChapter?.order) || (chapters.length > 0 ? chapters.length : 1),
+            });
+            const createdCh = chRes.data?.data || chRes.data;
+            if (createdCh) {
+              setChapters((prev) => {
+                if (prev.length === 0) return [createdCh];
+                const next = [...prev];
+                next[activeChapterIndex] = createdCh;
+                return next;
+              });
+            }
+          }
+          await refetchChapters();
+        } catch {
+          // Chapter sync handled gracefully
+        }
+      }
+
+      // If submitting for review as writer, call the explicit submit endpoint to transition status
+      if (status === "PENDING_REVIEW" && resolvedSlug && !isAdmin) {
+        await api.post(`/writer/stories/${resolvedSlug}/submit/`);
+      }
+
+      toast.success(
+        status === "DRAFT"
+          ? "Draft Saved!"
+          : status === "PUBLISHED"
+          ? "Story Published Live!"
+          : isMultiChapter
+          ? "Series Submitted for Editorial Review!"
+          : "Story Submitted for Editorial Review!",
+        {
+          description:
+            status === "DRAFT"
+              ? `"${title}" saved as draft. You can continue writing.`
+              : `"${title}" has been submitted and is now in the editorial review queue.`,
+        }
+      );
 
       // If submitted for review or published, clear and refresh
       if (status !== "DRAFT") {
@@ -273,23 +744,28 @@ export function StoryEditor({
         setTitle("");
         setDek("");
         setBody("");
+        setIsMultiChapter(false);
+        setSeriesStatus("ONGOING");
+        setChapters([]);
         setTagsInput("");
         setReadingTimeInput("5");
-        savedSnapshotRef.current = serializeStoryState("", "", "", "", "");
+        savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false);
       } else {
         // Saved as draft: update baseline snapshot so form is clean
-        savedSnapshotRef.current = serializeStoryState(title, dek, body, selectedCategory, tagsInput);
+        savedSnapshotRef.current = serializeStoryState(title, dek, body, selectedCategory, tagsInput, isMultiChapter);
       }
 
       queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
       queryClient.invalidateQueries({ queryKey: ["writer-stories"] });
-      return true;
+      queryClient.invalidateQueries({ queryKey: ["writer-active-ongoing-series"] });
+      queryClient.invalidateQueries({ queryKey: ["writer-all-series"] });
+      return { success: true, slug: resolvedSlug || undefined };
     } catch (err: any) {
       toast.error("Failed to save story", {
         description: err.response?.data?.message || err.response?.data?.error || err.message || "An unexpected error occurred.",
       });
-      return false;
+      return { success: false };
     } finally {
       setIsSubmitting(false);
     }
@@ -302,6 +778,15 @@ export function StoryEditor({
     setDek(st.subtitle || st.seo_description || "");
     const initialContent = st.content || st.plain_text_content || (Array.isArray(st.body) ? st.body.join("\n\n") : st.body) || "";
     setBody(initialContent);
+    const isMulti = Boolean(st.is_multi_chapter || st.chapters?.length > 0 || (st.chapter_count && st.chapter_count > 0));
+    setIsMultiChapter(isMulti);
+    setSeriesStatus(st.series_status || "ONGOING");
+    if (st.chapters && Array.isArray(st.chapters) && st.chapters.length > 0) {
+      setChapters(st.chapters);
+      setActiveChapterIndex(0);
+      setChapterTitleInput(st.chapters[0]?.title || "");
+      setChapterContentInput(st.chapters[0]?.content || "");
+    }
     setReadingTimeInput(String(st.estimated_reading_time || st.reading_time || 5));
     setRejectionFeedback(st.rejection_feedback || st.feedback || "");
     const catVal = st.category?.slug || st.category?.id || "";
@@ -318,36 +803,76 @@ export function StoryEditor({
       initialContent,
       catVal,
       tagsVal,
+      isMulti,
     );
-    setActiveTab("editor");
+    setActiveTab(isMulti ? "chapters" : "editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
-    toast.info(`Loaded "${st.title}" into editor.`);
+    toast.info(`Loaded "${st.title}" into ${isMulti ? "Chapters workspace" : "story editor"}.`);
 
-    // Fetch full story details asynchronously to guarantee rich content is retrieved
+    // Fetch full story details and dedicated chapter list concurrently
     try {
-      const endpoint = isAdmin ? `/admin/stories/${slugOrId}/` : `/writer/stories/${slugOrId}/`;
-      const res = await api.get(endpoint);
-      const fullStory = res.data?.data || res.data;
-      if (fullStory) {
-        if (fullStory.content) setBody(fullStory.content);
-        if (fullStory.title) setTitle(fullStory.title);
-        if (fullStory.subtitle || fullStory.dek) setDek(fullStory.subtitle || fullStory.dek);
-        const resolvedCat = fullStory.category?.slug || fullStory.category?.id || catVal;
-        if (resolvedCat) {
-          setSelectedCategory(resolvedCat);
+      const endpointPrefix = isAdmin ? "/admin/stories" : "/writer/stories";
+      const [storyRes, chaptersRes] = await Promise.allSettled([
+        api.get(`${endpointPrefix}/${slugOrId}/`),
+        api.get(`${endpointPrefix}/${slugOrId}/chapters/`),
+      ]);
+
+      let loadedChapters: any[] = [];
+      if (chaptersRes.status === "fulfilled") {
+        const val: any = chaptersRes.value;
+        const chData = val?.data?.results || val?.data?.data || val?.data || val?.results || (Array.isArray(val) ? val : []);
+        if (Array.isArray(chData) && chData.length > 0) {
+          loadedChapters = chData;
         }
-        let resolvedTags = tagsVal;
-        if (fullStory.tags && Array.isArray(fullStory.tags)) {
-          resolvedTags = fullStory.tags.map((t: any) => t.name || t).join(", ");
-          setTagsInput(resolvedTags);
+      }
+
+      if (storyRes.status === "fulfilled") {
+        const val: any = storyRes.value;
+        const fullStory = val?.data?.data || val?.data || val;
+        if (fullStory && typeof fullStory === "object") {
+          if (fullStory.content) setBody(fullStory.content);
+          if (fullStory.title) setTitle(fullStory.title);
+          if (fullStory.subtitle || fullStory.dek) setDek(fullStory.subtitle || fullStory.dek);
+          if (fullStory.series_status) setSeriesStatus(fullStory.series_status);
+          const resolvedCat = fullStory.category?.slug || fullStory.category?.id || catVal;
+          if (resolvedCat) {
+            setSelectedCategory(resolvedCat);
+          }
+          let resolvedTags = tagsVal;
+          if (fullStory.tags && Array.isArray(fullStory.tags)) {
+            resolvedTags = fullStory.tags.map((t: any) => t.name || t).join(", ");
+            setTagsInput(resolvedTags);
+          }
+          if (loadedChapters.length === 0 && fullStory.chapters && Array.isArray(fullStory.chapters) && fullStory.chapters.length > 0) {
+            loadedChapters = fullStory.chapters;
+          }
+          const resolvedMulti = Boolean(
+            fullStory.is_multi_chapter ||
+            loadedChapters.length > 0 ||
+            (fullStory.chapter_count && fullStory.chapter_count > 0)
+          );
+          setIsMultiChapter(resolvedMulti);
+          if (resolvedMulti) {
+            setActiveTab("chapters");
+          }
+          savedSnapshotRef.current = serializeStoryState(
+            fullStory.title || st.title || "",
+            fullStory.subtitle || fullStory.dek || st.subtitle || "",
+            fullStory.content || initialContent,
+            resolvedCat,
+            resolvedTags,
+            resolvedMulti,
+          );
         }
-        savedSnapshotRef.current = serializeStoryState(
-          fullStory.title || st.title || "",
-          fullStory.subtitle || fullStory.dek || st.subtitle || "",
-          fullStory.content || initialContent,
-          resolvedCat,
-          resolvedTags,
-        );
+      }
+
+      if (loadedChapters.length > 0) {
+        setChapters(loadedChapters);
+        setActiveChapterIndex(0);
+        setChapterTitleInput(loadedChapters[0]?.title || "");
+        setChapterContentInput(loadedChapters[0]?.content || "");
+        setIsMultiChapter(true);
+        setActiveTab("chapters");
       }
     } catch {
       // Keep existing populated data
@@ -365,17 +890,44 @@ export function StoryEditor({
     setTitle("");
     setDek("");
     setBody("");
+    setIsMultiChapter(false);
+    setSeriesStatus("ONGOING");
+    setChapters([]);
+    setActiveChapterIndex(0);
+    setChapterTitleInput("");
+    setChapterContentInput("");
     setTagsInput("");
     setReadingTimeInput("5");
     setRejectionFeedback("");
     setRejectionReviews([]);
-    savedSnapshotRef.current = serializeStoryState("", "", "", "", "");
+    savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false);
     toast.info("Cleared editor canvas to write new story.");
   };
 
+  const handleToggleMultiChapterInEditor = () => {
+    if (!isMultiChapter) {
+      if (
+        activeOngoingSeriesData &&
+        activeOngoingSeriesData.slug !== activeEditingSlug &&
+        activeOngoingSeriesData.id !== activeEditingSlug
+      ) {
+        setActiveSeriesAlertModal({
+          isOpen: true,
+          activeStory: activeOngoingSeriesData,
+        });
+        return;
+      }
+      setIsMultiChapter(true);
+      setActiveTab("chapters");
+      toast.info("Multi-Chapter mode enabled! Switched to Chapters workspace.");
+    } else {
+      setIsMultiChapter(false);
+    }
+  };
+
   const handleSaveAndLeave = async () => {
-    const success = await handleSave("DRAFT");
-    if (success) {
+    const res = await handleSave("DRAFT");
+    if (res?.success) {
       blocker.proceed?.();
     }
   };
@@ -385,9 +937,177 @@ export function StoryEditor({
   };
 
   const handleDiscardAndLeave = () => {
-    savedSnapshotRef.current = serializeStoryState(title, dek, body, selectedCategory, tagsInput);
+    savedSnapshotRef.current = serializeStoryState(title, dek, body, selectedCategory, tagsInput, isMultiChapter);
     blocker.proceed?.();
   };
+
+  const publishingSidebar = (
+    <aside className="space-y-6">
+      <Panel className="p-6 space-y-5">
+        <div>
+          <h2 className="text-lg font-display font-bold text-heading">Publishing Controls</h2>
+          <div className="mt-2.5 flex items-center justify-between">
+            <Badge tone={activeEditingSlug ? "info" : isAdmin ? "success" : "warning"}>
+              {activeEditingSlug ? "Editing Mode" : isAdmin ? "Ready to publish" : "Draft"}
+            </Badge>
+            {activeEditingSlug && (
+              <button
+                type="button"
+                onClick={handleClearEditor}
+                className="text-[0.75rem] font-bold text-primary hover:underline cursor-pointer"
+              >
+                + New Story
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-4 space-y-4">
+          {/* Multi-Chapter Switch Card: Only displayed in Single-Story Editor view */}
+          {activeTab === "editor" && (
+            <div
+              onClick={handleToggleMultiChapterInEditor}
+              className="group relative cursor-pointer rounded-2xl border border-border bg-surface-alt/40 p-3.5 space-y-2 transition-all hover:border-primary/50 hover:bg-primary-light/10"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="size-4 text-primary" />
+                  <span className="text-xs font-bold text-heading">Multi-Chapter Series</span>
+                </div>
+                <label
+                  className="relative inline-flex cursor-pointer items-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isMultiChapter}
+                    onChange={handleToggleMultiChapterInEditor}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-5 w-9 rounded-full bg-border peer-checked:bg-primary after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-focus:outline-none" />
+                </label>
+              </div>
+              <p className="text-[0.75rem] text-subtle leading-relaxed">
+                Serialize this story with numbered episodes, a Table of Contents, and chapter navigation.
+              </p>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-primary pt-0.5 group-hover:underline">
+                <span>Switch to Chapters Workspace</span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+          )}
+
+          <Field label="Category">
+            <CustomSelect
+              value={selectedCategory || (categoriesList?.[0]?.slug ?? "")}
+              onChange={(val) => setSelectedCategory(val)}
+              options={
+                categoriesList.length === 0
+                  ? [{ label: "General", value: "" }]
+                  : categoriesList.map((c: any) => ({
+                      label: c.name,
+                      value: c.slug || c.id,
+                    }))
+              }
+            />
+
+            <div className="mt-2 flex items-center justify-between">
+              <button
+                type="button"
+                suppressHydrationWarning
+                onClick={() => setShowAddCategoryModal((v) => !v)}
+                className="inline-flex items-center gap-1 font-sans text-[0.8125rem] font-bold text-primary hover:text-primary-hover transition-colors"
+              >
+                <Plus className="size-3.5" /> Add Category
+              </button>
+            </div>
+
+            {showAddCategoryModal && (
+              <form onSubmit={handleCreateCategory} className="mt-2.5 space-y-2.5 rounded-xl border border-primary/20 bg-primary-light/40 p-3.5">
+                <p className="font-sans text-[0.8125rem] font-bold text-heading">New Category</p>
+                <Input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Category name (e.g. Mythology)"
+                  required
+                  className="h-9 text-[0.8125rem]"
+                />
+                <Textarea
+                  value={newCategoryDesc}
+                  onChange={(e) => setNewCategoryDesc(e.target.value)}
+                  placeholder="Short description"
+                  rows={2}
+                  className="text-[0.75rem]"
+                />
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="ghostOutline"
+                    size="sm"
+                    onClick={() => setShowAddCategoryModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    disabled={isCreatingCategory}
+                  >
+                    {isCreatingCategory ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </Field>
+
+          <Field label="Tags" hint="Comma separated">
+            <Input
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              placeholder="memoir, monsoon, family"
+              className="h-11 text-[0.875rem]"
+            />
+          </Field>
+
+          <Field
+            label="Reading Time (mins)"
+            hint={
+              isReadingTimeCustom ? (
+                <span>
+                  Custom set ·{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsReadingTimeCustom(false);
+                      setReadingTimeInput(String(minutes || 1));
+                    }}
+                    className="text-primary font-bold underline hover:opacity-80 cursor-pointer"
+                  >
+                    Auto-calculate (~{minutes || 1} min)
+                  </button>
+                </span>
+              ) : (
+                `Auto-calculated: ~${minutes || 1} min (${words} words)`
+              )
+            }
+          >
+            <Input
+              type="number"
+              min="1"
+              value={readingTimeInput}
+              onChange={(e) => {
+                setIsReadingTimeCustom(true);
+                setReadingTimeInput(e.target.value);
+              }}
+              placeholder={String(minutes || 1)}
+              className="h-11 text-[0.875rem]"
+            />
+          </Field>
+        </div>
+      </Panel>
+    </aside>
+  );
 
   return (
     <AppShell
@@ -398,30 +1118,44 @@ export function StoryEditor({
           ? "Manage authored stories, review performance, or make live edits."
           : activeTab === "drafts"
             ? "Your unfinished drafts and revision requests — continue writing anytime."
-            : activeEditingSlug
-              ? "Editing active publication. Save changes or publish revisions."
-              : story
-                ? "Revise, then resubmit. Editors see a diff of what changed."
-                : isAdmin
-                  ? "Write, manage, and publish stories directly."
-                  : "Start with a sentence you'd read twice. Everything saves as you type."
+            : activeTab === "chapters"
+              ? "Manage and edit serialized chapters, arrange story order, and polish episodes."
+              : activeEditingSlug
+                ? "Editing active publication. Save changes or publish revisions."
+                : story
+                  ? "Revise, then resubmit. Editors see a diff of what changed."
+                  : isAdmin
+                    ? "Write, manage, and publish stories directly."
+                    : "Start with a sentence you'd read twice. Everything saves as you type."
       }
       actions={
-        activeTab === "editor" ? (
+        activeTab === "editor" || activeTab === "chapters" ? (
           <>
             {activeEditingSlug && (
               <Button variant="ghostOutline" size="sm" onClick={handleClearEditor} className="gap-1.5 text-xs">
                 <Plus className="size-3.5" /> New Story
               </Button>
             )}
-            <Button variant="ghostOutline" size="sm" onClick={() => setPreview((v) => !v)} className="gap-1.5">
-              {preview ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              {preview ? "Edit" : "Preview"}
-            </Button>
+            {activeTab === "editor" && (
+              <Button variant="ghostOutline" size="sm" onClick={() => setPreview((v) => !v)} className="gap-1.5">
+                {preview ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                {preview ? "Edit" : "Preview"}
+              </Button>
+            )}
+            {activeTab === "chapters" && (
+              <Button
+                variant="ghostOutline"
+                size="sm"
+                onClick={handleAddNewChapter}
+                className="gap-1.5 text-primary font-bold"
+              >
+                <Plus className="size-4" /> New Chapter
+              </Button>
+            )}
             <Button
               variant="soft"
               size="sm"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isSavingChapter}
               onClick={() => handleSave("DRAFT")}
               className={cn("gap-1.5", isDirty && "ring-2 ring-primary/50 text-primary font-semibold")}
             >
@@ -431,7 +1165,7 @@ export function StoryEditor({
             <Button
               variant="primary"
               size="sm"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isSavingChapter}
               onClick={() => handleSave(isAdmin ? "PUBLISHED" : "PENDING_REVIEW")}
               className="gap-1.5"
             >
@@ -450,6 +1184,7 @@ export function StoryEditor({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
+            suppressHydrationWarning
             onClick={() => setActiveTab("editor")}
             className={cn(
               "flex items-center gap-2 rounded-xl px-4 py-2 font-sans text-[0.875rem] font-bold transition-all",
@@ -462,6 +1197,35 @@ export function StoryEditor({
           </button>
           <button
             type="button"
+            suppressHydrationWarning
+            onClick={() => {
+              setIsMultiChapter(true);
+              setActiveTab("chapters");
+            }}
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-4 py-2 font-sans text-[0.875rem] font-bold transition-all",
+              activeTab === "chapters"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-surface text-body hover:bg-surface-hover border border-border"
+            )}
+          >
+            <Layers className="size-4" /> Chapters
+            <span
+              className={cn(
+                "ml-1 rounded-full px-2 py-0.5 text-[0.75rem]",
+                activeTab === "chapters"
+                  ? "bg-primary-foreground/20 text-primary-foreground"
+                  : chapters.length > 0
+                    ? "bg-primary-light text-primary font-bold"
+                    : "bg-surface-alt text-subtle"
+              )}
+            >
+              {chapters.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            suppressHydrationWarning
             onClick={() => setActiveTab("library")}
             className={cn(
               "flex items-center gap-2 rounded-xl px-4 py-2 font-sans text-[0.875rem] font-bold transition-all",
@@ -480,6 +1244,7 @@ export function StoryEditor({
           </button>
           <button
             type="button"
+            suppressHydrationWarning
             onClick={() => setActiveTab("drafts")}
             className={cn(
               "flex items-center gap-2 rounded-xl px-4 py-2 font-sans text-[0.875rem] font-bold transition-all",
@@ -599,7 +1364,7 @@ export function StoryEditor({
                   />
                 </Field>
 
-                <Field label="Story Body" hint="Write prose content. Separate paragraphs with a blank line.">
+                <Field label="Story Body" hint={isMultiChapter ? "Introductory overview or prologue. Write detailed episodes in the Chapters tab." : "Write prose content. Separate paragraphs with a blank line."}>
                   <Textarea
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
@@ -613,138 +1378,53 @@ export function StoryEditor({
           </div>
 
           {/* Right Compact Sidebar Controls */}
-          <aside className="space-y-6">
-            <Panel className="p-6 space-y-5">
-              <div>
-                <h2 className="text-lg font-display font-bold text-heading">Publishing Controls</h2>
-                <div className="mt-2.5 flex items-center justify-between">
-                  <Badge tone={activeEditingSlug ? "info" : isAdmin ? "success" : "warning"}>
-                    {activeEditingSlug ? "Editing Mode" : isAdmin ? "Ready to publish" : "Draft"}
-                  </Badge>
-                  {activeEditingSlug && (
-                    <button
-                      type="button"
-                      onClick={handleClearEditor}
-                      className="text-[0.75rem] font-bold text-primary hover:underline"
-                    >
-                      + New Story
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t border-border pt-4 space-y-4">
-                <Field label="Category">
-                  <CustomSelect
-                    value={selectedCategory || (categoriesList?.[0]?.slug ?? "")}
-                    onChange={(val) => setSelectedCategory(val)}
-                    options={
-                      categoriesList.length === 0
-                        ? [{ label: "General", value: "" }]
-                        : categoriesList.map((c: any) => ({
-                            label: c.name,
-                            value: c.slug || c.id,
-                          }))
-                    }
-                  />
-
-                  <div className="mt-2 flex items-center justify-between">
-                    <button
-                      type="button"
-                      suppressHydrationWarning
-                      onClick={() => setShowAddCategoryModal((v) => !v)}
-                      className="inline-flex items-center gap-1 font-sans text-[0.8125rem] font-bold text-primary hover:text-primary-hover transition-colors"
-                    >
-                      <Plus className="size-3.5" /> Add Category
-                    </button>
-                  </div>
-
-                  {showAddCategoryModal && (
-                    <form onSubmit={handleCreateCategory} className="mt-2.5 space-y-2.5 rounded-xl border border-primary/20 bg-primary-light/40 p-3.5">
-                      <p className="font-sans text-[0.8125rem] font-bold text-heading">New Category</p>
-                      <Input
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        placeholder="Category name (e.g. Mythology)"
-                        required
-                        className="h-9 text-[0.8125rem]"
-                      />
-                      <Textarea
-                        value={newCategoryDesc}
-                        onChange={(e) => setNewCategoryDesc(e.target.value)}
-                        placeholder="Short description"
-                        rows={2}
-                        className="text-[0.75rem]"
-                      />
-                      <div className="flex items-center justify-end gap-2 pt-1">
-                        <Button
-                          type="button"
-                          variant="ghostOutline"
-                          size="sm"
-                          onClick={() => setShowAddCategoryModal(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          variant="primary"
-                          size="sm"
-                          disabled={isCreatingCategory}
-                        >
-                          {isCreatingCategory ? "Saving..." : "Save"}
-                        </Button>
-                      </div>
-                    </form>
-                  )}
-                </Field>
-
-                <Field label="Tags" hint="Comma separated">
-                  <Input
-                    value={tagsInput}
-                    onChange={(e) => setTagsInput(e.target.value)}
-                    placeholder="memoir, monsoon, family"
-                    className="h-11 text-[0.875rem]"
-                  />
-                </Field>
-
-                <Field
-                  label="Reading Time (mins)"
-                  hint={
-                    isReadingTimeCustom ? (
-                      <span>
-                        Custom set ·{" "}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsReadingTimeCustom(false);
-                            setReadingTimeInput(String(minutes || 1));
-                          }}
-                          className="text-primary font-bold underline hover:opacity-80 cursor-pointer"
-                        >
-                          Auto-calculate (~{minutes || 1} min)
-                        </button>
-                      </span>
-                    ) : (
-                      `Auto-calculated: ~${minutes || 1} min (${words} words)`
-                    )
-                  }
-                >
-                  <Input
-                    type="number"
-                    min="1"
-                    value={readingTimeInput}
-                    onChange={(e) => {
-                      setIsReadingTimeCustom(true);
-                      setReadingTimeInput(e.target.value);
-                    }}
-                    placeholder={String(minutes || 1)}
-                    className="h-11 text-[0.875rem]"
-                  />
-                </Field>
-              </div>
-            </Panel>
-          </aside>
+          {publishingSidebar}
         </div>
+      )}
+
+      {/* View 4: Multi-Chapter Series Editor */}
+      {activeTab === "chapters" && (
+        <ChaptersWorkspace
+          role={role}
+          activeEditingSlug={activeEditingSlug}
+          title={title}
+          setTitle={setTitle}
+          dek={dek}
+          setDek={setDek}
+          seriesStatus={seriesStatus}
+          isChangingSeriesStatus={isChangingSeriesStatus}
+          showSeriesMeta={showSeriesMeta}
+          setShowSeriesMeta={setShowSeriesMeta}
+          handleStartSeries={handleStartSeries}
+          handleToggleSeriesStatus={handleToggleSeriesStatus}
+          seriesSelectorOpen={seriesSelectorOpen}
+          setSeriesSelectorOpen={setSeriesSelectorOpen}
+          allSeriesData={allSeriesData || []}
+          activeOngoingSeriesData={activeOngoingSeriesData}
+          handleEditStory={handleEditStory}
+          handleClearEditor={handleClearEditor}
+          setIsMultiChapter={setIsMultiChapter}
+          setActiveTab={setActiveTab}
+          chapters={chapters}
+          activeChapterIndex={activeChapterIndex}
+          chapterTitleInput={chapterTitleInput}
+          setChapterTitleInput={setChapterTitleInput}
+          chapterContentInput={chapterContentInput}
+          setChapterContentInput={setChapterContentInput}
+          isSavingChapter={isSavingChapter}
+          handleSelectChapter={handleSelectChapter}
+          handleSaveCurrentChapter={handleSaveCurrentChapter}
+          handleAddNewChapter={handleAddNewChapter}
+          handleDeleteChapter={handleDeleteChapter}
+          handleReorderChapter={handleReorderChapter}
+          rejectionFeedback={rejectionFeedback}
+          rejectionReviews={rejectionReviews}
+          totalChapterWords={totalChapterWords}
+          totalSeriesWords={totalSeriesWords}
+          totalSeriesMinutes={totalSeriesMinutes}
+          isSubmitting={isSubmitting}
+          publishingSidebar={publishingSidebar}
+        />
       )}
 
       {/* View 2: Library / Stories Desk View */}
@@ -775,6 +1455,8 @@ export function StoryEditor({
                 const likesCount = st.likes_count ?? st.likes ?? 0;
                 const bookmarksCount = st.bookmarks_count ?? st.bookmarks ?? 0;
                 const readingTime = st.estimated_reading_time || st.reading_time || 5;
+                const isMulti = Boolean(st.is_multi_chapter || (st.chapters && st.chapters.length > 0));
+                const isCompletedSeries = st.series_status === "COMPLETED" || st.series_status === "completed";
 
                 return (
                   <div
@@ -783,9 +1465,20 @@ export function StoryEditor({
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <Badge tone={st.status === "PUBLISHED" ? "success" : st.status === "PENDING_REVIEW" ? "warning" : st.status === "REJECTED" ? "error" : "info"}>
-                          {st.status === "PENDING_REVIEW" ? "In Review" : st.status}
-                        </Badge>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge tone={st.status === "PUBLISHED" ? "success" : st.status === "PENDING_REVIEW" ? "warning" : st.status === "REJECTED" ? "error" : "info"}>
+                            {st.status === "PENDING_REVIEW" ? "In Review" : st.status}
+                          </Badge>
+                          {isMulti && (
+                            <Badge
+                              tone={isCompletedSeries ? "neutral" : "success"}
+                              className="gap-1 font-bold text-[0.6875rem]"
+                            >
+                              <Layers className="size-3" />
+                              {isCompletedSeries ? "🏁 Completed" : "🟢 Ongoing"} · {st.chapters_count ?? st.chapters?.length ?? "Series"}
+                            </Badge>
+                          )}
+                        </div>
                         <span className="font-sans text-[0.75rem] font-bold text-subtle truncate">
                           {st.category?.name || "General"}
                         </span>
@@ -834,9 +1527,9 @@ export function StoryEditor({
                           variant="ghostOutline"
                           size="sm"
                           onClick={() => handleEditStory(st)}
-                          className="h-8 px-2.5 text-xs gap-1"
+                          className="h-8 px-2.5 text-xs gap-1 font-bold"
                         >
-                          <Edit3 className="size-3" /> Edit
+                          <Edit3 className="size-3" /> {isMulti ? "Edit Series" : "Edit"}
                         </Button>
                         <Button
                           variant="danger"
@@ -905,6 +1598,8 @@ export function StoryEditor({
               {draftStoriesList.map((st: any) => {
                 const wordsCount = st.word_count || (st.content ? st.content.trim().split(/\s+/).filter(Boolean).length : 0);
                 const readingTime = st.estimated_reading_time || st.reading_time || 5;
+                const isMulti = Boolean(st.is_multi_chapter || (st.chapters && st.chapters.length > 0));
+                const isCompletedSeries = st.series_status === "COMPLETED" || st.series_status === "completed";
 
                 return (
                   <div
@@ -913,9 +1608,20 @@ export function StoryEditor({
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <Badge tone={st.status === "REJECTED" ? "error" : "warning"}>
-                          {st.status === "REJECTED" ? "Needs Revision" : "Draft"}
-                        </Badge>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge tone={st.status === "REJECTED" ? "error" : "warning"}>
+                            {st.status === "REJECTED" ? "Needs Revision" : "Draft"}
+                          </Badge>
+                          {isMulti && (
+                            <Badge
+                              tone={isCompletedSeries ? "neutral" : "success"}
+                              className="gap-1 font-bold text-[0.6875rem]"
+                            >
+                              <Layers className="size-3" />
+                              {isCompletedSeries ? "🏁 Completed" : "🟢 Ongoing"} · {st.chapters_count ?? st.chapters?.length ?? "Series"}
+                            </Badge>
+                          )}
+                        </div>
                         <span className="font-sans text-[0.75rem] font-bold text-subtle truncate">
                           {st.category?.name || "General"}
                         </span>
@@ -958,7 +1664,7 @@ export function StoryEditor({
                           onClick={() => handleEditStory(st)}
                           className="h-8 px-3 text-xs gap-1 font-bold"
                         >
-                          <Edit3 className="size-3" /> Continue
+                          <Edit3 className="size-3" /> {isMulti ? "Continue Series" : "Continue"}
                         </Button>
                         <Button
                           variant="danger"
@@ -992,6 +1698,68 @@ export function StoryEditor({
         onStay={handleStay}
         onDiscardAndLeave={handleDiscardAndLeave}
       />
+
+      {/* Active Ongoing Series Single-Series Restriction Modal */}
+      {activeSeriesAlertModal?.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in"
+            onClick={() => setActiveSeriesAlertModal(null)}
+          />
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl space-y-4 animate-in zoom-in-95 z-10">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-base font-bold text-heading">
+                  Active Ongoing Series in Progress
+                </h3>
+                <p className="text-xs text-subtle font-medium">
+                  Single Active Series Rule
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-body leading-relaxed">
+              You already have an active series in progress:{" "}
+              <strong className="text-heading">"{activeSeriesAlertModal.activeStory?.title}"</strong>.
+              Tossatale allows writers to focus on one active serialized series at a time.
+            </p>
+
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-subtle flex items-start gap-2">
+              <Info className="size-4 text-primary shrink-0 mt-0.5" />
+              <span>
+                To start a brand new series, first complete the narrative arc of your active series in the Chapters workspace by clicking <strong>"Mark as Completed"</strong>.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                type="button"
+                variant="ghostOutline"
+                size="sm"
+                onClick={() => setActiveSeriesAlertModal(null)}
+              >
+                Stay in Editor
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  const storyToOpen = activeSeriesAlertModal.activeStory;
+                  setActiveSeriesAlertModal(null);
+                  handleEditStory(storyToOpen);
+                }}
+                className="gap-1.5"
+              >
+                <Layers className="size-3.5" /> Open Ongoing Series
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

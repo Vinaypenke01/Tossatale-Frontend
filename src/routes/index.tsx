@@ -100,18 +100,17 @@ function SectionDivider() {
   );
 }
 
-function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: boolean }) {
+function HandpickedTales({ stories, isLoading }: { stories?: any[]; isLoading?: boolean }) {
   const displayList = (stories && Array.isArray(stories) && stories.length > 0)
     ? stories.slice(0, 2)
     : [];
 
   return (
-    <section className="bg-slate-50 dark:bg-black py-12 sm:py-16 lg:py-24 overflow-hidden">
+    <section className="bg-slate-50 dark:bg-black py-16 lg:py-20">
       <div className="mx-auto max-w-[1240px] px-4 sm:px-5 lg:px-8">
         <Reveal>
           <SectionHeading
-            eyebrow="Featured"
-            title="Featured stories"
+            title="Handpicked tales"
           />
         </Reveal>
 
@@ -120,14 +119,14 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
         ) : displayList.length === 0 ? (
           <EmptySectionFallback
             icon="write"
-            title="No Featured Stories Yet"
-            description="Selected longform narratives handpicked by our editorial desk will appear here."
+            title="No Handpicked Tales Yet"
+            description="Selected short stories from our original collection will appear here."
           />
         ) : (
           <div className="mt-8 sm:mt-10 grid gap-6 sm:gap-8 md:grid-cols-2">
             {displayList.map((story, i) => (
               <Reveal key={story.slug || i} delay={i * 70}>
-                <div className="group flex flex-col justify-between h-full rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-7 lg:p-9 border-none">
+                <div className="group flex flex-col justify-between h-full rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-7 lg:p-9">
                   <div>
                     <div className="flex items-center gap-2.5">
                       <CategoryPill>{story.category?.name || story.category || "Featured"}</CategoryPill>
@@ -143,12 +142,17 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
 
                   <div className="mt-6 sm:mt-8 border-t border-divider pt-4 sm:pt-5">
                     <div className="flex items-center justify-between gap-2.5 sm:gap-3">
-                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                        <div className="size-8 sm:size-9 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.75rem] sm:text-[0.8125rem] grid place-items-center shrink-0">
-                          {((story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2)).toUpperCase()}
-                        </div>
+                      <Link
+                        to="/writers/$slug"
+                        params={{ slug: story.writer?.slug || "writer" }}
+                        className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 group/author"
+                      >
+                        <Avatar
+                          src={story.writer?.profile_photo}
+                          size="sm"
+                        />
                         <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-1.5 font-sans text-[0.8125rem] sm:text-[0.875rem] font-bold text-heading truncate">
+                          <p className="flex items-center gap-1.5 font-sans text-[0.8125rem] sm:text-[0.875rem] font-bold text-heading truncate group-hover/author:text-primary transition-colors">
                             {story.writer?.name || story.writer?.user?.full_name || "Author"} {story.writer?.is_verified && <VerifiedBadge />}
                           </p>
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.6875rem] sm:text-[0.75rem] text-subtle mt-0.5">
@@ -159,7 +163,7 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
                             </span>
                           </div>
                         </div>
-                      </div>
+                      </Link>
 
                       <Link
                         to="/stories/$slug"
@@ -175,8 +179,10 @@ function FeaturedStories({ stories, isLoading }: { stories?: any[]; isLoading?: 
                     <div className="mt-3.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-divider flex items-center justify-between text-[0.75rem] sm:text-[0.8125rem]">
                       <div className="flex items-center gap-3.5 sm:gap-4">
                         <span className="inline-flex items-center gap-1.5" title="Likes">
-                          <Heart className="size-3.5 text-rose-500 fill-rose-500/20" />
-                          <span className="font-bold text-black dark:text-white text-[0.75rem] sm:text-[0.8125rem]">{story.likes_count ?? story.likes ?? 0}</span>
+                          <Heart className={cn("size-3.5 transition-colors", story.is_liked ? "text-rose-500 fill-rose-500" : "text-rose-500/60 fill-rose-500/20")} />
+                          <span className={cn("font-bold text-[0.75rem] sm:text-[0.8125rem]", story.is_liked ? "text-rose-600 dark:text-rose-400" : "text-black dark:text-white")}>
+                            {story.likes_count ?? story.likes ?? 0}
+                          </span>
                         </span>
                         <span className="inline-flex items-center gap-1.5" title="Views">
                           <Eye className="size-3.5 text-blue-500" />
@@ -256,7 +262,7 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
           <SectionHeading
             eyebrow="Popular now"
             title="Trending stories"
-            blurb="The most-read, liked, and bookmarked pieces across tossatale."
+            blurb="The most-read, liked, and bookmarked tales across tossatale."
           />
         </Reveal>
 
@@ -272,7 +278,7 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
           <div className="mt-8 sm:mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {stories.slice(0, 6).map((story, i) => (
               <Reveal key={story.slug || i} delay={i * 50} className="h-full">
-                <div className="group flex items-start gap-4 sm:gap-5 rounded-2xl bg-surface p-5 sm:p-6 border border-border/80 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 h-full">
+                <div className="group flex items-start gap-4 sm:gap-5 rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 h-full">
                   {/* Big Number */}
                   <span className="font-sans text-[2.1rem] sm:text-[2.25rem] font-black leading-none text-slate-300 dark:text-zinc-700 shrink-0 select-none w-10 group-hover:text-primary transition-colors">
                     {String(i + 1).padStart(2, "0")}
@@ -287,9 +293,7 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
                         params={{ slug: story.writer?.slug || "writer" }}
                         className="flex items-center gap-2 group/author w-max max-w-full"
                       >
-                        <div className="size-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 font-bold text-[0.625rem] grid place-items-center shrink-0">
-                          {((story.writer?.name || story.writer?.user?.full_name || "Author").substring(0, 2)).toUpperCase()}
-                        </div>
+                        <Avatar src={story.writer?.profile_photo} size="xs" />
                         <span className="font-sans text-[0.8125rem] font-bold text-heading truncate group-hover/author:text-primary transition-colors">
                           {story.writer?.name || story.writer?.user?.full_name || "Author"}
                         </span>
@@ -315,11 +319,13 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
                           <span>{story.estimated_reading_time || 5}m</span>
                         </span>
                         <span className="inline-flex items-center gap-1" title="Likes">
-                          <Heart className="size-3 text-rose-500 fill-rose-500/20" />
-                          <span className="font-bold text-black dark:text-white">{story.likes_count ?? story.likes ?? 0}</span>
+                          <Heart className={cn("size-3 transition-colors", story.is_liked ? "text-rose-500 fill-rose-500" : "text-rose-500/60 fill-rose-500/20")} />
+                          <span className={cn("font-bold", story.is_liked ? "text-rose-600 dark:text-rose-400" : "text-black dark:text-white")}>
+                            {story.likes_count ?? story.likes ?? 0}
+                          </span>
                         </span>
                         <span className="inline-flex items-center gap-1" title="Views">
-                          <Eye className="size-3 text-blue-500" />
+                          <Eye className="size-3.5 text-blue-500" />
                           <span className="font-bold text-black dark:text-white">{story.views_count ?? story.views ?? 0}</span>
                         </span>
                       </div>
@@ -368,7 +374,7 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
           <div className="mt-10 grid gap-6 md:grid-cols-2">
             {blogs.slice(0, 4).map((b, i) => (
               <Reveal key={b.slug} delay={i * 70}>
-                <div className="group flex h-full flex-col sm:flex-row items-center gap-5 p-5 rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 border-none">
+                <div className="group flex h-full flex-col sm:flex-row items-center gap-5 p-5 rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
                   <img
                     src={b.cover_image || "/assets/cover-terrace.jpg"}
                     alt=""
@@ -442,7 +448,7 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
             {videos.slice(0, 2).map((v, i) => (
               <Reveal key={v.slug || v.id || i} delay={i * 70}>
                 <div className="group block h-full">
-                  <div className="flex flex-col h-full rounded-2xl bg-surface p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 border-none">
+                  <div className="flex flex-col h-full rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
                     <div className="relative overflow-hidden rounded-xl aspect-video w-full">
                       <img
                         src={v.thumbnail_url || coverBoat}
@@ -496,7 +502,7 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
 
 function Newsletter() {
   return (
-    <section id="newsletter" className="relative overflow-hidden bg-slate-50 dark:bg-black py-14 sm:py-20">
+    <section id="newsletter" className="relative overflow-hidden bg-slate-50 dark:bg-black pt-12 sm:pt-16 pb-4 sm:pb-6">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <div className="relative overflow-hidden rounded-3xl border border-border/80 dark:border-zinc-800/80 bg-surface/90 dark:bg-zinc-900/90 p-6 sm:p-12 md:p-14 shadow-lg backdrop-blur-md text-center">
@@ -595,6 +601,82 @@ function NewsletterForm() {
   );
 }
 
+function CatSignoff() {
+  return (
+    <div className="bg-slate-50 dark:bg-black pt-1 pb-8 sm:pb-10 flex flex-col items-center justify-center text-center select-none">
+      <div className="relative group transition-transform duration-300 hover:scale-105">
+        <svg
+          viewBox="0 0 160 90"
+          className="w-28 h-16 sm:w-32 sm:h-18 text-slate-700 dark:text-zinc-300"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Yarn Ball with dynamic wound texture */}
+          <circle cx="144" cy="68" r="8" className="fill-[#FF6B35]/20 stroke-[#FF6B35]" strokeWidth="1.75" />
+          <path d="M140 63 C144 68 144 72 148 73" stroke="#FF6B35" strokeWidth="1.25" strokeLinecap="round" />
+          <path d="M138 69 C144 67 148 70 151 66" stroke="#FF6B35" strokeWidth="1.25" strokeLinecap="round" />
+          {/* Thread trailing towards the cat's playful paw */}
+          <path d="M136 71 C130 75 125 70 120 73" stroke="#FF6B35" strokeWidth="1.25" strokeLinecap="round" strokeDasharray="2 2" />
+
+          {/* Realistic Sleek Playing Cat Body */}
+          <path
+            d="M 28 20
+               C 22 20, 16 28, 16 38
+               C 16 48, 24 58, 36 60
+               C 34 68, 36 78, 44 80
+               C 49 80, 52 76, 54 70
+               C 70 70, 88 68, 102 72
+               L 106 80
+               C 108 82, 114 82, 116 78
+               L 118 72
+               C 122 71, 128 73, 134 72
+               C 137 71, 137 68, 133 67
+               C 126 66, 120 62, 116 54
+               C 122 52, 128 47, 130 42
+               C 131 39, 130 36, 126 36
+               L 128 24
+               C 128 22, 125 22, 122 25
+               L 116 32
+               C 112 30, 106 30, 102 32
+               L 96 25
+               C 93 22, 90 22, 90 24
+               L 92 36
+               C 86 42, 86 48, 88 52
+               C 74 46, 56 46, 44 50
+               C 36 46, 30 36, 32 26
+               C 33 22, 31 20, 28 20 Z"
+            className="fill-slate-800 dark:fill-zinc-200"
+          />
+
+          {/* Inner Ears - Soft Pink Accents */}
+          <path d="M 94 28 L 96 25 L 102 32 Z" className="fill-rose-300/80 dark:fill-rose-400/60" />
+          <path d="M 124 26 L 126 24 L 118 32 Z" className="fill-rose-300/80 dark:fill-rose-400/60" />
+
+          {/* Expressive Cat Eye (Amber Iris + Slit Pupil + Catchlight Highlight) */}
+          <ellipse cx="120" cy="38" rx="4" ry="2.6" transform="rotate(-10 120 38)" className="fill-amber-400" />
+          <ellipse cx="120.3" cy="38" rx="1.6" ry="2.4" transform="rotate(-10 120.3 38)" className="fill-slate-950 dark:fill-black" />
+          <circle cx="119.2" cy="36.8" r="0.9" className="fill-white" />
+          <circle cx="121.2" cy="39" r="0.4" className="fill-white/80" />
+          <path d="M 115.5 36.5 C 118 34, 123 34.5, 125.5 37.5" className="stroke-slate-950 dark:stroke-zinc-900" strokeWidth="1" strokeLinecap="round" />
+
+          {/* Cute Nose & Whiskers */}
+          <path d="M 129 42 L 132 43 L 130 45 Z" className="fill-[#FF6B35]" />
+          <path d="M 130 45 Q 128 47.5 125 46.5 M 130 45 Q 131 47.5 133 46" className="stroke-slate-400 dark:stroke-zinc-500" strokeWidth="0.9" strokeLinecap="round" />
+          <path d="M 128 43.5 L 140 40.5 M 129 45.5 L 142 45.5 M 128 47.5 L 139 50.5" className="stroke-slate-400 dark:stroke-zinc-400" strokeWidth="0.8" strokeLinecap="round" />
+
+          {/* Playful Paw Pads Accent on Batting Paw */}
+          <circle cx="132" cy="70" r="1.3" className="fill-[#FF6B35]" />
+          <circle cx="129.8" cy="69" r="0.75" className="fill-[#FF6B35]/80" />
+          <circle cx="133.8" cy="71" r="0.75" className="fill-[#FF6B35]/80" />
+        </svg>
+      </div>
+      <p className="mt-2 font-serif italic text-sm sm:text-base text-subtle tracking-wide">
+        That’s all for now!
+      </p>
+    </div>
+  );
+}
+
 function Home() {
   const isUnderConstruction = import.meta.env.VITE_UNDER_CONSTRUCTION === "true";
 
@@ -623,7 +705,7 @@ function Home() {
   return (
     <SiteLayout announcement={announcementData} footer={footerData}>
       <Hero />
-      <FeaturedStories stories={featuredStoriesData} isLoading={isLoading} />
+      <HandpickedTales stories={featuredStoriesData} isLoading={isLoading} />
       <SectionDivider />
       <LatestStories stories={latestStoriesData} isLoading={isLoading} />
       <SectionDivider />
@@ -634,6 +716,7 @@ function Home() {
       <VideoLibrary videos={videosData} isLoading={isLoading} />
       <SectionDivider />
       <Newsletter />
+      <CatSignoff />
     </SiteLayout>
   );
 }

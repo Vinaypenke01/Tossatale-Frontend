@@ -155,6 +155,7 @@ export function Avatar({
   useIcon = true,
   size = "md",
   className,
+  suppressHydrationWarning = true,
 }: {
   src?: string;
   gender?: "MALE" | "FEMALE" | "OTHER" | string;
@@ -162,30 +163,32 @@ export function Avatar({
   useIcon?: boolean;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
+  suppressHydrationWarning?: boolean;
 }) {
   const sizes = {
-    xs: "size-6 text-[0.5625rem]",
-    sm: "size-8 text-[0.6875rem]",
-    md: "size-10 text-xs",
-    lg: "size-14 text-sm",
-    xl: "size-24 text-xl",
+    xs: "size-6",
+    sm: "size-8",
+    md: "size-10",
+    lg: "size-14",
+    xl: "size-24",
   } as const;
 
   const iconSizes = {
-    xs: "size-3",
-    sm: "size-4",
-    md: "size-5",
-    lg: "size-7",
-    xl: "size-12",
+    xs: "size-3.5",
+    sm: "size-4.5",
+    md: "size-5.5",
+    lg: "size-8",
+    xl: "size-14",
   } as const;
 
   if (src) {
     return (
       <img
         src={src}
-        alt={initials || "Avatar"}
+        alt="Avatar"
+        suppressHydrationWarning={suppressHydrationWarning}
         className={cn(
-          "shrink-0 rounded-full object-cover shadow-paper border border-border/50",
+          "shrink-0 rounded-full object-cover shadow-xs border border-border/50",
           sizes[size],
           className
         )}
@@ -195,13 +198,14 @@ export function Avatar({
 
   return (
     <span
+      suppressHydrationWarning={suppressHydrationWarning}
       className={cn(
-        "grid shrink-0 place-items-center rounded-full ink-gradient font-sans font-black tracking-wider text-primary-foreground shadow-paper",
+        "grid shrink-0 place-items-center rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 shadow-xs border border-black/5 dark:border-white/5",
         sizes[size],
         className,
       )}
     >
-      {initials ? initials : <User className={cn(iconSizes[size], "opacity-90")} />}
+      <User className={cn(iconSizes[size], "opacity-90")} />
     </span>
   );
 }

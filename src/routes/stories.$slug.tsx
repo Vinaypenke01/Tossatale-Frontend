@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, Outlet, useChildMatches, useRouter } from "@tanstack/react-router";
 import {
   ArrowRight,
   Bookmark,
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import useEmblaCarousel from "embla-carousel-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
@@ -30,9 +30,11 @@ import { Reveal, useScrollProgress } from "@/components/tossa/Reveal";
 import { StoryCard } from "@/components/tossa/StoryCard";
 import { LikeAuthModal } from "@/components/auth/LikeAuthModal";
 import { useAuth } from "@/components/auth/AuthContext";
+import { TableOfContents } from "@/components/tossa/TableOfContents";
 import coverLane from "@/assets/cover-lane.jpg";
 import {
   Avatar,
+  Badge,
   Button,
   ButtonLink,
   CategoryPill,
@@ -43,12 +45,20 @@ import {
 import { cn, formatDate } from "@/lib/utils";
 import { api } from "@/lib/api";
 
+function StoryPageContainer() {
+  const childMatches = useChildMatches();
+  if (childMatches && childMatches.length > 0) {
+    return <Outlet />;
+  }
+  return <StoryDetail />;
+}
+
 export const Route = createFileRoute("/stories/$slug")({
   loader: async ({ params }) => {
     try {
       const res = await api.get(`/public/stories/${params.slug}/`);
       if (res.data) {
-        return { story: res.data };
+        return { story: res.data?.data || res.data };
       }
     } catch {
       // Fallback
@@ -72,7 +82,7 @@ export const Route = createFileRoute("/stories/$slug")({
     };
   },
   notFoundComponent: StoryNotFound,
-  component: StoryDetail,
+  component: StoryPageContainer,
 });
 
 function StoryNotFound() {
@@ -261,6 +271,8 @@ function ShareModal({
 }
 
 function StoryDetail() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const loaderData = Route.useLoaderData();
   const story = loaderData?.story;
   const progress = useScrollProgress();
@@ -318,6 +330,12 @@ function StoryDetail() {
         setLikesCount((prev) => (typeof newLikes === "number" ? newLikes : Math.max(0, prev - 1)));
         toast.success("Like Removed");
       }
+      router.invalidate();
+      queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
+      queryClient.invalidateQueries({ queryKey: ["public-stories"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-bookmarks"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-history"] });
     } catch (err: any) {
       toast.error("Like Action Failed", { description: err.message });
     }
@@ -341,6 +359,12 @@ function StoryDetail() {
         setSaved(false);
         toast.success("Removed from Bookmarks");
       }
+      router.invalidate();
+      queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
+      queryClient.invalidateQueries({ queryKey: ["public-stories"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-bookmarks"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reader-history"] });
     } catch (err: any) {
       if (err.message?.toLowerCase()?.includes("already bookmarked")) {
         setSaved(true);
@@ -441,6 +465,12 @@ function StoryDetail() {
               </nav>
 
               <div className="flex items-center gap-3">
+                {story.is_multi_chapter && (
+                  <Badge tone="info" className="gap-1.5 font-sans text-xs font-bold">
+                    <Layers className="size-3.5 text-primary" />
+                    Multi-Chapter Series · {story.chapters?.length || 0} Parts
+                  </Badge>
+                )}
                 <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle font-medium">
                   <Clock className="size-3.5" /> {story.estimated_reading_time || 5} min read
                 </span>
@@ -522,27 +552,86 @@ function StoryDetail() {
           </div>
         </header>
 
-        {/* Centered Story Content */}
-        <div className="mx-auto max-w-[900px] px-5 py-14 lg:px-8">
-          <div className="min-w-0 prose prose-lg max-w-none text-body font-serif leading-relaxed text-[1.125rem] space-y-6 break-words [overflow-wrap:anywhere]">
-            {story.content ? (
-              story.content.includes("<p>") || story.content.includes("<br") || story.content.includes("<div") ? (
-                <div dangerouslySetInnerHTML={{ __html: story.content }} className="break-words [overflow-wrap:anywhere]" />
-              ) : (
-                story.content
-                  .split(/\n{2,}|\r\n\r\n/)
-                  .map((paragraph: string) => paragraph.trim())
-                  .filter(Boolean)
-                  .map((paragraph: string, idx: number) => (
-                    <p key={idx} className="whitespace-pre-line leading-relaxed mb-6 font-serif text-[1.125rem] text-body break-words [overflow-wrap:anywhere]">
-                      {paragraph}
+        {/* Story Content Area */}
+        <div className="mx-auto max-w-[900px] px-5 py-12 lg:px-8">
+          {story.is_multi_chapter ? (
+            <div className="space-y-10">
+              {/* Multi-Chapter Hero CTA Banner */}
+              {story.chapters && story.chapters.length > 0 && (
+                <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-surface to-surface p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                  <div>
+                    <span className="font-sans text-[0.75rem] font-bold uppercase tracking-wider text-primary">
+                      Serialized Series
+                    </span>
+                    <h2 className="mt-1 font-display text-xl sm:text-2xl font-bold text-heading">
+                      {story.title}
+                    </h2>
+                    <p className="mt-1 text-sm text-subtle">
+                      Complete story serialized across {story.chapters.length} episodic chapters (~{story.estimated_reading_time || 5} min total).
                     </p>
-                  ))
-              )
-            ) : (
-              <p className="text-lg leading-relaxed text-body break-words [overflow-wrap:anywhere]">{story.subtitle || "Full story text content."}</p>
-            )}
-          </div>
+                  </div>
+                  <Link
+                    to="/stories/$slug/chapters/$chapterOrder"
+                    params={{ slug: story.slug, chapterOrder: "1" }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-sans text-sm font-bold text-white shadow-sm hover:bg-primary-hover transition-all shrink-0 active:scale-95"
+                  >
+                    <span>Start Reading Part 1</span>
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </div>
+              )}
+
+              {/* Prologue / Introductory Note if provided */}
+              {story.content && (
+                <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8 space-y-4">
+                  <h3 className="font-display text-lg font-bold text-heading">
+                    Overview & Introduction
+                  </h3>
+                  <div className="prose dark:prose-invert max-w-none text-body font-serif leading-relaxed text-[1.0625rem]">
+                    {story.content.includes("<p>") || story.content.includes("<br") || story.content.includes("<div") ? (
+                      <div dangerouslySetInnerHTML={{ __html: story.content }} className="break-words [overflow-wrap:anywhere]" />
+                    ) : (
+                      story.content
+                        .split(/\n{2,}|\r\n\r\n/)
+                        .map((paragraph: string) => paragraph.trim())
+                        .filter(Boolean)
+                        .map((paragraph: string, idx: number) => (
+                          <p key={idx} className="whitespace-pre-line leading-relaxed mb-4 font-serif text-[1.0625rem] text-body break-words [overflow-wrap:anywhere]">
+                            {paragraph}
+                          </p>
+                        ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Table of Contents */}
+              <TableOfContents
+                storySlug={story.slug}
+                chapters={story.chapters || []}
+              />
+            </div>
+          ) : (
+            <div className="min-w-0 prose prose-lg max-w-none text-body font-serif leading-relaxed text-[1.125rem] space-y-6 break-words [overflow-wrap:anywhere]">
+              {story.content ? (
+                story.content.includes("<p>") || story.content.includes("<br") || story.content.includes("<div") ? (
+                  <div dangerouslySetInnerHTML={{ __html: story.content }} className="break-words [overflow-wrap:anywhere]" />
+                ) : (
+                  story.content
+                    .split(/\n{2,}|\r\n\r\n/)
+                    .map((paragraph: string) => paragraph.trim())
+                    .filter(Boolean)
+                    .map((paragraph: string, idx: number) => (
+                      <p key={idx} className="whitespace-pre-line leading-relaxed mb-6 font-serif text-[1.125rem] text-body break-words [overflow-wrap:anywhere]">
+                        {paragraph}
+                      </p>
+                    ))
+                )
+              ) : (
+                <p className="text-lg leading-relaxed text-body break-words [overflow-wrap:anywhere]">{story.subtitle || "Full story text content."}</p>
+              )}
+            </div>
+          )}
         </div>
       </article>
 

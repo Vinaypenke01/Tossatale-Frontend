@@ -725,7 +725,7 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
   const facebookUrl = (footer as any).facebook || (footer as any).socials?.facebook || "https://facebook.com";
 
   return (
-    <footer className="mt-16 bg-slate-100 dark:bg-zinc-900 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)] text-black dark:text-white">
+    <footer className="mt-0 bg-slate-100 dark:bg-zinc-900 border-t border-black/5 dark:border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)] text-black dark:text-white">
       <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {footerColumns.map((col) => (

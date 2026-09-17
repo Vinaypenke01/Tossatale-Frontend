@@ -35,7 +35,21 @@ export type Writer = {
   achievements: string[];
 };
 
+export type StoryChapter = {
+  id: string;
+  story_id: string;
+  order: number;
+  title: string;
+  content: string;
+  plain_text_content?: string;
+  estimated_reading_time: number;
+  word_count: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type Story = {
+  id?: string;
   slug: string;
   title: string;
   dek: string;
@@ -51,6 +65,9 @@ export type Story = {
   tags: string[];
   views: number;
   likes: number;
+  is_multi_chapter?: boolean;
+  chapter_count?: number;
+  chapters?: StoryChapter[];
 };
 
 export type Category = {

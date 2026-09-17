@@ -58,6 +58,7 @@ import { Route as AdminWritersIndexRouteImport } from './routes/admin.writers.in
 import { Route as AdminWritersSlugRouteImport } from './routes/admin.writers.$slug'
 import { Route as WriterEditorIndexRouteImport } from './routes/writer.editor.index'
 import { Route as WriterEditorStoryIdRouteImport } from './routes/writer.editor.$storyId'
+import { Route as StoriesSlugChaptersChapterOrderRouteImport } from './routes/stories.$slug.chapters.$chapterOrder'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -304,6 +305,12 @@ const WriterEditorStoryIdRoute = WriterEditorStoryIdRouteImport.update({
   path: '/writer/editor/$storyId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StoriesSlugChaptersChapterOrderRoute =
+  StoriesSlugChaptersChapterOrderRouteImport.update({
+    id: '/chapters/$chapterOrder',
+    path: '/chapters/$chapterOrder',
+    getParentRoute: () => StoriesSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -335,7 +342,7 @@ export interface FileRoutesByFullPath {
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
-  '/stories/$slug': typeof StoriesSlugRoute
+  '/stories/$slug': typeof StoriesSlugRouteWithChildren
   '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
@@ -355,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/admin/editor/': typeof AdminEditorIndexRoute
   '/admin/writers/': typeof AdminWritersIndexRoute
   '/writer/editor/': typeof WriterEditorIndexRoute
+  '/stories/$slug/chapters/$chapterOrder': typeof StoriesSlugChaptersChapterOrderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -383,7 +391,7 @@ export interface FileRoutesByTo {
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
-  '/stories/$slug': typeof StoriesSlugRoute
+  '/stories/$slug': typeof StoriesSlugRouteWithChildren
   '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
@@ -403,6 +411,7 @@ export interface FileRoutesByTo {
   '/admin/editor': typeof AdminEditorIndexRoute
   '/admin/writers': typeof AdminWritersIndexRoute
   '/writer/editor': typeof WriterEditorIndexRoute
+  '/stories/$slug/chapters/$chapterOrder': typeof StoriesSlugChaptersChapterOrderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -435,7 +444,7 @@ export interface FileRoutesById {
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
-  '/stories/$slug': typeof StoriesSlugRoute
+  '/stories/$slug': typeof StoriesSlugRouteWithChildren
   '/videos/$slug': typeof VideosSlugRoute
   '/writer/analytics': typeof WriterAnalyticsRoute
   '/writer/profile': typeof WriterProfileRoute
@@ -455,6 +464,7 @@ export interface FileRoutesById {
   '/admin/editor/': typeof AdminEditorIndexRoute
   '/admin/writers/': typeof AdminWritersIndexRoute
   '/writer/editor/': typeof WriterEditorIndexRoute
+  '/stories/$slug/chapters/$chapterOrder': typeof StoriesSlugChaptersChapterOrderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/admin/editor/'
     | '/admin/writers/'
     | '/writer/editor/'
+    | '/stories/$slug/chapters/$chapterOrder'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -556,6 +567,7 @@ export interface FileRouteTypes {
     | '/admin/editor'
     | '/admin/writers'
     | '/writer/editor'
+    | '/stories/$slug/chapters/$chapterOrder'
   id:
     | '__root__'
     | '/'
@@ -607,6 +619,7 @@ export interface FileRouteTypes {
     | '/admin/editor/'
     | '/admin/writers/'
     | '/writer/editor/'
+    | '/stories/$slug/chapters/$chapterOrder'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -638,7 +651,7 @@ export interface RootRouteChildren {
   ReaderBookmarksRoute: typeof ReaderBookmarksRoute
   ReaderFollowingRoute: typeof ReaderFollowingRoute
   ReaderHistoryRoute: typeof ReaderHistoryRoute
-  StoriesSlugRoute: typeof StoriesSlugRoute
+  StoriesSlugRoute: typeof StoriesSlugRouteWithChildren
   WriterAnalyticsRoute: typeof WriterAnalyticsRoute
   WriterProfileRoute: typeof WriterProfileRoute
   WriterRegisterRoute: typeof WriterRegisterRoute
@@ -1000,6 +1013,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WriterEditorStoryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stories/$slug/chapters/$chapterOrder': {
+      id: '/stories/$slug/chapters/$chapterOrder'
+      path: '/chapters/$chapterOrder'
+      fullPath: '/stories/$slug/chapters/$chapterOrder'
+      preLoaderRoute: typeof StoriesSlugChaptersChapterOrderRouteImport
+      parentRoute: typeof StoriesSlugRoute
+    }
   }
 }
 
@@ -1042,6 +1062,18 @@ const AdminWritersRouteWithChildren = AdminWritersRoute._addFileChildren(
   AdminWritersRouteChildren,
 )
 
+interface StoriesSlugRouteChildren {
+  StoriesSlugChaptersChapterOrderRoute: typeof StoriesSlugChaptersChapterOrderRoute
+}
+
+const StoriesSlugRouteChildren: StoriesSlugRouteChildren = {
+  StoriesSlugChaptersChapterOrderRoute: StoriesSlugChaptersChapterOrderRoute,
+}
+
+const StoriesSlugRouteWithChildren = StoriesSlugRoute._addFileChildren(
+  StoriesSlugRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -1071,7 +1103,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReaderBookmarksRoute: ReaderBookmarksRoute,
   ReaderFollowingRoute: ReaderFollowingRoute,
   ReaderHistoryRoute: ReaderHistoryRoute,
-  StoriesSlugRoute: StoriesSlugRoute,
+  StoriesSlugRoute: StoriesSlugRouteWithChildren,
   WriterAnalyticsRoute: WriterAnalyticsRoute,
   WriterProfileRoute: WriterProfileRoute,
   WriterRegisterRoute: WriterRegisterRoute,

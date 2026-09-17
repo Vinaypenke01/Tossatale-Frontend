@@ -85,6 +85,7 @@ export function NotificationDropdown() {
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
+        suppressHydrationWarning
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Notifications"
         className={cn(

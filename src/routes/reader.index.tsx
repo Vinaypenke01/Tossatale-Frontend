@@ -24,7 +24,7 @@ function ReaderDashboard() {
     queryKey: ["reader-dashboard"],
     queryFn: async () => {
       const res = await api.get("/user/dashboard/");
-      return res.data || {};
+      return res.data?.data || res.data || {};
     },
   });
 
@@ -36,14 +36,23 @@ function ReaderDashboard() {
     },
   });
 
-  const stats = dashboardData?.stats || {
+  const stats = dashboardData?.stats || dashboardData?.reading_statistics || {
     total_liked_stories: 0,
     total_bookmarked_stories: 0,
     recently_read_count: 0,
+    total_stories_read: 0,
+    hours_read: 0,
   };
 
+  const storiesReadCount = stats.recently_read_count ?? stats.total_stories_read ?? (dashboardData?.recently_read?.length || 0);
+  const hoursReadCount = stats.hours_read ?? 0;
+  const bookmarksCount = stats.total_bookmarked_stories ?? (dashboardData?.bookmarks?.length || 0);
+  const likedStoriesCount = stats.total_liked_stories ?? (dashboardData?.liked_stories?.length || 0);
+
   const storiesList = (publicStories && Array.isArray(publicStories)) ? publicStories : [];
-  const currentStory = storiesList[0];
+  const recentStoryRecord = dashboardData?.recently_read?.[0];
+  const continueReadingStory = recentStoryRecord?.story || storiesList[0];
+  const isActualHistory = Boolean(recentStoryRecord?.story);
 
   return (
     <ReaderLayout
@@ -56,33 +65,40 @@ function ReaderDashboard() {
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Stories read" value={String(stats.recently_read_count)} hint="this month" />
-        <StatCard label="Hours read" value="0" />
-        <StatCard label="Bookmarks" value={String(stats.total_bookmarked_stories)} hint="saved stories" />
-        <StatCard label="Liked Stories" value={String(stats.total_liked_stories)} hint="favorite stories" />
+        <StatCard label="Stories read" value={String(storiesReadCount)} hint="this month" />
+        <StatCard label="Hours read" value={String(hoursReadCount)} />
+        <StatCard label="Bookmarks" value={String(bookmarksCount)} hint="saved stories" />
+        <StatCard label="Liked Stories" value={String(likedStoriesCount)} hint="favorite stories" />
       </div>
 
-      {currentStory ? (
+      {continueReadingStory ? (
         <Panel className="overflow-hidden p-6 lg:p-8">
           <div>
-            <p className="font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
-              Continue reading
-            </p>
-            <h2 className="mt-3 text-2xl font-display font-bold leading-snug">{currentStory.title}</h2>
-            <p className="mt-2 text-[1rem] text-body">{currentStory.subtitle || currentStory.seo_description || "Featured story."}</p>
+            <div className="flex items-center justify-between">
+              <p className="font-sans text-[0.6875rem] font-black tracking-[0.2em] text-primary uppercase">
+                {isActualHistory ? "Continue reading" : "Featured Pick"}
+              </p>
+              {recentStoryRecord?.reading_progress ? (
+                <span className="text-xs font-bold text-primary">
+                  {Math.round(recentStoryRecord.reading_progress)}% completed
+                </span>
+              ) : null}
+            </div>
+            <h2 className="mt-3 text-2xl font-display font-bold leading-snug">{continueReadingStory.title}</h2>
+            <p className="mt-2 text-[1rem] text-body">{continueReadingStory.subtitle || continueReadingStory.seo_description || "Featured story."}</p>
             <div className="mt-5">
               <div className="flex items-baseline justify-between text-[0.8125rem] text-subtle">
-                <span>{currentStory.writer?.name || currentStory.writer?.user?.full_name || "Author"}</span>
-                <span>{currentStory.estimated_reading_time || 5} min read</span>
+                <span>{continueReadingStory.writer?.name || continueReadingStory.writer?.user?.full_name || "Author"}</span>
+                <span>{continueReadingStory.estimated_reading_time || 5} min read</span>
               </div>
             </div>
             <ButtonLink
               to="/stories/$slug"
-              params={{ slug: currentStory.slug }}
+              params={{ slug: continueReadingStory.slug }}
               variant="soft"
               className="mt-6"
             >
-              Start reading
+              {isActualHistory && recentStoryRecord?.reading_progress ? "Resume story" : "Start reading"}
             </ButtonLink>
           </div>
         </Panel>

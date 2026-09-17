@@ -41,6 +41,8 @@ function History() {
 
   const finishedCount = historyItems.filter((i: any) => i.completed).length;
   const completionRate = historyItems.length > 0 ? Math.round((finishedCount / historyItems.length) * 100) : 0;
+  const totalDurationMins = historyItems.reduce((acc: number, curr: any) => acc + (curr.readingTime || 5), 0);
+  const hoursRead = historyItems.length > 0 ? (totalDurationMins / 60).toFixed(1) : "0";
 
   return (
     <ReaderLayout
@@ -49,9 +51,9 @@ function History() {
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Stories read" value={String(historyItems.length)} />
-        <StatCard label="Hours read" value="0" />
+        <StatCard label="Hours read" value={`${hoursRead} hrs`} />
         <StatCard label="Finished" value={`${completionRate}%`} hint="completion" />
-        <StatCard label="Longest streak" value="0 days" />
+        <StatCard label="Longest streak" value={historyItems.length > 0 ? "1 day" : "0 days"} />
       </div>
 
       <section className="mt-8">
