@@ -300,13 +300,22 @@ function MyStories() {
                         <Trash2 className="size-3.5" />
                       </Button>
                     )}
-                    <Link
-                      to="/writer/editor/$storyId"
-                      params={{ storyId: story.slug }}
-                      className="font-sans font-bold text-primary hover:underline ml-1"
-                    >
-                      {story.rawStatus === "REJECTED" ? "Edit & Fix" : "Edit"}
-                    </Link>
+                    {story.isMultiChapter ? (
+                      <Link
+                        to="/writer/series"
+                        className="font-sans font-bold text-primary hover:underline ml-1"
+                      >
+                        {story.rawStatus === "REJECTED" ? "Edit Series" : "Manage Series"}
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/writer/editor/$storyId"
+                        params={{ storyId: story.slug }}
+                        className="font-sans font-bold text-primary hover:underline ml-1"
+                      >
+                        {story.rawStatus === "REJECTED" ? "Edit & Fix" : "Edit"}
+                      </Link>
+                    )}
                   </div>
                 </li>
               );

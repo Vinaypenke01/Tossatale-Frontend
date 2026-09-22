@@ -32,11 +32,13 @@ import { Route as AdminFaqRouteImport } from './routes/admin.faq'
 import { Route as AdminHomepageBuilderRouteImport } from './routes/admin.homepage-builder'
 import { Route as AdminProfileRouteImport } from './routes/admin.profile'
 import { Route as AdminReviewQueueRouteImport } from './routes/admin.review-queue'
+import { Route as AdminSeriesRouteImport } from './routes/admin.series'
 import { Route as AdminUpcomingProjectsRouteImport } from './routes/admin.upcoming-projects'
 import { Route as AdminVideosRouteImport } from './routes/admin.videos'
 import { Route as AdminWritersRouteImport } from './routes/admin.writers'
 import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
 import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
+import { Route as NewsletterVerifyRouteImport } from './routes/newsletter.verify'
 import { Route as ReaderIndexRouteImport } from './routes/reader.index'
 import { Route as ReaderBookmarksRouteImport } from './routes/reader.bookmarks'
 import { Route as ReaderFollowingRouteImport } from './routes/reader.following'
@@ -175,6 +177,11 @@ const AdminReviewQueueRoute = AdminReviewQueueRouteImport.update({
   path: '/admin/review-queue',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSeriesRoute = AdminSeriesRouteImport.update({
+  id: '/admin/series',
+  path: '/admin/series',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminUpcomingProjectsRoute = AdminUpcomingProjectsRouteImport.update({
   id: '/admin/upcoming-projects',
   path: '/admin/upcoming-projects',
@@ -199,6 +206,11 @@ const BlogsSlugRoute = BlogsSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => BlogsRoute,
+} as any)
+const NewsletterVerifyRoute = NewsletterVerifyRouteImport.update({
+  id: '/newsletter/verify',
+  path: '/newsletter/verify',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ReaderIndexRoute = ReaderIndexRouteImport.update({
   id: '/reader/',
@@ -335,10 +347,12 @@ export interface FileRoutesByFullPath {
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
+  '/admin/series': typeof AdminSeriesRoute
   '/admin/upcoming-projects': typeof AdminUpcomingProjectsRoute
   '/admin/videos': typeof AdminVideosRoute
   '/admin/writers': typeof AdminWritersRouteWithChildren
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/newsletter/verify': typeof NewsletterVerifyRoute
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
@@ -385,9 +399,11 @@ export interface FileRoutesByTo {
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
+  '/admin/series': typeof AdminSeriesRoute
   '/admin/upcoming-projects': typeof AdminUpcomingProjectsRoute
   '/admin/videos': typeof AdminVideosRoute
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/newsletter/verify': typeof NewsletterVerifyRoute
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
@@ -437,10 +453,12 @@ export interface FileRoutesById {
   '/admin/homepage-builder': typeof AdminHomepageBuilderRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/review-queue': typeof AdminReviewQueueRoute
+  '/admin/series': typeof AdminSeriesRoute
   '/admin/upcoming-projects': typeof AdminUpcomingProjectsRoute
   '/admin/videos': typeof AdminVideosRoute
   '/admin/writers': typeof AdminWritersRouteWithChildren
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/newsletter/verify': typeof NewsletterVerifyRoute
   '/reader/bookmarks': typeof ReaderBookmarksRoute
   '/reader/following': typeof ReaderFollowingRoute
   '/reader/history': typeof ReaderHistoryRoute
@@ -491,10 +509,12 @@ export interface FileRouteTypes {
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
+    | '/admin/series'
     | '/admin/upcoming-projects'
     | '/admin/videos'
     | '/admin/writers'
     | '/blogs/$slug'
+    | '/newsletter/verify'
     | '/reader/bookmarks'
     | '/reader/following'
     | '/reader/history'
@@ -541,9 +561,11 @@ export interface FileRouteTypes {
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
+    | '/admin/series'
     | '/admin/upcoming-projects'
     | '/admin/videos'
     | '/blogs/$slug'
+    | '/newsletter/verify'
     | '/reader/bookmarks'
     | '/reader/following'
     | '/reader/history'
@@ -592,10 +614,12 @@ export interface FileRouteTypes {
     | '/admin/homepage-builder'
     | '/admin/profile'
     | '/admin/review-queue'
+    | '/admin/series'
     | '/admin/upcoming-projects'
     | '/admin/videos'
     | '/admin/writers'
     | '/blogs/$slug'
+    | '/newsletter/verify'
     | '/reader/bookmarks'
     | '/reader/following'
     | '/reader/history'
@@ -645,9 +669,11 @@ export interface RootRouteChildren {
   AdminHomepageBuilderRoute: typeof AdminHomepageBuilderRoute
   AdminProfileRoute: typeof AdminProfileRoute
   AdminReviewQueueRoute: typeof AdminReviewQueueRoute
+  AdminSeriesRoute: typeof AdminSeriesRoute
   AdminUpcomingProjectsRoute: typeof AdminUpcomingProjectsRoute
   AdminVideosRoute: typeof AdminVideosRoute
   AdminWritersRoute: typeof AdminWritersRouteWithChildren
+  NewsletterVerifyRoute: typeof NewsletterVerifyRoute
   ReaderBookmarksRoute: typeof ReaderBookmarksRoute
   ReaderFollowingRoute: typeof ReaderFollowingRoute
   ReaderHistoryRoute: typeof ReaderHistoryRoute
@@ -831,6 +857,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReviewQueueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/series': {
+      id: '/admin/series'
+      path: '/admin/series'
+      fullPath: '/admin/series'
+      preLoaderRoute: typeof AdminSeriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/upcoming-projects': {
       id: '/admin/upcoming-projects'
       path: '/admin/upcoming-projects'
@@ -865,6 +898,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/blogs/$slug'
       preLoaderRoute: typeof BlogsSlugRouteImport
       parentRoute: typeof BlogsRoute
+    }
+    '/newsletter/verify': {
+      id: '/newsletter/verify'
+      path: '/newsletter/verify'
+      fullPath: '/newsletter/verify'
+      preLoaderRoute: typeof NewsletterVerifyRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/reader/': {
       id: '/reader/'
@@ -1097,9 +1137,11 @@ const rootRouteChildren: RootRouteChildren = {
   AdminHomepageBuilderRoute: AdminHomepageBuilderRoute,
   AdminProfileRoute: AdminProfileRoute,
   AdminReviewQueueRoute: AdminReviewQueueRoute,
+  AdminSeriesRoute: AdminSeriesRoute,
   AdminUpcomingProjectsRoute: AdminUpcomingProjectsRoute,
   AdminVideosRoute: AdminVideosRoute,
   AdminWritersRoute: AdminWritersRouteWithChildren,
+  NewsletterVerifyRoute: NewsletterVerifyRoute,
   ReaderBookmarksRoute: ReaderBookmarksRoute,
   ReaderFollowingRoute: ReaderFollowingRoute,
   ReaderHistoryRoute: ReaderHistoryRoute,

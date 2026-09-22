@@ -40,6 +40,7 @@ const navs: Record<Role, NavItem[]> = {
     { label: "Home", to: "/", icon: Home },
     { label: "Overview", to: "/admin", icon: LayoutDashboard },
     { label: "Write story", to: "/admin/editor", icon: PenLine },
+    { label: "My series", to: "/admin/series", icon: Layers },
     { label: "Blogs", to: "/admin/blogs", icon: Newspaper },
     { label: "Videos", to: "/admin/videos", icon: Youtube },
     { label: "Upcoming projects", to: "/admin/upcoming-projects", icon: Clapperboard },

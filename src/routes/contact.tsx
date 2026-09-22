@@ -3,6 +3,7 @@ import { Gift, Lightbulb, Mail, PenLine } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import contactHeaderArt from "@/assets/Contact page header - September 18, 2026 at 23.21.40.png";
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
 import { Badge, Button, ButtonLink, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
@@ -62,17 +63,25 @@ function ContactPage() {
 
   return (
     <SiteLayout>
-      <header className="border-b border-border paper-gradient">
-        <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8">
-          <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-primary uppercase">
-            Contact
+      <header className="relative overflow-hidden bg-heading border-b border-border text-white">
+        {/* Background Cover Image with Gradient Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={contactHeaderArt}
+            alt=""
+            className="h-full w-full object-cover opacity-45 dark:opacity-35 scale-105 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/35" />
+          <div className="pointer-events-none absolute -top-24 left-1/4 size-[500px] rounded-full bg-primary/20 blur-3xl" />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
+          <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-[#FF6B35] uppercase">
+            CONTACT
           </p>
-          <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
+          <h1 className="mt-3 max-w-3xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05] font-display font-bold text-white drop-shadow-xs">
             Have something to say? We’re listening
           </h1>
-          <p className="mt-3 max-w-xl text-[1.0625rem] text-body">
-            Whether you have a story to share, a question to ask, or simply something to say - our team is listening. We’ll get back to you as soon as we can.
-          </p>
         </div>
       </header>
 

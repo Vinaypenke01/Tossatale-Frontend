@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Check, ExternalLink, Sparkles, CheckCircle2 } from "lucide-react";
+import { Bell, Check, ExternalLink, Sparkles, CheckCircle2, Trash2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 
@@ -68,6 +68,26 @@ export function NotificationDropdown() {
     },
   });
 
+  // Clear all notifications
+  const clearAllMutation = useMutation({
+    mutationFn: async () => {
+      return await api.post("/notifications/clear-all/");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  // Dismiss / delete single notification
+  const dismissMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await api.delete(`/notifications/${id}/`).catch(() => api.post(`/notifications/${id}/mark-read/`));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -89,7 +109,7 @@ export function NotificationDropdown() {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Notifications"
         className={cn(
-          "relative grid size-8 place-items-center rounded-full border border-border bg-surface text-subtle transition-all hover:border-primary hover:text-primary shrink-0 shadow-xs",
+          "relative grid size-8 place-items-center rounded-full border border-border bg-surface text-subtle transition-all hover:border-primary hover:text-primary shrink-0 shadow-xs cursor-pointer",
           open && "border-primary text-primary"
         )}
       >
@@ -113,17 +133,32 @@ export function NotificationDropdown() {
                 </span>
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={() => markAllReadMutation.mutate()}
-                disabled={markAllReadMutation.isPending}
-                className="flex items-center gap-1 text-[0.75rem] font-bold text-primary hover:underline"
-              >
-                <Check className="size-3.5" />
-                Mark all read
-              </button>
-            )}
+            <div className="flex items-center gap-2.5">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markAllReadMutation.mutate()}
+                  disabled={markAllReadMutation.isPending}
+                  className="flex items-center gap-1 text-[0.75rem] font-bold text-primary hover:underline cursor-pointer"
+                  title="Mark all as read"
+                >
+                  <Check className="size-3.5" />
+                  <span>Mark all read</span>
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => clearAllMutation.mutate()}
+                  disabled={clearAllMutation.isPending}
+                  className="flex items-center gap-1 text-[0.75rem] font-medium text-subtle hover:text-destructive transition-colors cursor-pointer"
+                  title="Clear all notifications"
+                >
+                  <Trash2 className="size-3.5" />
+                  <span>Clear all</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Body */}
@@ -180,20 +215,18 @@ export function NotificationDropdown() {
                               if (!notif.is_read) markReadMutation.mutate(notif.id);
                               setOpen(false);
                             }}
-                            className="inline-flex items-center gap-1 text-[0.75rem] font-bold text-primary hover:underline"
+                            className="inline-flex items-center gap-1 text-[0.75rem] font-bold text-primary hover:underline cursor-pointer"
                           >
                             View details <ExternalLink className="size-3" />
                           </Link>
                         )}
-                        {!notif.is_read && (
-                          <button
-                            type="button"
-                            onClick={() => markReadMutation.mutate(notif.id)}
-                            className="text-[0.6875rem] text-subtle hover:text-heading"
-                          >
-                            Dismiss
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => dismissMutation.mutate(notif.id)}
+                          className="text-[0.6875rem] text-subtle hover:text-destructive transition-colors cursor-pointer"
+                        >
+                          Dismiss
+                        </button>
                       </div>
                     </div>
                   </div>

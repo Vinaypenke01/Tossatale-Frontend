@@ -48,7 +48,7 @@ export function StoryEditor({
 }) {
   const isAdmin = role === "admin";
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"editor" | "chapters" | "library" | "drafts">("editor");
+  const [activeTab, setActiveTab] = useState<"editor" | "library" | "drafts">("editor");
 
   const [title, setTitle] = useState(story?.title ?? "");
   const [dek, setDek] = useState(story?.dek ?? (story as any)?.subtitle ?? "");
@@ -124,9 +124,6 @@ export function StoryEditor({
       const isMulti = Boolean(story.is_multi_chapter || (story as any).chapters?.length > 0);
       setIsMultiChapter(isMulti);
       setSeriesStatus((story as any).series_status || "ONGOING");
-      if (isMulti) {
-        setActiveTab("chapters");
-      }
       const initialChs = (story as any).chapters || [];
       setChapters(initialChs);
       if (initialChs.length > 0) {
@@ -167,7 +164,7 @@ export function StoryEditor({
   }, [story]);
 
   const isDirty = useMemo(() => {
-    if (activeTab !== "editor" && activeTab !== "chapters") return false;
+    if (activeTab !== "editor") return false;
     if (!hasInitializedRef.current || !savedSnapshotRef.current) {
       return Boolean(title.trim() || body.trim() || chapterTitleInput.trim() || chapterContentInput.trim());
     }
@@ -238,12 +235,7 @@ export function StoryEditor({
     },
   });
 
-  // Auto-load ongoing series if user enters Chapters workspace without a loaded story
-  useEffect(() => {
-    if (activeTab === "chapters" && !activeEditingSlug && activeOngoingSeriesData) {
-      handleEditStory(activeOngoingSeriesData);
-    }
-  }, [activeTab, activeEditingSlug, activeOngoingSeriesData]);
+
 
   const handleToggleSeriesStatus = async (newStatus: "ONGOING" | "COMPLETED") => {
     if (!activeEditingSlug) {
@@ -805,9 +797,9 @@ export function StoryEditor({
       tagsVal,
       isMulti,
     );
-    setActiveTab(isMulti ? "chapters" : "editor");
+    setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
-    toast.info(`Loaded "${st.title}" into ${isMulti ? "Chapters workspace" : "story editor"}.`);
+    toast.info(`Loaded "${st.title}" into story editor.`);
 
     // Fetch full story details and dedicated chapter list concurrently
     try {
@@ -852,9 +844,6 @@ export function StoryEditor({
             (fullStory.chapter_count && fullStory.chapter_count > 0)
           );
           setIsMultiChapter(resolvedMulti);
-          if (resolvedMulti) {
-            setActiveTab("chapters");
-          }
           savedSnapshotRef.current = serializeStoryState(
             fullStory.title || st.title || "",
             fullStory.subtitle || fullStory.dek || st.subtitle || "",
@@ -872,7 +861,6 @@ export function StoryEditor({
         setChapterTitleInput(loadedChapters[0]?.title || "");
         setChapterContentInput(loadedChapters[0]?.content || "");
         setIsMultiChapter(true);
-        setActiveTab("chapters");
       }
     } catch {
       // Keep existing populated data
@@ -905,24 +893,7 @@ export function StoryEditor({
   };
 
   const handleToggleMultiChapterInEditor = () => {
-    if (!isMultiChapter) {
-      if (
-        activeOngoingSeriesData &&
-        activeOngoingSeriesData.slug !== activeEditingSlug &&
-        activeOngoingSeriesData.id !== activeEditingSlug
-      ) {
-        setActiveSeriesAlertModal({
-          isOpen: true,
-          activeStory: activeOngoingSeriesData,
-        });
-        return;
-      }
-      setIsMultiChapter(true);
-      setActiveTab("chapters");
-      toast.info("Multi-Chapter mode enabled! Switched to Chapters workspace.");
-    } else {
-      setIsMultiChapter(false);
-    }
+    setIsMultiChapter((prev) => !prev);
   };
 
   const handleSaveAndLeave = async () => {
@@ -963,38 +934,25 @@ export function StoryEditor({
         </div>
 
         <div className="border-t border-border pt-4 space-y-4">
-          {/* Multi-Chapter Switch Card: Only displayed in Single-Story Editor view */}
-          {activeTab === "editor" && (
-            <div
-              onClick={handleToggleMultiChapterInEditor}
-              className="group relative cursor-pointer rounded-2xl border border-border bg-surface-alt/40 p-3.5 space-y-2 transition-all hover:border-primary/50 hover:bg-primary-light/10"
+          {/* Dedicated Series Studio Link */}
+          {activeTab === "editor" && !isAdmin && (
+            <Link
+              to="/writer/series"
+              className="group relative block rounded-2xl border border-border bg-surface-alt/40 p-3.5 space-y-2 transition-all hover:border-primary/50 hover:bg-primary-light/10"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Layers className="size-4 text-primary" />
-                  <span className="text-xs font-bold text-heading">Multi-Chapter Series</span>
+                  <span className="text-xs font-bold text-heading">Serialized Longform?</span>
                 </div>
-                <label
-                  className="relative inline-flex cursor-pointer items-center"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isMultiChapter}
-                    onChange={handleToggleMultiChapterInEditor}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-5 w-9 rounded-full bg-border peer-checked:bg-primary after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-focus:outline-none" />
-                </label>
+                <span className="text-[0.6875rem] font-bold text-primary flex items-center gap-1 group-hover:underline">
+                  Open Studio <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                </span>
               </div>
               <p className="text-[0.75rem] text-subtle leading-relaxed">
-                Serialize this story with numbered episodes, a Table of Contents, and chapter navigation.
+                Writing episodic chapters? Head over to the dedicated Series & Chapters Studio.
               </p>
-              <div className="flex items-center gap-1.5 text-xs font-bold text-primary pt-0.5 group-hover:underline">
-                <span>Switch to Chapters Workspace</span>
-                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-              </div>
-            </div>
+            </Link>
           )}
 
           <Field label="Category">
@@ -1071,7 +1029,7 @@ export function StoryEditor({
           </Field>
 
           <Field
-            label="Reading Time (mins)"
+            label={isMultiChapter ? "Series Total Reading Time (mins)" : "Reading Time (mins)"}
             hint={
               isReadingTimeCustom ? (
                 <span>
@@ -1080,13 +1038,15 @@ export function StoryEditor({
                     type="button"
                     onClick={() => {
                       setIsReadingTimeCustom(false);
-                      setReadingTimeInput(String(minutes || 1));
+                      setReadingTimeInput(String(isMultiChapter ? totalSeriesMinutes : (minutes || 1)));
                     }}
                     className="text-primary font-bold underline hover:opacity-80 cursor-pointer"
                   >
-                    Auto-calculate (~{minutes || 1} min)
+                    Auto-calculate (~{isMultiChapter ? totalSeriesMinutes : (minutes || 1)} min)
                   </button>
                 </span>
+              ) : isMultiChapter ? (
+                `Series Total: ~${totalSeriesMinutes} min (${totalSeriesWords.toLocaleString()} words across ${chapters.length} chapter${chapters.length === 1 ? "" : "s"})`
               ) : (
                 `Auto-calculated: ~${minutes || 1} min (${words} words)`
               )
@@ -1100,7 +1060,7 @@ export function StoryEditor({
                 setIsReadingTimeCustom(true);
                 setReadingTimeInput(e.target.value);
               }}
-              placeholder={String(minutes || 1)}
+              placeholder={String(isMultiChapter ? totalSeriesMinutes : (minutes || 1))}
               className="h-11 text-[0.875rem]"
             />
           </Field>
@@ -1118,40 +1078,26 @@ export function StoryEditor({
           ? "Manage authored stories, review performance, or make live edits."
           : activeTab === "drafts"
             ? "Your unfinished drafts and revision requests — continue writing anytime."
-            : activeTab === "chapters"
-              ? "Manage and edit serialized chapters, arrange story order, and polish episodes."
-              : activeEditingSlug
-                ? "Editing active publication. Save changes or publish revisions."
-                : story
-                  ? "Revise, then resubmit. Editors see a diff of what changed."
-                  : isAdmin
-                    ? "Write, manage, and publish stories directly."
-                    : "Start with a sentence you'd read twice. Everything saves as you type."
+            : activeEditingSlug
+              ? "Editing active publication. Save changes or publish revisions."
+              : story
+                ? "Revise, then resubmit. Editors see a diff of what changed."
+                : isAdmin
+                  ? "Write, manage, and publish stories directly."
+                  : "Start with a sentence you'd read twice. Everything saves as you type."
       }
       actions={
-        activeTab === "editor" || activeTab === "chapters" ? (
+        activeTab === "editor" ? (
           <>
             {activeEditingSlug && (
               <Button variant="ghostOutline" size="sm" onClick={handleClearEditor} className="gap-1.5 text-xs">
                 <Plus className="size-3.5" /> New Story
               </Button>
             )}
-            {activeTab === "editor" && (
-              <Button variant="ghostOutline" size="sm" onClick={() => setPreview((v) => !v)} className="gap-1.5">
-                {preview ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                {preview ? "Edit" : "Preview"}
-              </Button>
-            )}
-            {activeTab === "chapters" && (
-              <Button
-                variant="ghostOutline"
-                size="sm"
-                onClick={handleAddNewChapter}
-                className="gap-1.5 text-primary font-bold"
-              >
-                <Plus className="size-4" /> New Chapter
-              </Button>
-            )}
+            <Button variant="ghostOutline" size="sm" onClick={() => setPreview((v) => !v)} className="gap-1.5">
+              {preview ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              {preview ? "Edit" : "Preview"}
+            </Button>
             <Button
               variant="soft"
               size="sm"
@@ -1194,34 +1140,6 @@ export function StoryEditor({
             )}
           >
             <FileText className="size-4" /> {activeEditingSlug ? "Editing Story" : "Write / Edit Story"}
-          </button>
-          <button
-            type="button"
-            suppressHydrationWarning
-            onClick={() => {
-              setIsMultiChapter(true);
-              setActiveTab("chapters");
-            }}
-            className={cn(
-              "flex items-center gap-2 rounded-xl px-4 py-2 font-sans text-[0.875rem] font-bold transition-all",
-              activeTab === "chapters"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-surface text-body hover:bg-surface-hover border border-border"
-            )}
-          >
-            <Layers className="size-4" /> Chapters
-            <span
-              className={cn(
-                "ml-1 rounded-full px-2 py-0.5 text-[0.75rem]",
-                activeTab === "chapters"
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : chapters.length > 0
-                    ? "bg-primary-light text-primary font-bold"
-                    : "bg-surface-alt text-subtle"
-              )}
-            >
-              {chapters.length}
-            </span>
           </button>
           <button
             type="button"
@@ -1382,50 +1300,7 @@ export function StoryEditor({
         </div>
       )}
 
-      {/* View 4: Multi-Chapter Series Editor */}
-      {activeTab === "chapters" && (
-        <ChaptersWorkspace
-          role={role}
-          activeEditingSlug={activeEditingSlug}
-          title={title}
-          setTitle={setTitle}
-          dek={dek}
-          setDek={setDek}
-          seriesStatus={seriesStatus}
-          isChangingSeriesStatus={isChangingSeriesStatus}
-          showSeriesMeta={showSeriesMeta}
-          setShowSeriesMeta={setShowSeriesMeta}
-          handleStartSeries={handleStartSeries}
-          handleToggleSeriesStatus={handleToggleSeriesStatus}
-          seriesSelectorOpen={seriesSelectorOpen}
-          setSeriesSelectorOpen={setSeriesSelectorOpen}
-          allSeriesData={allSeriesData || []}
-          activeOngoingSeriesData={activeOngoingSeriesData}
-          handleEditStory={handleEditStory}
-          handleClearEditor={handleClearEditor}
-          setIsMultiChapter={setIsMultiChapter}
-          setActiveTab={setActiveTab}
-          chapters={chapters}
-          activeChapterIndex={activeChapterIndex}
-          chapterTitleInput={chapterTitleInput}
-          setChapterTitleInput={setChapterTitleInput}
-          chapterContentInput={chapterContentInput}
-          setChapterContentInput={setChapterContentInput}
-          isSavingChapter={isSavingChapter}
-          handleSelectChapter={handleSelectChapter}
-          handleSaveCurrentChapter={handleSaveCurrentChapter}
-          handleAddNewChapter={handleAddNewChapter}
-          handleDeleteChapter={handleDeleteChapter}
-          handleReorderChapter={handleReorderChapter}
-          rejectionFeedback={rejectionFeedback}
-          rejectionReviews={rejectionReviews}
-          totalChapterWords={totalChapterWords}
-          totalSeriesWords={totalSeriesWords}
-          totalSeriesMinutes={totalSeriesMinutes}
-          isSubmitting={isSubmitting}
-          publishingSidebar={publishingSidebar}
-        />
-      )}
+
 
       {/* View 2: Library / Stories Desk View */}
       {activeTab === "library" && (

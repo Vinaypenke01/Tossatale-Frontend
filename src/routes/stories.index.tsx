@@ -12,6 +12,7 @@ import { CategoryPill, CustomSelect, Input, Panel } from "@/components/tossa/kit
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import coverLane from "@/assets/cover-lane.jpg";
+import storiesHeaderBg from "@/assets/Stories page header - September 18, 2026 at 23.21.40.png";
 
 export const Route = createFileRoute("/stories/")({
   head: () => ({
@@ -57,7 +58,7 @@ function StoriesIndex() {
       if (sort === "Most liked") ordering = "-likes_count";
       if (sort === "Shortest read") ordering = "estimated_reading_time";
 
-      let endpoint = `/public/stories/?ordering=${ordering}&page=${page}&page_size=12`;
+      let endpoint = `/public/stories/?ordering=${ordering}&page=${page}&page_size=9`;
       if (activeCategory !== "all") endpoint += `&category=${encodeURIComponent(activeCategory)}`;
       if (query.trim()) endpoint += `&search=${encodeURIComponent(query.trim())}`;
 
@@ -68,7 +69,7 @@ function StoriesIndex() {
 
   const apiStories = apiResponse?.results || (Array.isArray(apiResponse) ? apiResponse : []);
   const totalStoriesCount = apiResponse?.count || apiStories.length || 0;
-  const totalPages = Math.ceil(totalStoriesCount / 12);
+  const totalPages = Math.ceil(totalStoriesCount / 9);
 
   const handleCategoryChange = (catSlug: string) => {
     setActiveCategory(catSlug);
@@ -126,12 +127,24 @@ function StoriesIndex() {
 
   return (
     <SiteLayout>
-      <header className="border-b border-border paper-gradient">
-        <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
+      <header className="relative overflow-hidden border-b border-border bg-surface">
+        {/* Background Artwork */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={storiesHeaderBg}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-bottom opacity-90 dark:opacity-40"
+          />
+          {/* Subtle atmospheric gradient scrim to preserve high text contrast */}
+          <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-transparent dark:from-background/95 dark:via-background/70 dark:to-transparent" />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
           <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-primary uppercase">
             ALL HERE
           </p>
-          <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] font-display font-bold leading-[1.05]">
+          <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] font-display font-bold leading-[1.05] text-heading">
             Stories we’d love you to read
           </h1>
           <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
@@ -241,7 +254,7 @@ function StoriesIndex() {
           page={page}
           totalPages={totalPages}
           totalCount={totalStoriesCount}
-          pageSize={12}
+          pageSize={9}
           onPageChange={(newPage) => {
             setPage(newPage);
             window.scrollTo({ top: 300, behavior: "smooth" });

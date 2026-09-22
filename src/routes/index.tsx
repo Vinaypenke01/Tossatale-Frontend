@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import heroArt from "@/assets/Hero_section_pic.jpeg";
 import coverBoat from "@/assets/cover-boat.jpg";
 import coverLane from "@/assets/cover-lane.jpg";
+import kittenPic from "@/assets/Kitten Pic for Website.png";
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { UnderConstruction } from "@/components/tossa/UnderConstruction";
 import { Reveal } from "@/components/tossa/Reveal";
@@ -29,7 +30,7 @@ import {
   SectionHeading,
   VerifiedBadge,
 } from "@/components/tossa/kit";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -367,54 +368,80 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
         ) : !blogs || blogs.length === 0 ? (
           <EmptySectionFallback
             icon="blog"
-            title="No Editorial Blogs Yet"
+            title="No Blogs Yet"
             description="Craft essays, author interviews and behind-the-scenes posts will appear here."
           />
         ) : (
           <div className="mt-10 grid gap-6 md:grid-cols-2">
-            {blogs.slice(0, 4).map((b, i) => (
-              <Reveal key={b.slug} delay={i * 70}>
-                <div className="group flex h-full flex-col sm:flex-row items-center gap-5 p-5 rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
-                  <img
-                    src={b.cover_image || "/assets/cover-terrace.jpg"}
-                    alt=""
-                    loading="lazy"
-                    width={1200}
-                    height={800}
-                    className="h-36 w-full sm:w-44 sm:h-36 shrink-0 rounded-xl object-cover"
-                  />
-                  <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
-                    <div>
-                      <h3 className="text-[1.125rem] leading-snug font-display font-bold text-heading line-clamp-2">
-                        {b.title}
-                      </h3>
-                      <p className="mt-2 line-clamp-2 text-[0.875rem] text-body leading-relaxed">
-                        {b.excerpt || b.seo_description || "Blog article."}
-                      </p>
-                    </div>
+            {blogs.slice(0, 4).map((b, i) => {
+              const authorName = b.author?.name || b.author?.user?.full_name || "Our Bloggers";
+              const authorPhoto = b.author?.profile_photo || b.author?.avatar || "";
+              const formattedDate = formatDate(b.published_at, "Recent");
+              const readingTime = b.reading_time || b.estimated_reading_time || 4;
 
-                    <div className="mt-4 flex items-center justify-between pt-2 border-t border-divider">
-                      <p className="text-[0.75rem] text-subtle flex items-center gap-1.5">
-                        <span>{b.published_at ? new Date(b.published_at).toLocaleDateString() : "Recent"}</span>
-                        <span>·</span>
-                        <span className="inline-flex items-center gap-1">
-                          <Clock className="size-3 text-emerald-500" /> {b.reading_time || 4} min
-                        </span>
-                      </p>
+              return (
+                <Reveal key={b.slug || i} delay={i * 70}>
+                  <div className="group flex h-full flex-col sm:flex-row items-stretch gap-5 p-5 rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
+                    <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block overflow-hidden rounded-xl shrink-0 w-full sm:w-44 h-40 sm:h-auto">
+                      <img
+                        src={b.cover_image || "/assets/cover-terrace.jpg"}
+                        alt={b.title || ""}
+                        loading="lazy"
+                        width={1200}
+                        height={800}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </Link>
+                    <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+                      <div>
+                        <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block group/title">
+                          <h3 className="text-[1.125rem] leading-snug font-display font-bold text-heading group-hover/title:text-primary transition-colors line-clamp-2">
+                            {b.title}
+                          </h3>
+                        </Link>
+                        <p className="mt-2 line-clamp-2 text-[0.875rem] text-body leading-relaxed">
+                          {b.excerpt || b.seo_description || "Blog article."}
+                        </p>
+                      </div>
 
-                      <Link
-                        to="/blogs/$slug"
-                        params={{ slug: b.slug }}
-                        className="group/read font-sans text-[0.8125rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
-                      >
-                        <span>Read story</span>
-                        <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
-                      </Link>
+                      <div className="mt-4 pt-3.5 border-t border-divider space-y-2.5">
+                        {/* Author & Read here CTA */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar src={authorPhoto} initials={authorName.substring(0, 2).toUpperCase()} size="xs" />
+                            <div className="min-w-0">
+                              <span className="block font-sans text-[0.8125rem] font-bold text-heading truncate">
+                                {authorName}
+                              </span>
+                              <span className="block text-[0.71875rem] text-subtle" suppressHydrationWarning>
+                                {formattedDate}
+                              </span>
+                            </div>
+                          </div>
+
+                          <Link
+                            to="/blogs/$slug"
+                            params={{ slug: b.slug }}
+                            className="group/read shrink-0 font-sans text-[0.8125rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
+                          >
+                            <span>Read here</span>
+                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
+                          </Link>
+                        </div>
+
+                        {/* Reading Time */}
+                        <div className="flex items-center justify-end text-[0.75rem] text-subtle">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Clock className="size-3.5 text-emerald-500" />
+                            <span>{readingTime} min read</span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Reveal>
-            ))}
+                </Reveal>
+              );
+            })}
           </div>
         )}
       </div>
@@ -511,26 +538,26 @@ function Newsletter() {
             <div className="pointer-events-none absolute -bottom-24 -left-24 size-64 rounded-full bg-[#FF6B35]/15 blur-3xl" />
 
             <div className="relative z-10 max-w-xl mx-auto">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary mb-4">
+              {/* <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary mb-4">
                 <Sparkles className="size-3.5 text-primary" />
                 <span>Weekly Dispatch</span>
-              </div>
+              </div> */}
 
               <h2 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-heading leading-tight">
                 Keep reading. Keep watching.
               </h2>
               <p className="mt-3 text-sm sm:text-base leading-relaxed text-body">
-                Get handpicked longform stories, essays, and short films delivered directly to your inbox every week.
+                Get updates on new short stories, short films, and upcoming releases.
               </p>
 
               <div className="mt-7 sm:mt-8">
                 <NewsletterForm />
               </div>
 
-              <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 text-xs text-subtle">
+              {/* <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 text-xs text-subtle">
                 <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
                 <span>No spam, zero clutter. Unsubscribe anytime in one click.</span>
-              </div>
+              </div> */}
             </div>
           </div>
         </Reveal>
@@ -603,72 +630,13 @@ function NewsletterForm() {
 
 function CatSignoff() {
   return (
-    <div className="bg-slate-50 dark:bg-black pt-1 pb-8 sm:pb-10 flex flex-col items-center justify-center text-center select-none">
+    <div className="bg-slate-50 dark:bg-black pt-2 pb-8 sm:pb-10 flex flex-col items-center justify-center text-center select-none">
       <div className="relative group transition-transform duration-300 hover:scale-105">
-        <svg
-          viewBox="0 0 160 90"
-          className="w-28 h-16 sm:w-32 sm:h-18 text-slate-700 dark:text-zinc-300"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Yarn Ball with dynamic wound texture */}
-          <circle cx="144" cy="68" r="8" className="fill-[#FF6B35]/20 stroke-[#FF6B35]" strokeWidth="1.75" />
-          <path d="M140 63 C144 68 144 72 148 73" stroke="#FF6B35" strokeWidth="1.25" strokeLinecap="round" />
-          <path d="M138 69 C144 67 148 70 151 66" stroke="#FF6B35" strokeWidth="1.25" strokeLinecap="round" />
-          {/* Thread trailing towards the cat's playful paw */}
-          <path d="M136 71 C130 75 125 70 120 73" stroke="#FF6B35" strokeWidth="1.25" strokeLinecap="round" strokeDasharray="2 2" />
-
-          {/* Realistic Sleek Playing Cat Body */}
-          <path
-            d="M 28 20
-               C 22 20, 16 28, 16 38
-               C 16 48, 24 58, 36 60
-               C 34 68, 36 78, 44 80
-               C 49 80, 52 76, 54 70
-               C 70 70, 88 68, 102 72
-               L 106 80
-               C 108 82, 114 82, 116 78
-               L 118 72
-               C 122 71, 128 73, 134 72
-               C 137 71, 137 68, 133 67
-               C 126 66, 120 62, 116 54
-               C 122 52, 128 47, 130 42
-               C 131 39, 130 36, 126 36
-               L 128 24
-               C 128 22, 125 22, 122 25
-               L 116 32
-               C 112 30, 106 30, 102 32
-               L 96 25
-               C 93 22, 90 22, 90 24
-               L 92 36
-               C 86 42, 86 48, 88 52
-               C 74 46, 56 46, 44 50
-               C 36 46, 30 36, 32 26
-               C 33 22, 31 20, 28 20 Z"
-            className="fill-slate-800 dark:fill-zinc-200"
-          />
-
-          {/* Inner Ears - Soft Pink Accents */}
-          <path d="M 94 28 L 96 25 L 102 32 Z" className="fill-rose-300/80 dark:fill-rose-400/60" />
-          <path d="M 124 26 L 126 24 L 118 32 Z" className="fill-rose-300/80 dark:fill-rose-400/60" />
-
-          {/* Expressive Cat Eye (Amber Iris + Slit Pupil + Catchlight Highlight) */}
-          <ellipse cx="120" cy="38" rx="4" ry="2.6" transform="rotate(-10 120 38)" className="fill-amber-400" />
-          <ellipse cx="120.3" cy="38" rx="1.6" ry="2.4" transform="rotate(-10 120.3 38)" className="fill-slate-950 dark:fill-black" />
-          <circle cx="119.2" cy="36.8" r="0.9" className="fill-white" />
-          <circle cx="121.2" cy="39" r="0.4" className="fill-white/80" />
-          <path d="M 115.5 36.5 C 118 34, 123 34.5, 125.5 37.5" className="stroke-slate-950 dark:stroke-zinc-900" strokeWidth="1" strokeLinecap="round" />
-
-          {/* Cute Nose & Whiskers */}
-          <path d="M 129 42 L 132 43 L 130 45 Z" className="fill-[#FF6B35]" />
-          <path d="M 130 45 Q 128 47.5 125 46.5 M 130 45 Q 131 47.5 133 46" className="stroke-slate-400 dark:stroke-zinc-500" strokeWidth="0.9" strokeLinecap="round" />
-          <path d="M 128 43.5 L 140 40.5 M 129 45.5 L 142 45.5 M 128 47.5 L 139 50.5" className="stroke-slate-400 dark:stroke-zinc-400" strokeWidth="0.8" strokeLinecap="round" />
-
-          {/* Playful Paw Pads Accent on Batting Paw */}
-          <circle cx="132" cy="70" r="1.3" className="fill-[#FF6B35]" />
-          <circle cx="129.8" cy="69" r="0.75" className="fill-[#FF6B35]/80" />
-          <circle cx="133.8" cy="71" r="0.75" className="fill-[#FF6B35]/80" />
-        </svg>
+        <img
+          src={kittenPic}
+          alt="Playful Kitten"
+          className="w-36 sm:w-44 h-auto object-contain drop-shadow-xs"
+        />
       </div>
       <p className="mt-2 font-serif italic text-sm sm:text-base text-subtle tracking-wide">
         That’s all for now!

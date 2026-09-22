@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Calendar, Clapperboard, Sparkles, Video } from "lucide-react";
+import { Calendar, Sparkles, Video } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -67,7 +67,7 @@ function UpcomingProjectsPage() {
             Upcoming Projects
           </h1>
           <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            Get an exclusive look at original short films, docuseries, and visual storytelling adaptations currently in production.
+            Get an exclusive look at original short films and visual storytelling adaptations currently in production.
           </p>
         </div>
       </header>
@@ -128,9 +128,6 @@ function UpcomingProjectsPage() {
                       <h2 className="text-[1.4rem] font-display font-bold text-heading">
                         {project.title}
                       </h2>
-                      <p className="mt-1.5 text-[0.8125rem] text-subtle font-medium flex items-center gap-1.5">
-                        <Clapperboard className="size-3.5 text-primary" /> Director: {project.director || "Tossatale Studio"}
-                      </p>
                       <p className="mt-3 text-[0.9375rem] leading-relaxed text-body">
                         {project.description || project.logline || "Short film adaptation coming soon."}
                       </p>

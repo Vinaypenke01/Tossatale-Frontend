@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import aboutHeaderArt from "@/assets/About us page header - September 18, 2026 at 23.21.40.png";
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal } from "@/components/tossa/Reveal";
 import { Avatar, ButtonLink, Panel, SectionHeading } from "@/components/tossa/kit";
@@ -60,16 +61,27 @@ const teamMembers = [
 function AboutPage() {
   return (
     <SiteLayout>
-      <header className="border-b border-border paper-gradient">
-        <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
-          <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-primary uppercase">
-            Get to know us
+      <header className="relative overflow-hidden border-b border-border bg-heading text-white">
+        {/* Background Cover Image with Gradient Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={aboutHeaderArt}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-center opacity-60 dark:opacity-40"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/40" />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
+          <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-[#FF6B35] uppercase">
+            GET TO KNOW US
           </p>
-          <h1 className="mt-3 max-w-3xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
+          <h1 className="mt-3 max-w-3xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05] font-display font-bold text-white drop-shadow-xs">
             We built a reading house, not a feed.
           </h1>
-          <p className="mt-4 max-w-xl text-[1.0625rem] text-body">
-            Our journey began in 2020, during the pandemic, with a simple belief that we all have stories to tell, and so do you to.
+          <p className="mt-4 max-w-xl text-[1.0625rem] text-white/90">
+            Our journey began in 2020, during the pandemic, with a simple belief that we all have stories to tell, and so do you.
           </p>
         </div>
       </header>

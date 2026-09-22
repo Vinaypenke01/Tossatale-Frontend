@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertCircle, BookOpen, Check, ChevronDown, ChevronUp, Clock, Eye, History, MessageSquare, X } from "lucide-react";
+import { AlertCircle, BookOpen, Check, ChevronDown, ChevronUp, Clock, Eye, History, Layers, MessageSquare, X } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -311,13 +311,22 @@ function ReviewQueue() {
 
                       {/* Multi-chapter Series Badge */}
                       {story.isMultiChapter && (
-                        <Badge tone="info" className="font-bold gap-1">
-                          <BookOpen className="size-3" />
-                          <span>
-                            Series ({story.chapterCount || story.chapters?.length || 0}{" "}
-                            {(story.chapterCount || story.chapters?.length) === 1 ? "Chapter" : "Chapters"})
-                          </span>
-                        </Badge>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge tone="info" className="font-bold gap-1">
+                            <Layers className="size-3" />
+                            <span>
+                              Series ({story.chapterCount || story.chapters?.length || 0}{" "}
+                              {(story.chapterCount || story.chapters?.length) === 1 ? "Chapter" : "Chapters"})
+                            </span>
+                          </Badge>
+                          {story.pendingChaptersCount > 0 && (
+                            <Badge tone="warning" className="font-bold gap-1">
+                              <span>
+                                ⏳ {story.pendingChaptersCount} {story.pendingChaptersCount === 1 ? "Chapter" : "Chapters"} in Review
+                              </span>
+                            </Badge>
+                          )}
+                        </div>
                       )}
 
                       <span className="font-sans text-[0.75rem] font-bold text-subtle">{story.category}</span>
@@ -396,7 +405,18 @@ function ReviewQueue() {
                       <Eye className="size-4" /> Read
                     </Button>
                     {story.rawStatus === "PUBLISHED" ? (
-                      <Badge tone="success" className="px-3.5 py-1.5 font-bold text-xs">Published Live</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge tone="success" className="px-3.5 py-1.5 font-bold text-xs">Published Live</Badge>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleOpenReject(story)}
+                          className="gap-1.5"
+                          title="Unpublish this story and send feedback to writer"
+                        >
+                          <X className="size-4" /> Unpublish & Reject
+                        </Button>
+                      </div>
                     ) : (
                       <>
                         <Button
@@ -661,9 +681,26 @@ function ReviewQueue() {
                             {/* Chapter Review Actions */}
                             <div className="flex items-center gap-2">
                               {activeChapter.status === "PUBLISHED" ? (
-                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                  <Check className="size-3.5" /> Published Live
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                    <Check className="size-3.5" /> Published Live
+                                  </span>
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => {
+                                      setRejectingChapter({
+                                        storyId: readingStory.id,
+                                        chapter: activeChapter,
+                                      });
+                                      setChapterFeedbackText(activeChapter.rejection_feedback || "");
+                                    }}
+                                    className="gap-1 text-xs h-7.5 px-2.5 font-bold"
+                                    title="Unpublish this chapter and send feedback"
+                                  >
+                                    <X className="size-3.5" /> Unpublish Chapter
+                                  </Button>
+                                </div>
                               ) : (
                                 <>
                                   <Button
@@ -757,7 +794,20 @@ function ReviewQueue() {
                 Close Preview
               </Button>
               <div className="flex items-center gap-2">
-                {readingStory.rawStatus !== "PUBLISHED" && (
+                {readingStory.rawStatus === "PUBLISHED" ? (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => {
+                      const storyToReject = readingStory;
+                      setReadingStory(null);
+                      handleOpenReject(storyToReject);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <X className="size-4" /> Unpublish & Reject Story
+                  </Button>
+                ) : (
                   <>
                     <Button
                       variant="danger"
@@ -804,7 +854,9 @@ function ReviewQueue() {
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
                 <h3 className="font-display text-lg font-bold text-heading">
-                  {rejectingStory.rejectionCount > 0
+                  {rejectingStory.rawStatus === "PUBLISHED"
+                    ? "Unpublish Story & Request Revisions"
+                    : rejectingStory.rejectionCount > 0
                     ? `Reject Story (Rejection #${rejectingStory.rejectionCount + 1})`
                     : "Reject Story & Provide Feedback"}
                 </h3>
@@ -846,7 +898,7 @@ function ReviewQueue() {
                 onClick={handleConfirmReject}
                 className="gap-1.5 font-bold"
               >
-                <X className="size-4" /> {rejectMutation.isPending ? "Submitting..." : `Record Rejection ${rejectingStory.rejectionCount > 0 ? `#${rejectingStory.rejectionCount + 1}` : ""}`}
+                <X className="size-4" /> {rejectMutation.isPending ? "Submitting..." : rejectingStory.rawStatus === "PUBLISHED" ? "Unpublish & Send Feedback" : `Record Rejection ${rejectingStory.rejectionCount > 0 ? `#${rejectingStory.rejectionCount + 1}` : ""}`}
               </Button>
             </div>
           </div>

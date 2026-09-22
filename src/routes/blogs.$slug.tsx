@@ -254,25 +254,39 @@ function ShareModal({
 
 function renderBlogContent(rawContent: string) {
   if (!rawContent) return "";
-  if (/<(p|div|figure|h1|h2|h3|h4|blockquote|ul|ol)\b/i.test(rawContent)) {
-    return rawContent;
-  }
-  let formatted = rawContent.replace(
+  let formatted = rawContent;
+
+  // 1. Process Markdown links [text](url)
+  formatted = formatted.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline font-medium hover:opacity-80">$1</a>'
   );
+
+  // 2. Process Markdown images ![alt](url)
   formatted = formatted.replace(
     /!\[([^\]]*)\]\(([^)]+)\)/g,
     '<figure class="my-6"><img src="$2" alt="$1" class="rounded-xl w-full max-h-[500px] object-cover" /><figcaption class="mt-2 text-center text-xs text-subtle italic">$1</figcaption></figure>'
   );
+
+  // 3. Process Headings (### and ##)
   formatted = formatted.replace(/^### (.*$)/gim, '<h3 class="font-display font-bold text-2xl text-heading mt-8 mb-3">$1</h3>');
   formatted = formatted.replace(/^## (.*$)/gim, '<h2 class="font-display font-bold text-3xl text-heading mt-10 mb-4">$1</h2>');
+
+  // 4. Process Bold (**text** or __text__)
   formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+  // 5. Process Italic (*text* or _text_)
   formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  formatted = formatted.replace(/(?<!\w)_([^_]+)_(?!\w)/g, '<em>$1</em>');
+
+  // 6. Process Blockquotes (> quote)
   formatted = formatted.replace(/^\> (.*$)/gim, '<blockquote class="border-l-4 border-primary pl-4 py-1 italic my-4 text-heading font-serif text-lg">$1</blockquote>');
+
+  // 7. Split paragraphs and wrap non-block elements in <p>
   const paragraphs = formatted.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   return paragraphs.map((p) => {
-    if (p.startsWith("<h") || p.startsWith("<figure") || p.startsWith("<blockquote")) {
+    if (/^<(h1|h2|h3|h4|h5|h6|figure|blockquote|ul|ol|div|p)\b/i.test(p)) {
       return p;
     }
     return `<p class="leading-relaxed text-body text-[1.0625rem] mb-5">${p.replace(/\n/g, "<br />")}</p>`;
@@ -299,7 +313,7 @@ function BlogDetail() {
     return <BlogNotFound />;
   }
 
-  const authorName = blog.author?.name || blog.author?.user?.full_name || "tossatale Editorial Team";
+  const authorName = blog.author?.name || blog.author?.user?.full_name || "Our Bloggers";
   const authorInitials = authorName.substring(0, 2).toUpperCase();
 
   return (
@@ -319,7 +333,7 @@ function BlogDetail() {
 
       <article>
         {/* Cinematic High-Contrast Hero Section */}
-        <header className="relative overflow-hidden bg-slate-950 py-16 lg:py-20 text-white dark:bg-black border-b border-white/10 shadow-md">
+        <header className="relative overflow-hidden bg-slate-950 py-12 lg:py-16 text-white dark:bg-black border-b border-white/10 shadow-md">
           {/* Background Cover Image with Rich Gradient Overlay */}
           <div className="absolute inset-0 z-0">
             <img
@@ -351,18 +365,18 @@ function BlogDetail() {
               </div>
             </div>
 
-            <h1 className="mt-4 text-[clamp(2.1rem,4.2vw,3.6rem)] leading-[1.1] font-display font-bold text-white drop-shadow-xs">
+            <h1 className="mt-4 text-[clamp(1.85rem,3.8vw,3.2rem)] leading-[1.15] font-display font-bold text-white drop-shadow-xs">
               {blog.title}
             </h1>
 
             {(blog.subtitle || blog.excerpt) && (
-              <p className="mt-4 max-w-2xl text-[1.125rem] leading-relaxed text-white/90">
+              <p className="mt-3.5 max-w-2xl text-[1.0625rem] sm:text-[1.125rem] leading-relaxed text-white/90">
                 {blog.subtitle || blog.excerpt}
               </p>
             )}
 
             {/* Author Details & Byline inside Hero */}
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-white/20 pt-6">
+            <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-white/20 pt-5">
               <div className="flex items-center gap-3.5">
                 <Avatar initials={authorInitials} size="lg" />
                 <div>
@@ -392,7 +406,7 @@ function BlogDetail() {
         </header>
 
         {/* Centered Prose Article Content Below Hero */}
-        <div className="mx-auto max-w-[800px] px-5 py-14 lg:px-8">
+        <div className="mx-auto max-w-[800px] px-5 py-12 lg:py-14 lg:px-8">
           <div className="min-w-0 prose prose-lg dark:prose-invert max-w-none text-body font-sans leading-relaxed space-y-6 break-words [overflow-wrap:anywhere]">
             {blog.content ? (
               <div dangerouslySetInnerHTML={{ __html: renderBlogContent(blog.content) }} className="break-words [overflow-wrap:anywhere]" />
@@ -402,6 +416,23 @@ function BlogDetail() {
               </p>
             )}
           </div>
+
+          {/* Completed Blog Reading Tags Section */}
+          {blog.tags && blog.tags.length > 0 && (
+            <div className="mt-12 pt-6 border-t border-border flex flex-wrap items-center gap-2">
+              <span className="font-sans text-xs font-bold uppercase tracking-wider text-subtle mr-1">
+                Tags:
+              </span>
+              {blog.tags.map((t: any) => (
+                <span
+                  key={t.id || t.slug || t.name}
+                  className="inline-flex items-center rounded-full bg-surface px-3.5 py-1 text-xs font-semibold text-heading border border-border/80 shadow-xs"
+                >
+                  #{t.name || t}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </article>
 
@@ -412,53 +443,92 @@ function BlogDetail() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-display font-bold text-heading">
-                  More from our editorial team
+                  Related Blogs
                 </h2>
                 <p className="mt-1 text-sm text-subtle">
-                  Explore related journal articles and thoughtful ideas.
+                  Latest blogs from our collection.
                 </p>
               </div>
               <Link
                 to="/blogs"
-                className="group inline-flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-primary"
+                className="group inline-flex items-center gap-1.5 font-sans text-[0.875rem] font-bold text-primary hover:text-primary-hover transition-colors"
               >
-                View all blogs
+                More
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
 
             <div className="mt-8 grid gap-6 md:grid-cols-3">
-              {relatedBlogs.slice(0, 3).map((b: any, i: number) => (
-                <Reveal key={b.slug || b.id} delay={i * 70}>
-                  <Link to="/blogs/$slug" params={{ slug: b.slug }}>
-                    <Panel hover className="h-full overflow-hidden flex flex-col justify-between">
+              {relatedBlogs.slice(0, 3).map((b: any, i: number) => {
+                const bAuthor = b.author?.name || b.author?.user?.full_name || "Our Bloggers";
+                const bPhoto = b.author?.profile_photo || b.author?.avatar || "";
+                const bDate = formatDate(b.published_at, "Recent");
+                const bReadingTime = b.reading_time || b.estimated_reading_time || 4;
+
+                return (
+                  <Reveal key={b.slug || b.id || i} delay={i * 70} className="h-full">
+                    <article className="group flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
                       <div>
                         {b.cover_image && (
-                          <img
-                            src={b.cover_image}
-                            alt={b.title}
-                            loading="lazy"
-                            className="aspect-[16/10] w-full object-cover"
-                          />
+                          <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block overflow-hidden">
+                            <img
+                              src={b.cover_image}
+                              alt={b.title || ""}
+                              loading="lazy"
+                              className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          </Link>
                         )}
-                        <div className="p-6">
-                          <CategoryPill>{b.category?.name || b.tag || "Editorial"}</CategoryPill>
-                          <h3 className="mt-3 text-[1.15rem] leading-snug font-display font-bold text-heading line-clamp-2">
-                            {b.title}
-                          </h3>
-                          <p className="mt-2 text-[0.875rem] text-subtle line-clamp-2">
+                        <div className="p-5 sm:p-6">
+                          <CategoryPill>{b.category?.name || b.tag || "Blog"}</CategoryPill>
+                          <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block group/title">
+                            <h3 className="mt-3 text-[1.125rem] leading-snug font-display font-bold text-heading group-hover/title:text-primary transition-colors line-clamp-2">
+                              {b.title}
+                            </h3>
+                          </Link>
+                          <p className="mt-2 text-[0.875rem] text-body line-clamp-2 leading-relaxed">
                             {b.subtitle || b.excerpt || "Read full blog post..."}
                           </p>
                         </div>
                       </div>
 
-                      <div className="px-6 pb-6 pt-2 border-t border-border/40 text-[0.8125rem] text-subtle" suppressHydrationWarning>
-                        {formatDate(b.published_at)} · {b.reading_time || 4} min read
+                      <div className="px-5 pb-5 sm:px-6 sm:pb-6 border-t border-divider pt-3.5 space-y-2.5">
+                        {/* Author & Read here */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar src={bPhoto} initials={bAuthor.substring(0, 2).toUpperCase()} size="xs" />
+                            <div className="min-w-0">
+                              <span className="block font-sans text-[0.8125rem] font-bold text-heading truncate">
+                                {bAuthor}
+                              </span>
+                              <span className="block text-[0.71875rem] text-subtle" suppressHydrationWarning>
+                                {bDate}
+                              </span>
+                            </div>
+                          </div>
+
+                          <Link
+                            to="/blogs/$slug"
+                            params={{ slug: b.slug }}
+                            className="group/read shrink-0 font-sans text-[0.8125rem] font-bold text-heading hover:text-[#FF6B35] transition-colors relative pb-0.5"
+                          >
+                            <span>Read here</span>
+                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FF6B35] transition-all duration-200 group-hover/read:w-full" />
+                          </Link>
+                        </div>
+
+                        {/* Reading Time */}
+                        <div className="flex items-center justify-end text-[0.75rem] text-subtle">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Clock className="size-3.5 text-emerald-500" />
+                            <span>{bReadingTime} min read</span>
+                          </span>
+                        </div>
                       </div>
-                    </Panel>
-                  </Link>
-                </Reveal>
-              ))}
+                    </article>
+                  </Reveal>
+                );
+              })}
             </div>
           </div>
         </section>

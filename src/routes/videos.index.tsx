@@ -9,6 +9,7 @@ import { VideosGridSkeleton } from "@/components/tossa/Skeletons";
 import { Pagination } from "@/components/tossa/Pagination";
 import { CategoryPill, Panel } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
+import videosHeaderArt from "@/assets/Pic for shortfilms.png";
 
 export const Route = createFileRoute("/videos/")({
   head: () => ({
@@ -38,7 +39,7 @@ function VideosIndexPage() {
     queryKey: ["public-videos", page],
     queryFn: async () => {
       try {
-        const res = await api.get(`/public/videos/?page=${page}&page_size=12`);
+        const res = await api.get(`/public/videos/?page=${page}&page_size=12&upcoming=false`);
         return res.data?.data || res.data || {};
       } catch {
         return {};
@@ -67,14 +68,29 @@ function VideosIndexPage() {
 
   return (
     <SiteLayout>
-      <header className="border-b border-border paper-gradient">
-        <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8">
-          <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-primary uppercase">
-            Watch
+      <header className="relative overflow-hidden border-b border-border bg-heading text-white">
+        {/* Background Cover Image with Rich Cinematic Gradient Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={videosHeaderArt}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-right sm:object-center opacity-65 dark:opacity-45 scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/35" />
+          <div className="pointer-events-none absolute -top-24 left-1/4 size-[500px] rounded-full bg-primary/20 blur-3xl" />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-[1240px] px-5 py-16 lg:px-8">
+          <p className="font-sans text-[0.6875rem] font-black tracking-[0.22em] text-[#FF6B35] uppercase">
+            WATCH
           </p>
-          <h1 className="mt-2 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] leading-[1.05]">
+          <h1 className="mt-3 max-w-2xl text-[clamp(2.2rem,4.6vw,3.4rem)] font-display font-bold leading-[1.05] text-white drop-shadow-xs">
             Our Short films
           </h1>
+          <p className="mt-4 max-w-xl text-[1.0625rem] text-white/90">
+            Short films, documentaries, and visual storytelling from tossatale.
+          </p>
         </div>
       </header>
 
@@ -104,11 +120,6 @@ function VideosIndexPage() {
                           height={800}
                           className="size-full object-cover opacity-90 transition-transform duration-[1200ms] group-hover:scale-105"
                         />
-                        <span className="absolute inset-0 grid place-items-center bg-black/25">
-                          <span className="grid size-14 place-items-center rounded-full bg-white/90 shadow-md transition-transform group-hover:scale-110">
-                            <Play className="size-6 text-primary fill-current translate-x-0.5" />
-                          </span>
-                        </span>
                       </div>
 
                       <div className="p-5">

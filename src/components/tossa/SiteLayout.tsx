@@ -326,6 +326,8 @@ export function AnnouncementBar({
 }: {
   announcement?: AnnouncementSettings | undefined;
 }) {
+  const [dismissed, setDismissed] = useState(false);
+
   const { data: homepageData } = useQuery({
     queryKey: ["public-homepage"],
     queryFn: async () => {
@@ -342,7 +344,7 @@ export function AnnouncementBar({
 
   const announcement = propAnnouncement || homepageData?.announcement || defaultAnnouncementSettings;
 
-  if (!announcement || !announcement.enabled || !announcement.text) {
+  if (dismissed || !announcement || !announcement.enabled || !announcement.text) {
     return null;
   }
 
@@ -368,13 +370,13 @@ export function AnnouncementBar({
 
   return (
     <div className="relative z-50 bg-gradient-to-r from-primary-hover via-primary to-primary-hover py-2 text-white shadow-paper transition-all overflow-hidden select-none">
-      {/* Desktop View: Centered single line */}
-      <div className="hidden md:flex items-center justify-center w-full">
+      {/* Desktop View: Centered single line with right dismiss button */}
+      <div className="hidden md:flex items-center justify-center w-full px-10">
         <AnnouncementContent />
       </div>
 
       {/* Mobile View: Continuous single-line scrolling carousel */}
-      <div className="md:hidden flex w-full overflow-hidden">
+      <div className="md:hidden flex w-full overflow-hidden pr-8">
         <div className="animate-announcement-ticker flex items-center">
           <AnnouncementContent />
           <AnnouncementContent />
@@ -382,6 +384,16 @@ export function AnnouncementBar({
           <AnnouncementContent />
         </div>
       </div>
+
+      {/* Dismiss Button on the complete right */}
+      <button
+        type="button"
+        aria-label="Dismiss announcement"
+        onClick={() => setDismissed(true)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 grid size-6 place-items-center rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all cursor-pointer"
+      >
+        <X className="size-3.5" />
+      </button>
     </div>
   );
 }
@@ -402,12 +414,12 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-zinc-950 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.35)] transition-colors">
       <AnnouncementBar announcement={announcement} />
-      <div className="mx-auto grid grid-cols-2 lg:grid-cols-[1fr_auto_1fr] h-18 max-w-[1240px] items-center px-5 py-3 lg:px-8">
-        <div className="justify-self-start">
+      <div className="mx-auto flex h-16 lg:h-18 max-w-[1240px] items-center justify-between px-5 lg:px-8">
+        <div className="flex items-center shrink-0">
           <Wordmark />
         </div>
 
-        <nav className="justify-self-center hidden items-center gap-5 whitespace-nowrap lg:flex shrink-0">
+        <nav className="hidden items-center gap-5 whitespace-nowrap lg:flex shrink-0">
           <Link
             to="/"
             activeOptions={{ exact: true }}
@@ -460,7 +472,7 @@ export function SiteHeader({ announcement }: { announcement?: AnnouncementSettin
           )}
         </nav>
 
-        <div className="justify-self-end flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Link
             to="/search"
             search={{ q: "" }}
@@ -725,12 +737,12 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
   const facebookUrl = (footer as any).facebook || (footer as any).socials?.facebook || "https://facebook.com";
 
   return (
-    <footer className="mt-0 bg-slate-100 dark:bg-zinc-900 border-t border-black/5 dark:border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)] text-black dark:text-white">
+    <footer className="mt-0 bg-[#0c0d0e] border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.35)] text-white">
       <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {footerColumns.map((col) => (
             <div key={col.title}>
-              <p className="mb-4 font-sans text-[0.875rem] font-bold text-black dark:text-white uppercase tracking-wider">
+              <p className="mb-4 font-sans text-[0.875rem] font-bold text-white uppercase tracking-wider">
                 {col.title}
               </p>
               <ul className="space-y-2.5">
@@ -738,7 +750,7 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
                   <li key={l.label}>
                     <Link
                       to={l.to}
-                      className="text-[0.9375rem] font-normal text-black/80 dark:text-white/80 transition-colors hover:text-[#2B638C] dark:hover:text-[#5295c5]"
+                      className="text-[0.9375rem] font-normal text-zinc-300 transition-colors hover:text-[#FF6B35]"
                     >
                       {l.label}
                     </Link>
@@ -749,36 +761,36 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col gap-4 border-t border-black/10 dark:border-white/10 pt-6 text-[0.875rem] sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 text-[0.875rem] sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-semibold text-black dark:text-white">All rights reserved.</p>
-            <p className="text-subtle text-[0.8125rem]">{copyrightText}</p>
+            <p className="font-semibold text-white">All rights reserved.</p>
+            <p className="text-zinc-400 text-[0.8125rem]">{copyrightText}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-bold text-black dark:text-white mr-1 text-[0.875rem]">Follow us:</span>
+            <span className="font-bold text-white mr-1 text-[0.875rem]">Follow us:</span>
             {facebookUrl && (
-              <a href={facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+              <a href={facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook" className="grid size-8 place-items-center rounded-full bg-zinc-800 text-zinc-200 border border-zinc-700/50 shadow-xs transition-all hover:scale-105 hover:bg-[#FF6B35] hover:border-[#FF6B35] hover:text-white">
                 <Facebook className="size-4" />
               </a>
             )}
             {instagramUrl && (
-              <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+              <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram" className="grid size-8 place-items-center rounded-full bg-zinc-800 text-zinc-200 border border-zinc-700/50 shadow-xs transition-all hover:scale-105 hover:bg-[#FF6B35] hover:border-[#FF6B35] hover:text-white">
                 <Instagram className="size-4" />
               </a>
             )}
             {twitterUrl && (
-              <a href={twitterUrl} target="_blank" rel="noreferrer" aria-label="X" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+              <a href={twitterUrl} target="_blank" rel="noreferrer" aria-label="X" className="grid size-8 place-items-center rounded-full bg-zinc-800 text-zinc-200 border border-zinc-700/50 shadow-xs transition-all hover:scale-105 hover:bg-[#FF6B35] hover:border-[#FF6B35] hover:text-white">
                 <XIcon className="size-3.5" />
               </a>
             )}
             {linkedinUrl && (
-              <a href={linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+              <a href={linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="grid size-8 place-items-center rounded-full bg-zinc-800 text-zinc-200 border border-zinc-700/50 shadow-xs transition-all hover:scale-105 hover:bg-[#FF6B35] hover:border-[#FF6B35] hover:text-white">
                 <Linkedin className="size-4" />
               </a>
             )}
             {youtubeUrl && (
-              <a href={youtubeUrl} target="_blank" rel="noreferrer" aria-label="YouTube" className="grid size-8 place-items-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs transition-transform hover:scale-105 hover:text-primary">
+              <a href={youtubeUrl} target="_blank" rel="noreferrer" aria-label="YouTube" className="grid size-8 place-items-center rounded-full bg-zinc-800 text-zinc-200 border border-zinc-700/50 shadow-xs transition-all hover:scale-105 hover:bg-[#FF6B35] hover:border-[#FF6B35] hover:text-white">
                 <Youtube className="size-4" />
               </a>
             )}

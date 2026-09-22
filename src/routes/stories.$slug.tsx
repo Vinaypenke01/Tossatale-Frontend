@@ -454,14 +454,26 @@ function StoryDetail() {
 
           <div className="relative z-10 mx-auto max-w-[920px] px-5 pt-6 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-subtle">
+              <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-subtle flex items-center gap-1.5 flex-wrap">
                 <Link to="/" className="hover:text-primary transition-colors">
                   Home
                 </Link>
-                <span className="px-2">/</span>
+                <span>/</span>
                 <Link to="/stories" className="hover:text-primary transition-colors">
                   Stories
                 </Link>
+                {story.category?.name && (
+                  <>
+                    <span>/</span>
+                    <Link
+                      to="/stories"
+                      search={{ category: story.category.slug || story.category.id }}
+                      className="hover:text-primary transition-colors"
+                    >
+                      {story.category.name}
+                    </Link>
+                  </>
+                )}
               </nav>
 
               <div className="flex items-center gap-3">
@@ -479,11 +491,6 @@ function StoryDetail() {
 
             <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-heading sm:text-5xl lg:text-[3.25rem] leading-[1.12]">
               {story.title}
-              {story.category?.name && (
-                <span className="font-normal text-subtle text-xl sm:text-2xl lg:text-3xl ml-2 sm:ml-3">
-                  / {story.category.name}
-                </span>
-              )}
             </h1>
             <p className="mt-2 font-display text-lg text-body sm:text-xl leading-relaxed">
               {story.subtitle || "A quiet piece of prose written for thoughtful readers."}
@@ -556,30 +563,6 @@ function StoryDetail() {
         <div className="mx-auto max-w-[900px] px-5 py-12 lg:px-8">
           {story.is_multi_chapter ? (
             <div className="space-y-10">
-              {/* Multi-Chapter Hero CTA Banner */}
-              {story.chapters && story.chapters.length > 0 && (
-                <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-surface to-surface p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                  <div>
-                    <span className="font-sans text-[0.75rem] font-bold uppercase tracking-wider text-primary">
-                      Serialized Series
-                    </span>
-                    <h2 className="mt-1 font-display text-xl sm:text-2xl font-bold text-heading">
-                      {story.title}
-                    </h2>
-                    <p className="mt-1 text-sm text-subtle">
-                      Complete story serialized across {story.chapters.length} episodic chapters (~{story.estimated_reading_time || 5} min total).
-                    </p>
-                  </div>
-                  <Link
-                    to="/stories/$slug/chapters/$chapterOrder"
-                    params={{ slug: story.slug, chapterOrder: "1" }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-sans text-sm font-bold text-white shadow-sm hover:bg-primary-hover transition-all shrink-0 active:scale-95"
-                  >
-                    <span>Start Reading Part 1</span>
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </div>
-              )}
 
               {/* Prologue / Introductory Note if provided */}
               {story.content && (

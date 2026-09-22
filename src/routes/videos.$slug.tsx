@@ -72,7 +72,6 @@ function FloatingShare() {
     <div className="flex items-center gap-2">
       <span className="mr-2 text-[0.75rem] font-bold text-subtle uppercase">Share</span>
       {[
-        { icon: XIcon, label: "Share on X" },
         { icon: Share2, label: "Share" },
         {
           icon: Link2,
@@ -102,7 +101,38 @@ function VideoDetail() {
   const loaderData = Route.useLoaderData();
   const video = loaderData?.video;
   const progress = useScrollProgress();
-  const [liked, setLiked] = useState(false);
+
+  const videoKey = video?.slug || video?.id || "";
+  const [liked, setLiked] = useState(() => {
+    try {
+      const stored = localStorage.getItem("tossatale_liked_videos");
+      if (stored) {
+        const list = JSON.parse(stored);
+        return Array.isArray(list) && list.includes(videoKey);
+      }
+    } catch {
+      // fallback
+    }
+    return false;
+  });
+
+  const handleLikeToggle = () => {
+    const next = !liked;
+    setLiked(next);
+    try {
+      const stored = localStorage.getItem("tossatale_liked_videos");
+      let list = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(list)) list = [];
+      if (next) {
+        if (!list.includes(videoKey)) list.push(videoKey);
+      } else {
+        list = list.filter((k: string) => k !== videoKey);
+      }
+      localStorage.setItem("tossatale_liked_videos", JSON.stringify(list));
+    } catch {
+      // ignore
+    }
+  };
 
   const ytId = useMemo(
     () => video?.youtube_id || youtubeId(video?.youtube_url || "") || "dQw4w9WgXcQ",
@@ -113,7 +143,7 @@ function VideoDetail() {
     queryKey: ["public-videos-related", video?.id, video?.slug],
     queryFn: async () => {
       try {
-        const res = await api.get("/public/videos/");
+        const res = await api.get("/public/videos/?upcoming=false");
         let items = res.data?.results || res.data?.data || res.data || [];
         return items.filter((item: any) => item.slug !== video?.slug && item.id !== video?.id);
       } catch {
@@ -126,6 +156,8 @@ function VideoDetail() {
   if (!video) {
     return <VideoNotFound />;
   }
+
+  const noteOrDescription = video.editorial_note || video.description || "";
 
   return (
     <SiteLayout>
@@ -153,13 +185,12 @@ function VideoDetail() {
             </nav>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <CategoryPill>{video.category?.name || video.series_name || "Documentary"}</CategoryPill>
-              {video.duration && (
+              {video.duration ? (
                 <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle">
                   <Clock className="size-3.5" /> {video.duration}
                 </span>
-              )}
-              {video.views_count && (
+              ) : null}
+              {Boolean(video.views_count) && (
                 <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-subtle">
                   <Eye className="size-3.5" /> {video.views_count} views
                 </span>
@@ -189,28 +220,31 @@ function VideoDetail() {
           </div>
         </div>
 
-        {/* Video Editorial Note & Actions Below Player */}
+        {/* Video Description & Actions Below Player */}
         <div className="mx-auto max-w-[1100px] px-5 py-12 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
             <div className="flex items-center gap-3">
               <Button
                 variant={liked ? "primary" : "ghostOutline"}
                 size="sm"
-                onClick={() => setLiked((v) => !v)}
-                className="gap-1.5"
+                onClick={handleLikeToggle}
+                className={cn(
+                  "gap-1.5 transition-all",
+                  liked && "bg-destructive text-white hover:bg-destructive/90 border-destructive shadow-xs"
+                )}
               >
-                <Heart className={cn("size-4", liked && "fill-current")} />
+                <Heart className={cn("size-4", liked && "fill-current text-white")} />
                 {liked ? "Liked" : "Like Video"}
               </Button>
             </div>
             <FloatingShare />
           </div>
 
-          {video.editorial_note && (
+          {noteOrDescription && (
             <div className="mt-8 space-y-4">
-              <h2 className="font-display text-xl font-bold text-heading">Editorial Note</h2>
+              <h2 className="font-display text-xl font-bold text-heading">Description</h2>
               <div className="prose prose-lg dark:prose-invert max-w-none text-body font-sans leading-relaxed whitespace-pre-line">
-                {video.editorial_note}
+                {noteOrDescription}
               </div>
             </div>
           )}
