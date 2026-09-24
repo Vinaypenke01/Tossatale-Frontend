@@ -26,7 +26,7 @@ import { toast } from "sonner";
 
 import { AppShell, StatCard, type Role } from "@/components/tossa/AppShell";
 import { Badge, Button, CustomSelect, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
-import { api } from "@/lib/api";
+import { api, formatApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 function calculateReadingStats(text: string) {
@@ -127,6 +127,27 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
     setViewMode(targetView);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Auto-select series if ?series=... or ?storyId=... is in URL
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const targetSlug = params.get("series") || params.get("storyId") || params.get("id");
+      if (targetSlug && (!activeSeries || (activeSeries.slug !== targetSlug && activeSeries.id !== targetSlug))) {
+        const found = seriesList.find((s: any) => s.slug === targetSlug || s.id === targetSlug);
+        if (found) {
+          selectSeries(found, "hub");
+        } else {
+          api.get(`${endpointPrefix}/${targetSlug}/`).then((res: any) => {
+            const data = res?.data?.data || res?.data || res;
+            if (data && (data.id || data.slug)) {
+              selectSeries(data, "hub");
+            }
+          }).catch(() => {});
+        }
+      }
+    }
+  }, [seriesList]);
 
   // Query Chapters for Active Series
   const activeSeriesSlug = activeSeries?.slug || activeSeries?.id || null;
@@ -280,7 +301,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
       }
     } catch (err: any) {
       toast.error("Could not save series details", {
-        description: err.response?.data?.message || err.response?.data?.error || err.message,
+        description: formatApiErrorMessage(err),
       });
     } finally {
       setIsSavingSeriesMeta(false);
@@ -309,7 +330,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
       ]);
     } catch (err: any) {
       toast.error("Could not update series status", {
-        description: err.response?.data?.message || err.response?.data?.error || err.message,
+        description: formatApiErrorMessage(err),
       });
     } finally {
       setIsChangingSeriesStatus(false);
@@ -387,7 +408,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
       await refetchAllSeries();
     } catch (err: any) {
       toast.error("Could not save chapter", {
-        description: err.response?.data?.message || err.response?.data?.error || err.message,
+        description: formatApiErrorMessage(err),
       });
     } finally {
       setIsSavingChapter(false);
@@ -430,7 +451,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
         await refetchChapters();
         await refetchAllSeries();
       } catch (err: any) {
-        toast.error("Could not delete chapter", { description: err.message });
+        toast.error("Could not delete chapter", { description: formatApiErrorMessage(err) });
       }
     } else {
       setChapters((prev) => prev.filter((_, i) => i !== idx));
@@ -466,7 +487,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
         toast.success("Chapters reordered.");
         await refetchChapters();
       } catch (err: any) {
-        toast.error("Could not save chapter order", { description: err.message });
+        toast.error("Could not save chapter order", { description: formatApiErrorMessage(err) });
       }
     }
   };
@@ -792,15 +813,16 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
 
                 <Field
                   label="Series Synopsis / Premise *"
-                  hint="Mandatory · Brief logline or overview"
+                  hint={`Mandatory · Max 500 characters (${seriesDek.length}/500)`}
                 >
                   <Textarea
                     value={seriesDek}
                     onChange={(e) => setSeriesDek(e.target.value)}
+                    maxLength={500}
                     required
-                    rows={2}
+                    rows={3}
                     placeholder="Four monsoons, one cloth-bound account book, and a secret that threatens to tear the valley apart…"
-                    className="text-sm"
+                    className="text-sm leading-relaxed"
                   />
                 </Field>
 

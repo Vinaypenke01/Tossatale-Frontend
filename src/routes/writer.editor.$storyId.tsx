@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { StoryEditor } from "@/components/tossa/StoryEditor";
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/writer/editor/$storyId")({
 
 function EditStory() {
   const { storyId } = Route.useParams();
+  const navigate = useNavigate();
 
   const { data: storyData, isLoading } = useQuery({
     queryKey: ["writer-story-edit-detail", storyId],
@@ -26,6 +28,15 @@ function EditStory() {
     },
     enabled: Boolean(storyId),
   });
+
+  useEffect(() => {
+    if (storyData && (storyData.is_multi_chapter || (Array.isArray(storyData.chapters) && storyData.chapters.length > 0))) {
+      navigate({
+        to: "/writer/series",
+        search: { series: storyData.slug || storyData.id } as any,
+      });
+    }
+  }, [storyData, navigate]);
 
   if (isLoading) {
     return (

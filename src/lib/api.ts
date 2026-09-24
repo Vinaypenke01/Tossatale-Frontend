@@ -12,13 +12,51 @@ export interface ApiResponse<T = any> {
   errors?: Record<string, string[]>;
 }
 
+export function formatApiErrorMessage(err: any): string {
+  if (!err) return "An unexpected error occurred.";
+
+  if (typeof err === "string") return err;
+
+  // Check if errors object exists (from ApiError, fetch response, or Axios/drf response)
+  const errors = err.errors || err.response?.data?.errors || err.data?.errors;
+  const rawMessage = err.message || err.response?.data?.message || err.response?.data?.detail;
+
+  if (errors && typeof errors === "object") {
+    const errorDetails: string[] = [];
+    for (const [field, fieldErrors] of Object.entries(errors)) {
+      const fieldName =
+        field === "non_field_errors" || field === "detail" || field === "error"
+          ? ""
+          : `${field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, " ")}: `;
+
+      if (Array.isArray(fieldErrors)) {
+        errorDetails.push(`${fieldName}${fieldErrors.join(", ")}`);
+      } else if (typeof fieldErrors === "string") {
+        errorDetails.push(`${fieldName}${fieldErrors}`);
+      } else if (fieldErrors && typeof fieldErrors === "object") {
+        errorDetails.push(`${fieldName}${JSON.stringify(fieldErrors)}`);
+      }
+    }
+    if (errorDetails.length > 0) {
+      return errorDetails.join(" · ");
+    }
+  }
+
+  if (rawMessage && rawMessage !== "Validation error.") {
+    return rawMessage;
+  }
+
+  return rawMessage || "Validation error occurred. Please check your inputs.";
+}
+
 export class ApiError extends Error {
   status: number;
   data: any;
   errors?: Record<string, string[]> | undefined;
 
   constructor(message: string, status: number, data?: any, errors?: Record<string, string[]>) {
-    super(message);
+    const formatted = errors ? formatApiErrorMessage({ message, errors, data }) : message;
+    super(formatted || message);
     this.status = status;
     this.data = data;
     if (errors !== undefined) {

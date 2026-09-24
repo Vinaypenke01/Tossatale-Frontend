@@ -1,4 +1,4 @@
-import { Link, useBlocker } from "@tanstack/react-router";
+import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
   AlertTriangle,
@@ -32,11 +32,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/tossa/AppShell";
-import { Badge, Button, CustomSelect, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
+import { Badge, Button, ButtonLink, CustomSelect, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
 import { UnsavedChangesModal } from "@/components/tossa/UnsavedChangesModal";
 import { ChaptersWorkspace } from "@/components/tossa/ChaptersWorkspace";
 import { type Story } from "@/lib/data";
-import { api } from "@/lib/api";
+import { api, formatApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function StoryEditor({
@@ -47,6 +47,7 @@ export function StoryEditor({
   role?: "writer" | "admin";
 }) {
   const isAdmin = role === "admin";
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"editor" | "library" | "drafts">("editor");
 
@@ -523,7 +524,13 @@ export function StoryEditor({
     },
   });
 
-  const userStoriesList = (userStoriesData && Array.isArray(userStoriesData)) ? userStoriesData : [];
+  const rawStoriesList = (userStoriesData && Array.isArray(userStoriesData)) ? userStoriesData : [];
+  const userStoriesList = useMemo(() => {
+    return rawStoriesList.filter((s: any) => !s.is_multi_chapter && (!s.chapters || s.chapters.length === 0));
+  }, [rawStoriesList]);
+  const hasSeriesInAccount = useMemo(() => {
+    return rawStoriesList.some((s: any) => s.is_multi_chapter || (s.chapters && s.chapters.length > 0));
+  }, [rawStoriesList]);
   const draftStoriesList = useMemo(() => {
     return userStoriesList.filter((s: any) => s.status === "DRAFT" || s.status === "REJECTED");
   }, [userStoriesList]);
@@ -539,7 +546,7 @@ export function StoryEditor({
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
     },
     onError: (err: any) => {
-      toast.error("Failed to delete story", { description: err.message });
+      toast.error("Failed to delete story", { description: formatApiErrorMessage(err) });
     },
   });
 
@@ -608,7 +615,7 @@ export function StoryEditor({
       setNewCategoryDesc("");
       setShowAddCategoryModal(false);
     } catch (err: any) {
-      toast.error("Failed to create category", { description: err.message });
+      toast.error("Failed to create category", { description: formatApiErrorMessage(err) });
     } finally {
       setIsCreatingCategory(false);
     }
@@ -755,7 +762,7 @@ export function StoryEditor({
       return { success: true, slug: resolvedSlug || undefined };
     } catch (err: any) {
       toast.error("Failed to save story", {
-        description: err.response?.data?.message || err.response?.data?.error || err.message || "An unexpected error occurred.",
+        description: formatApiErrorMessage(err),
       });
       return { success: false };
     } finally {
@@ -764,13 +771,19 @@ export function StoryEditor({
   };
 
   const handleEditStory = async (st: any) => {
+    const isMulti = Boolean(st.is_multi_chapter || st.chapters?.length > 0 || (st.chapter_count && st.chapter_count > 0));
+    if (isMulti) {
+      const targetRoute = isAdmin ? "/admin/series" : "/writer/series";
+      const targetSlug = st.slug || st.id;
+      navigate({ to: targetRoute, search: { series: targetSlug } as any });
+      return;
+    }
     const slugOrId = st.slug || st.id;
     setActiveEditingSlug(slugOrId);
     setTitle(st.title || "");
     setDek(st.subtitle || st.seo_description || "");
     const initialContent = st.content || st.plain_text_content || (Array.isArray(st.body) ? st.body.join("\n\n") : st.body) || "";
     setBody(initialContent);
-    const isMulti = Boolean(st.is_multi_chapter || st.chapters?.length > 0 || (st.chapter_count && st.chapter_count > 0));
     setIsMultiChapter(isMulti);
     setSeriesStatus(st.series_status || "ONGOING");
     if (st.chapters && Array.isArray(st.chapters) && st.chapters.length > 0) {
@@ -1218,6 +1231,27 @@ export function StoryEditor({
               </Panel>
             ) : (
               <Panel className="p-6 lg:p-8 space-y-5">
+                {isMultiChapter && (
+                  <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-primary flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <Layers className="size-5 shrink-0 text-primary" />
+                      <div>
+                        <strong className="text-sm font-bold block text-heading">Multi-Chapter Series ("{title || "Untitled"}")</strong>
+                        <p className="text-xs text-subtle mt-0.5">Chapters and episodic roadmaps are managed in the dedicated Series Studio.</p>
+                      </div>
+                    </div>
+                    <ButtonLink
+                      to={isAdmin ? "/admin/series" : "/writer/series"}
+                      search={{ series: activeEditingSlug || (story as any)?.slug || (story as any)?.id } as any}
+                      variant="primary"
+                      size="sm"
+                      className="shrink-0 gap-1.5 font-bold text-xs"
+                    >
+                      Open in Series Studio <ArrowRight className="size-3.5" />
+                    </ButtonLink>
+                  </div>
+                )}
+
                 {(rejectionFeedback || rejectionReviews.length > 0) && (
                   <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-5 text-destructive space-y-3 shadow-xs">
                     <div className="flex items-center gap-2">
@@ -1273,10 +1307,11 @@ export function StoryEditor({
                   />
                 </Field>
 
-                <Field label="Synopsis" hint="One or two sentences to set the tone.">
+                <Field label="Synopsis" hint={`One or two sentences · Max 500 characters (${dek.length}/500)`}>
                   <Textarea
                     value={dek}
                     onChange={(e) => setDek(e.target.value)}
+                    maxLength={500}
                     rows={2}
                     placeholder="Four monsoons, one cloth-bound account book, and everything a family refuses to say out loud…"
                   />
@@ -1318,6 +1353,30 @@ export function StoryEditor({
               <Plus className="size-4" /> Write New Story
             </Button>
           </div>
+
+          {hasSeriesInAccount && (
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+              <div className="flex items-center gap-3">
+                <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Layers className="size-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-heading">Multi-Chapter Series Studio</h4>
+                  <p className="text-xs text-subtle">
+                    Multi-chapter stories and sequential chapter roadmaps are managed in the dedicated Series Studio.
+                  </p>
+                </div>
+              </div>
+              <ButtonLink
+                to={isAdmin ? "/admin/series" : "/writer/series"}
+                variant="ghostOutline"
+                size="sm"
+                className="shrink-0 gap-1.5 font-bold text-xs self-start sm:self-auto"
+              >
+                Go to Series Studio <ArrowRight className="size-3.5" />
+              </ButtonLink>
+            </div>
+          )}
 
           {userStoriesList.length === 0 ? (
             <div className="mt-6 py-12 text-center text-subtle font-medium border border-dashed border-border rounded-2xl">

@@ -42,18 +42,19 @@ export function UnderConstructionScreen({ message }: { message?: string }) {
         </h1>
 
         {/* Updated Maintenance Description */}
-        <p className="mx-auto mt-4 max-w-lg text-[0.9375rem] sm:text-[1.0625rem] leading-relaxed text-zinc-300">
-          {message ||
-            "We are currently making a few improvements behind the scenes to make your experience better. Please check back soon."}
+        <p className="mx-auto mt-3 max-w-lg text-[0.9375rem] sm:text-[1.0625rem] leading-relaxed text-zinc-300">
+          {message && !message.includes("undergo scheduled maintenance")
+            ? message
+            : "We are currently making a few improvements behind the scenes to make your experience better. Please check back soon."}
         </p>
 
-        {/* Social Media Section */}
-        <div className="mt-6 pt-5 border-t border-white/10 flex flex-col items-center justify-center">
+        {/* Social Media Section with reduced spacing to divider */}
+        <div className="mt-3.5 pt-3.5 border-t border-white/10 flex flex-col items-center justify-center">
           <p className="font-sans text-[0.875rem] sm:text-[0.9375rem] font-bold text-zinc-200">
             In the meantime, follow us for more updates.
           </p>
 
-          <div className="mt-5 flex items-center justify-center gap-3.5 sm:gap-4 flex-wrap">
+          <div className="mt-4 flex items-center justify-center gap-3.5 sm:gap-4 flex-wrap">
             {socialLinks.map((item) => {
               const Icon = item.icon;
               return (

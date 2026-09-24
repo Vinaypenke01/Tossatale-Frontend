@@ -3,6 +3,7 @@ import {
   Activity,
   CheckCircle2,
   Clock,
+  ExternalLink,
   Eye,
   EyeOff,
   FileCheck2,
@@ -45,6 +46,8 @@ function AdminProfileScreen() {
   const [lastName, setLastName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
+  const [bio, setBio] = useState("");
+  const [writerSlug, setWriterSlug] = useState("");
   const [roleTitle, setRoleTitle] = useState("");
   const [profilePhoto, setProfilePhoto] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -103,6 +106,8 @@ function AdminProfileScreen() {
       setLastName(userProfile.last_name || "");
       setDisplayName(userProfile.display_name || userProfile.full_name || "");
       setEmail(userProfile.email || "");
+      setBio(userProfile.writer_bio || userProfile.bio || "");
+      setWriterSlug(userProfile.writer_slug || "");
       setRoleTitle(userProfile.role ? `${userProfile.role} Administrator` : "Senior Managing Editor");
     }
   }, [userProfile]);
@@ -115,6 +120,9 @@ function AdminProfileScreen() {
         first_name: firstName,
         last_name: lastName,
         display_name: displayName,
+        bio: bio,
+        writer_bio: bio,
+        writer_slug: writerSlug.replace(/^@+/, "").trim(),
       });
 
       toast.success("Admin profile updated successfully!", {
@@ -123,6 +131,7 @@ function AdminProfileScreen() {
 
       await queryClient.invalidateQueries({ queryKey: ["admin-user-profile"] });
       await queryClient.invalidateQueries({ queryKey: ["auth-me"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-audit-logs"] });
     } catch (err: any) {
       toast.error("Failed to update admin profile", {
         description: err.message || "An error occurred while saving profile changes.",
@@ -260,15 +269,55 @@ function AdminProfileScreen() {
               <form onSubmit={handleSave} className="mt-5 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="First Name">
-                    <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Devika" />
+                    <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Admin" />
                   </Field>
                   <Field label="Last Name">
-                    <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Rao" />
+                    <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Writer" />
                   </Field>
                 </div>
 
                 <Field label="Display / Public Name">
-                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Devika Rao" />
+                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Admin Writtings" />
+                </Field>
+
+                <Field label="Author / Pen Name Handle" hint="Public handle used in story bylines & author URLs (e.g. admin-test)">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle font-mono text-xs font-bold select-none">
+                        @
+                      </span>
+                      <Input
+                        value={writerSlug}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/^@+/, "").replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
+                          setWriterSlug(val);
+                        }}
+                        placeholder="admin-writings"
+                        className="pl-7 font-mono text-xs font-bold text-heading"
+                      />
+                    </div>
+                    {userProfile?.writer_slug && (
+                      <a
+                        href={`/writers/${userProfile.writer_slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors shrink-0"
+                      >
+                        <ExternalLink className="size-3.5" />
+                        View Page
+                      </a>
+                    )}
+                  </div>
+                </Field>
+
+                <Field label="Editorial & Author Bio" hint={`${bio.length}/500`}>
+                  <Textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    placeholder="Short bio or editorial background visible on your published stories and public profile..."
+                  />
                 </Field>
 
                 <Field label="Official Email (Permanent Account Identifier)">
@@ -454,23 +503,42 @@ function AdminProfileScreen() {
                   No administrative activity recorded yet. System actions will automatically appear here.
                 </div>
               ) : (
-                <ul className="mt-5 space-y-4">
-                  {liveAuditLogs.map((log: any, idx: number) => (
-                    <li key={log.id || idx} className="rounded-xl border border-border bg-surface p-4">
-                      <div className="flex items-center justify-between">
-                        <span className="font-sans text-[0.875rem] font-bold text-heading flex items-center gap-2">
-                          <CheckCircle2 className="size-4 text-primary" />
-                          {log.action || log.event_type || "Admin Action"}
-                        </span>
-                        <span className="text-[0.75rem] text-subtle flex items-center gap-1">
-                          <Clock className="size-3" /> {log.created_at ? new Date(log.created_at).toLocaleString() : "Recent"}
-                        </span>
-                      </div>
-                      <p className="mt-1.5 text-[0.8125rem] text-subtle pl-6">
-                        {log.details || log.object_repr || log.object_type || "Administrative event"}
-                      </p>
-                    </li>
-                  ))}
+                <ul className="mt-5 space-y-3">
+                  {liveAuditLogs.map((log: any, idx: number) => {
+                    const actionName = (log.action || log.event_type || "ACTION").toUpperCase();
+                    const tone = 
+                      actionName === "APPROVE" || actionName === "PUBLISH" || actionName === "VERIFY" 
+                        ? "success" 
+                        : actionName === "REJECT" || actionName === "DELETE" || actionName === "DEACTIVATE" 
+                        ? "destructive" 
+                        : actionName === "UPDATE" 
+                        ? "warning" 
+                        : actionName === "CREATE" 
+                        ? "brand" 
+                        : "info";
+
+                    return (
+                      <li key={log.id || idx} className="rounded-xl border border-border bg-surface p-4 hover:border-primary/40 transition-colors">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Badge tone={tone as any}>{actionName}</Badge>
+                            <span className="font-sans text-[0.875rem] font-bold text-heading truncate">
+                              {log.object_repr || log.object_type || "Admin Event"}
+                            </span>
+                          </div>
+                          <span className="text-[0.75rem] text-subtle flex items-center gap-1 shrink-0">
+                            <Clock className="size-3" /> {log.created_at ? new Date(log.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "Recent"}
+                          </span>
+                        </div>
+                        {log.actor_email && (
+                          <p className="mt-1.5 text-[0.78125rem] text-subtle flex items-center gap-2">
+                            <span className="text-subtle">By: <strong className="text-heading font-medium">{log.actor_email}</strong></span>
+                            {log.object_type && <span className="text-[0.7rem] bg-surface-alt px-1.5 py-0.5 rounded border border-border font-mono">{log.object_type}</span>}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Panel>
