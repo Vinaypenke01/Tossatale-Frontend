@@ -251,7 +251,7 @@ function CoverImageModal({ isOpen, onClose, onSave }: CoverImageModalProps) {
     reader.onload = (e) => {
       const result = e.target?.result as string;
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const maxDim = 1400;
         let width = img.width;
         let height = img.height;
@@ -268,14 +268,33 @@ function CoverImageModal({ isOpen, onClose, onSave }: CoverImageModalProps) {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
+        let compressedBase64 = result;
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL("image/jpeg", 0.8);
-          setPreview(compressed);
-          toast.success("Cover image optimized!");
-        } else {
-          setPreview(result);
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
         }
+
+        // Try backend Cloudinary upload
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("folder", "blogs");
+          const res = await api.post("/media/upload/", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          const cdnUrl = res.data?.data?.url || res.data?.url;
+          if (cdnUrl) {
+            setPreview(cdnUrl);
+            toast.success("Cover image ready!");
+            setIsProcessing(false);
+            return;
+          }
+        } catch {
+          // Graceful fallback to local base64
+        }
+
+        setPreview(compressedBase64);
+        toast.success("Cover image optimized!");
         setIsProcessing(false);
       };
       img.onerror = () => {
@@ -1091,6 +1110,14 @@ function AdminBlogs() {
                         {c.name}
                       </button>
                     ))}
+                    <a
+                      href="/admin/categories"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[0.6875rem] font-semibold text-primary hover:underline"
+                    >
+                      + Manage / Delete Categories →
+                    </a>
                   </div>
                 )}
               </div>

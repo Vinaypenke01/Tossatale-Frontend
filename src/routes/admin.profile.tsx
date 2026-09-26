@@ -48,6 +48,9 @@ function AdminProfileScreen() {
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
   const [writerSlug, setWriterSlug] = useState("");
+  const [location, setLocation] = useState("India");
+  const [authorTitle, setAuthorTitle] = useState("tossatale author");
+  const [tagline, setTagline] = useState("Storyteller");
   const [roleTitle, setRoleTitle] = useState("");
   const [profilePhoto, setProfilePhoto] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -108,6 +111,9 @@ function AdminProfileScreen() {
       setEmail(userProfile.email || "");
       setBio(userProfile.writer_bio || userProfile.bio || "");
       setWriterSlug(userProfile.writer_slug || "");
+      setLocation(userProfile.location || "India");
+      setAuthorTitle(userProfile.author_title || "tossatale author");
+      setTagline(userProfile.tagline || "Storyteller");
       setRoleTitle(userProfile.role ? `${userProfile.role} Administrator` : "Senior Managing Editor");
     }
   }, [userProfile]);
@@ -123,6 +129,9 @@ function AdminProfileScreen() {
         bio: bio,
         writer_bio: bio,
         writer_slug: writerSlug.replace(/^@+/, "").trim(),
+        location: location,
+        author_title: authorTitle,
+        tagline: tagline,
       });
 
       toast.success("Admin profile updated successfully!", {
@@ -309,6 +318,18 @@ function AdminProfileScreen() {
                     )}
                   </div>
                 </Field>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Location">
+                    <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="India" />
+                  </Field>
+                  <Field label="Author Title">
+                    <Input value={authorTitle} onChange={(e) => setAuthorTitle(e.target.value)} placeholder="tossatale author" />
+                  </Field>
+                  <Field label="Tagline / Beat">
+                    <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Storyteller" />
+                  </Field>
+                </div>
 
                 <Field label="Editorial & Author Bio" hint={`${bio.length}/500`}>
                   <Textarea

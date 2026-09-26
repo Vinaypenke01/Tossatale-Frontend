@@ -55,7 +55,8 @@ function WriterProfileScreen() {
 
   const [name, setName] = useState(user?.full_name || "Writer");
   const [handle, setHandle] = useState("@writer");
-  const [role, setRole] = useState("Longform Storyteller");
+  const [tagline, setTagline] = useState("Storyteller");
+  const [authorTitle, setAuthorTitle] = useState("tossatale author");
   const [location, setLocation] = useState("India");
   const [email, setEmail] = useState(user?.email || "");
   const [gender, setGender] = useState("OTHER");
@@ -91,6 +92,9 @@ function WriterProfileScreen() {
       setBio(profileData.bio || "");
       setGender(profileData.gender || "OTHER");
       setProfilePhoto(profileData.profile_photo || "");
+      setLocation(profileData.location || "India");
+      setAuthorTitle(profileData.author_title || "tossatale author");
+      setTagline(profileData.tagline || "Storyteller");
       setWebsite(profileData.website_url || "");
       setInstagram(profileData.instagram_url || "");
       setTwitter(profileData.x_url || "");
@@ -181,6 +185,9 @@ function WriterProfileScreen() {
       name,
       gender,
       bio,
+      location,
+      author_title: authorTitle,
+      tagline,
       profile_photo: profilePhoto,
       website_url: website,
       instagram_url: instagram,
@@ -238,9 +245,14 @@ function WriterProfileScreen() {
                 {name}
                 {profileData?.is_verified && <VerifiedBadge />}
               </h2>
-              <p className="text-[0.8125rem] text-subtle">{handle} · {location}</p>
-              <p className="mt-1 inline-flex items-center rounded-full bg-primary/10 px-3 py-0.5 text-[0.75rem] font-bold text-primary">
-                {role}
+              <p className="text-[0.8125rem] text-subtle flex items-center justify-center gap-1 mt-0.5">
+                <MapPin className="size-3.5 text-primary shrink-0" />
+                <span>{location || "India"}</span>
+                <span>·</span>
+                <span className="font-semibold text-heading">{authorTitle || "tossatale author"}</span>
+              </p>
+              <p className="mt-1.5 inline-flex items-center rounded-full bg-primary/10 px-3 py-0.5 text-[0.75rem] font-bold text-primary">
+                {tagline || "Storyteller"}
               </p>
 
               {bio && (
@@ -308,7 +320,19 @@ function WriterProfileScreen() {
                   </Field>
                 </div>
 
-                <div className="mt-3.5 grid gap-3.5 sm:grid-cols-2">
+                <div className="mt-3.5 grid gap-3.5 sm:grid-cols-3">
+                  <Field label="Location (e.g. India, Bangalore)">
+                    <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="India" />
+                  </Field>
+                  <Field label="Author Title (e.g. tossatale author)">
+                    <Input value={authorTitle} onChange={(e) => setAuthorTitle(e.target.value)} placeholder="tossatale author" />
+                  </Field>
+                  <Field label="Tagline / Beat (e.g. Storyteller)">
+                    <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Storyteller" />
+                  </Field>
+                </div>
+
+                <div className="mt-3.5">
                   <Field label="Registered Email (Permanent Account Identifier)">
                     <div className="relative">
                       <Input
@@ -319,9 +343,6 @@ function WriterProfileScreen() {
                       />
                       <Lock className="size-4 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
                     </div>
-                  </Field>
-                  <Field label="Primary Beat / Role">
-                    <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Longform Storyteller" />
                   </Field>
                 </div>
 

@@ -11,6 +11,7 @@ import {
   Globe,
   Heart,
   Mail,
+  MapPin,
   Share2,
   ShieldAlert,
   ShieldCheck,
@@ -26,6 +27,7 @@ import {
   FileText,
   MessageSquareQuote,
   Layers,
+  PenLine,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -33,7 +35,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 import { AppShell } from "@/components/tossa/AppShell";
-import { Avatar, Badge, Button, ButtonLink, Panel, VerifiedBadge } from "@/components/tossa/kit";
+import { Avatar, Badge, Button, ButtonLink, Field, Input, Panel, Textarea, VerifiedBadge } from "@/components/tossa/kit";
 import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { pageHead } from "@/lib/head";
 import { cn } from "@/lib/utils";
@@ -209,6 +211,35 @@ function AdminWriterDetail() {
     },
   });
 
+  // Edit Writer Profile States & Mutation
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editLocation, setEditLocation] = useState(writer?.location || "India");
+  const [editAuthorTitle, setEditAuthorTitle] = useState(writer?.author_title || "tossatale author");
+  const [editTagline, setEditTagline] = useState(writer?.tagline || "Storyteller");
+  const [editBio, setEditBio] = useState(writer?.bio || "");
+
+  const updateWriterMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.patch(`/admin/writers/${writer.slug}/`, {
+        location: editLocation,
+        author_title: editAuthorTitle,
+        tagline: editTagline,
+        bio: editBio,
+      });
+      return res.data?.data || res.data;
+    },
+    onSuccess: (data) => {
+      setWriter((prev: any) => ({ ...prev, ...data }));
+      toast.success("Writer profile updated successfully!");
+      setIsEditModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-writers"] });
+      router.invalidate();
+    },
+    onError: (err: any) => {
+      toast.error("Failed to update writer", { description: err.message || "An error occurred." });
+    },
+  });
+
   if (!writer) {
     return <WriterNotFound />;
   }
@@ -332,8 +363,16 @@ function AdminWriterDetail() {
                 </Badge>
               </div>
 
-              <p className="mt-1 font-mono text-xs text-subtle">
-                @{writer.slug} · <span className="font-sans text-body">{email}</span>
+              <p className="mt-1 font-mono text-xs text-subtle flex flex-wrap items-center gap-2">
+                <span>@{writer.slug}</span>
+                <span>·</span>
+                <span className="font-sans text-body">{email}</span>
+                <span>·</span>
+                <span className="inline-flex items-center gap-1 font-sans text-primary">
+                  <MapPin className="size-3" /> {writer.location || "India"}
+                </span>
+                <span>·</span>
+                <span className="font-sans font-semibold text-heading">{writer.author_title || "tossatale author"}</span>
               </p>
 
               <p className="mt-3.5 max-w-2xl text-[0.9375rem] text-body leading-relaxed">
@@ -371,6 +410,22 @@ function AdminWriterDetail() {
 
           {/* Quick Admin Actions */}
           <div className="flex flex-wrap md:flex-col gap-2 shrink-0 border-t border-border pt-4 md:border-t-0 md:pt-0">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setEditLocation(writer.location || "India");
+                setEditAuthorTitle(writer.author_title || "tossatale author");
+                setEditTagline(writer.tagline || "Storyteller");
+                setEditBio(writer.bio || "");
+                setIsEditModalOpen(true);
+              }}
+              className="gap-1.5"
+            >
+              <PenLine className="size-3.5" />
+              <span>Edit Details</span>
+            </Button>
+
             <Button
               variant={writer.is_verified ? "ghostOutline" : "primary"}
               size="sm"
@@ -699,6 +754,94 @@ function AdminWriterDetail() {
                   </a>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 4. EDIT WRITER DETAILS MODAL ─── */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-surface-alt/60">
+              <div className="flex items-center gap-2.5">
+                <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <PenLine className="size-4" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-heading leading-none">
+                    Edit Writer Profile Details
+                  </h3>
+                  <p className="mt-1 text-xs text-subtle">
+                    Configure location, author badge, tagline, and bio for @{writer.slug}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-surface-alt hover:text-heading transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Location" hint="e.g. India, United Kingdom, Tokyo">
+                  <Input
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder="e.g. India"
+                  />
+                </Field>
+
+                <Field label="Author Title / Designation" hint="e.g. tossatale author, Staff Writer">
+                  <Input
+                    value={editAuthorTitle}
+                    onChange={(e) => setEditAuthorTitle(e.target.value)}
+                    placeholder="e.g. tossatale author"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Tagline / Short Role" hint="e.g. Storyteller, Fantasy Novelist">
+                <Input
+                  value={editTagline}
+                  onChange={(e) => setEditTagline(e.target.value)}
+                  placeholder="e.g. Storyteller"
+                />
+              </Field>
+
+              <Field label="Biography" hint="Short public author biography">
+                <Textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  placeholder="Write a brief bio..."
+                  rows={4}
+                />
+              </Field>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-2.5 border-t border-border px-6 py-4 bg-surface-alt/40">
+              <Button
+                variant="ghostOutline"
+                size="sm"
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={updateWriterMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={updateWriterMutation.isPending}
+                onClick={() => updateWriterMutation.mutate()}
+              >
+                {updateWriterMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
           </div>
         </div>

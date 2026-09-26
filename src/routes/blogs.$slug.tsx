@@ -347,18 +347,34 @@ function BlogDetail() {
 
           <div className="relative z-10 mx-auto max-w-[820px] px-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-white/70">
+              <nav aria-label="Breadcrumb" className="text-[0.8125rem] text-white/70 flex items-center gap-1.5 flex-wrap">
                 <Link to="/" className="hover:text-white transition-colors">
                   Home
                 </Link>
-                <span className="px-2 text-white/40">/</span>
-                <Link to="/blogs" className="hover:text-white transition-colors">
-                  Blog
+                <span className="text-white/40">/</span>
+                <Link to="/stories" className="hover:text-white transition-colors">
+                  Stories
                 </Link>
+                {(blog.category?.name || blog.category) && (
+                  <>
+                    <span className="text-white/40">/</span>
+                    <Link
+                      to="/stories"
+                      search={{
+                        category:
+                          typeof blog.category === "object"
+                            ? blog.category?.slug || blog.category?.id || "romance"
+                            : String(blog.category).toLowerCase().replace(/\s+/g, "-"),
+                      }}
+                      className="hover:text-white transition-colors capitalize text-white/90"
+                    >
+                      {typeof blog.category === "object" ? blog.category?.name : blog.category}
+                    </Link>
+                  </>
+                )}
               </nav>
 
               <div className="flex items-center gap-3">
-                <CategoryPill tone="onImage">{blog.category?.name || "General"}</CategoryPill>
                 <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-white/80 font-medium">
                   <Clock className="size-3.5" /> {blog.estimated_reading_time || blog.reading_time || 5} min read
                 </span>

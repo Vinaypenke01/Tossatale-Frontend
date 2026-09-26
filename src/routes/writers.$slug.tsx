@@ -61,11 +61,39 @@ function WriterProfile() {
   const loaderData = Route.useLoaderData();
   const writer = loaderData?.writer;
 
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const localSupportKey = writer?.slug ? `tossatale_writer_support_${writer.slug}_${todayKey}` : null;
+
   const [supportCount, setSupportCount] = useState(
     Number(writer?.total_supports || writer?.total_likes || 0)
   );
   const [isSupporting, setIsSupporting] = useState(false);
-  const [hasSupported, setHasSupported] = useState(false);
+  const [hasSupported, setHasSupported] = useState<boolean>(() => {
+    if (writer?.has_supported_today) return true;
+    if (typeof window !== "undefined" && localSupportKey) {
+      return localStorage.getItem(localSupportKey) === "true";
+    }
+    return false;
+  });
+
+  // Query fresh support status from backend
+  useQuery({
+    queryKey: ["public-writer-support-status", writer?.slug],
+    queryFn: async () => {
+      if (!writer?.slug) return null;
+      const res = await api.get(`/public/writers/${writer.slug}/support/`);
+      const data = res.data?.data || res.data;
+      if (typeof data?.supports_count === "number") {
+        setSupportCount(data.supports_count);
+      }
+      if (data?.has_supported_today) {
+        setHasSupported(true);
+        if (localSupportKey) localStorage.setItem(localSupportKey, "true");
+      }
+      return data;
+    },
+    enabled: Boolean(writer?.slug),
+  });
 
   const { data: publicStories, isLoading: isStoriesLoading } = useQuery({
     queryKey: ["public-writer-stories", writer?.slug],
@@ -79,23 +107,42 @@ function WriterProfile() {
 
   const handleSupportWriter = async () => {
     if (!writer?.slug || isSupporting) return;
+
+    if (hasSupported) {
+      toast.info(`You have already supported ${writer.name || "this writer"} today! ❤️`, {
+        description: "You can show your appreciation again tomorrow.",
+      });
+      return;
+    }
+
     setIsSupporting(true);
-    setSupportCount((prev) => prev + 1);
-    setHasSupported(true);
 
     try {
       const res = await api.post(`/public/writers/${writer.slug}/support/`);
-      const newCount = res.data?.data?.supports_count ?? res.data?.supports_count;
+      const respData = res.data?.data || res.data;
+      const newCount = respData?.supports_count ?? respData?.total_supports;
+
       if (typeof newCount === "number") {
         setSupportCount(newCount);
       }
-      toast.success(`You supported ${name}! ❤️`, {
-        description: "Your appreciation has been sent directly to this storyteller.",
-      });
-    } catch {
-      // Keep optimistic count
-      toast.success(`You supported ${name}! ❤️`, {
-        description: "Thank you for appreciating independent writing on tossatale.",
+
+      setHasSupported(true);
+      if (localSupportKey) {
+        localStorage.setItem(localSupportKey, "true");
+      }
+
+      if (respData?.already_supported) {
+        toast.info(res.data?.message || "You have already supported this writer today! ❤️", {
+          description: "Thank you! You can support them again tomorrow.",
+        });
+      } else {
+        toast.success(res.data?.message || `You supported ${writer.name || "this writer"}! ❤️`, {
+          description: "Your appreciation has been sent directly to this storyteller.",
+        });
+      }
+    } catch (err: any) {
+      toast.error("Could not send support", {
+        description: err.message || "Please try again shortly.",
       });
     } finally {
       setIsSupporting(false);
@@ -137,10 +184,10 @@ function WriterProfile() {
                 )}
               </h1>
               <p className="mt-1 text-[0.875rem] text-white/75">
-                @{writer.slug} · Storyteller
+                @{writer.slug} · {writer.tagline || "Storyteller"}
               </p>
               <p className="mt-0.5 flex items-center gap-1.5 text-[0.8125rem] text-white/65">
-                <MapPin className="size-3.5" /> India · tossatale author
+                <MapPin className="size-3.5" /> {writer.location || "India"} · {writer.author_title || "tossatale author"}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -148,6 +195,7 @@ function WriterProfile() {
                 variant="inkOnDark"
                 onClick={handleSupportWriter}
                 disabled={isSupporting}
+                title={hasSupported ? "You've supported this writer today (resets tomorrow)" : "Support this storyteller"}
                 className={cn(
                   "gap-2 px-4 py-2 text-xs transition-all duration-300 font-bold",
                   hasSupported && "bg-rose-500 text-white border-rose-400 hover:bg-rose-600 scale-105"

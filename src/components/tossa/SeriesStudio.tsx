@@ -83,6 +83,59 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
     return Array.isArray(categoriesData) ? categoriesData : [];
   }, [categoriesData]);
 
+  // Category Management in Studio
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDesc, setNewCategoryDesc] = useState("");
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) {
+      toast.error("Category name is required");
+      return;
+    }
+    setIsCreatingCategory(true);
+    try {
+      const res = await api.post("/admin/categories/", {
+        name: newCategoryName.trim(),
+        description: newCategoryDesc.trim() || "Series Category",
+        category_type: "STORY",
+      });
+      const createdCat = res.data?.data || res.data;
+      toast.success(`Category "${newCategoryName}" created successfully!`);
+      await queryClient.invalidateQueries({ queryKey: ["categories-list"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-categories"] });
+      if (createdCat?.slug || createdCat?.id) {
+        setSeriesCategory(createdCat.slug || createdCat.id);
+      }
+      setNewCategoryName("");
+      setNewCategoryDesc("");
+      setShowAddCategoryModal(false);
+    } catch (err: any) {
+      toast.error("Failed to create category", { description: formatApiErrorMessage(err) });
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (catId: string, catName: string) => {
+    if (!window.confirm(`Are you sure you want to delete the category "${catName}"?`)) {
+      return;
+    }
+    try {
+      await api.delete(`/admin/categories/${catId}/`);
+      toast.success(`Category "${catName}" deleted successfully.`);
+      await queryClient.invalidateQueries({ queryKey: ["categories-list"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-categories"] });
+      if (seriesCategory === catId) {
+        setSeriesCategory("");
+      }
+    } catch (err: any) {
+      toast.error("Failed to delete category", { description: formatApiErrorMessage(err) });
+    }
+  };
+
   // Query: All Series authored by Writer/Admin
   const {
     data: allSeriesData,
@@ -808,6 +861,78 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
                             }))
                       }
                     />
+
+                    <div className="mt-2 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddCategoryModal((v) => !v)}
+                        className="inline-flex items-center gap-1 font-sans text-[0.75rem] font-bold text-primary hover:underline transition-colors"
+                      >
+                        <Plus className="size-3" /> {showAddCategoryModal ? "Close Manager" : "Add / Manage Categories"}
+                      </button>
+                    </div>
+
+                    {showAddCategoryModal && (
+                      <div className="mt-2.5 space-y-3 rounded-xl border border-primary/20 bg-primary-light/40 p-3">
+                        <form onSubmit={handleCreateCategory} className="space-y-2">
+                          <p className="text-xs font-bold text-heading">New Category</p>
+                          <Input
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="e.g. Mystery"
+                            required
+                            className="h-8 text-xs"
+                          />
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghostOutline"
+                              size="sm"
+                              onClick={() => setShowAddCategoryModal(false)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              variant="primary"
+                              size="sm"
+                              disabled={isCreatingCategory}
+                            >
+                              {isCreatingCategory ? "Saving..." : "Save"}
+                            </Button>
+                          </div>
+                        </form>
+
+                        {categoriesList.length > 0 && (
+                          <div className="border-t border-primary/20 pt-2">
+                            <p className="text-[0.6875rem] font-bold uppercase tracking-wider text-subtle mb-1.5">
+                              Existing Categories
+                            </p>
+                            <div className="max-h-32 overflow-y-auto divide-y divide-border/60 rounded-lg border border-border bg-surface">
+                              {categoriesList.map((cat: any) => {
+                                const catId = cat.id || cat.slug;
+                                return (
+                                  <div
+                                    key={catId}
+                                    className="flex items-center justify-between px-2.5 py-1.5 text-xs hover:bg-surface-alt/50 transition-colors"
+                                  >
+                                    <span className="font-medium text-heading truncate mr-2">{cat.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteCategory(catId, cat.name)}
+                                      className="text-subtle hover:text-destructive p-0.5 rounded transition-colors shrink-0"
+                                      title={`Delete ${cat.name}`}
+                                    >
+                                      <Trash2 className="size-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </Field>
                 </div>
 

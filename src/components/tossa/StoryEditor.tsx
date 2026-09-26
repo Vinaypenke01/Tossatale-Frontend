@@ -621,6 +621,24 @@ export function StoryEditor({
     }
   };
 
+  const handleDeleteCategory = async (catId: string, catName: string) => {
+    if (!window.confirm(`Are you sure you want to delete the category "${catName}"? Stories in this category will remain intact.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/admin/categories/${catId}/`);
+      toast.success(`Category "${catName}" deleted successfully.`);
+      await queryClient.invalidateQueries({ queryKey: ["public-categories-editor"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-categories"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-categories-list"] });
+      if (selectedCategory === catId) {
+        setSelectedCategory("");
+      }
+    } catch (err: any) {
+      toast.error("Failed to delete category", { description: formatApiErrorMessage(err) });
+    }
+  };
+
   const handleSave = async (status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED"): Promise<{ success: boolean; slug?: string | undefined }> => {
     if (!title.trim() || title.trim().length < 2) {
       toast.error(isMultiChapter ? "Series Title is mandatory (at least 2 characters)." : "Please provide a story title (at least 2 characters).");
@@ -989,46 +1007,91 @@ export function StoryEditor({
                 onClick={() => setShowAddCategoryModal((v) => !v)}
                 className="inline-flex items-center gap-1 font-sans text-[0.8125rem] font-bold text-primary hover:text-primary-hover transition-colors"
               >
-                <Plus className="size-3.5" /> Add Category
+                <Plus className="size-3.5" /> {showAddCategoryModal ? "Close Manager" : "Add / Manage Categories"}
               </button>
+              {isAdmin && (
+                <a
+                  href="/admin/categories"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[0.75rem] text-subtle hover:text-primary transition-colors flex items-center gap-1"
+                >
+                  Full Manager <Folder className="size-3" />
+                </a>
+              )}
             </div>
 
             {showAddCategoryModal && (
-              <form onSubmit={handleCreateCategory} className="mt-2.5 space-y-2.5 rounded-xl border border-primary/20 bg-primary-light/40 p-3.5">
-                <p className="font-sans text-[0.8125rem] font-bold text-heading">New Category</p>
-                <Input
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="Category name (e.g. Mythology)"
-                  required
-                  className="h-9 text-[0.8125rem]"
-                />
-                <Textarea
-                  value={newCategoryDesc}
-                  onChange={(e) => setNewCategoryDesc(e.target.value)}
-                  placeholder="Short description"
-                  rows={2}
-                  className="text-[0.75rem]"
-                />
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <Button
-                    type="button"
-                    variant="ghostOutline"
-                    size="sm"
-                    onClick={() => setShowAddCategoryModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    disabled={isCreatingCategory}
-                  >
-                    {isCreatingCategory ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-              </form>
+              <div className="mt-2.5 space-y-3.5 rounded-xl border border-primary/20 bg-primary-light/40 p-3.5">
+                {/* Create New Category Form */}
+                <form onSubmit={handleCreateCategory} className="space-y-2.5">
+                  <p className="font-sans text-[0.8125rem] font-bold text-heading">Add New Category</p>
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Category name (e.g. Mythology)"
+                    required
+                    className="h-9 text-[0.8125rem]"
+                  />
+                  <Textarea
+                    value={newCategoryDesc}
+                    onChange={(e) => setNewCategoryDesc(e.target.value)}
+                    placeholder="Short description"
+                    rows={2}
+                    className="text-[0.75rem]"
+                  />
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="ghostOutline"
+                      size="sm"
+                      onClick={() => setShowAddCategoryModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="sm"
+                      disabled={isCreatingCategory}
+                    >
+                      {isCreatingCategory ? "Saving..." : "Save Category"}
+                    </Button>
+                  </div>
+                </form>
+
+                {/* Existing Categories List with Delete Option */}
+                {categoriesList.length > 0 && (
+                  <div className="border-t border-primary/20 pt-3">
+                    <p className="text-[0.75rem] font-bold uppercase tracking-wider text-subtle mb-2">
+                      Existing Categories ({categoriesList.length})
+                    </p>
+                    <div className="max-h-40 overflow-y-auto divide-y divide-border/60 rounded-lg border border-border bg-surface">
+                      {categoriesList.map((cat: any) => {
+                        const catId = cat.id || cat.slug;
+                        return (
+                          <div
+                            key={catId}
+                            className="flex items-center justify-between px-3 py-2 text-xs hover:bg-surface-alt/50 transition-colors"
+                          >
+                            <span className="font-medium text-heading truncate mr-2">
+                              {cat.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(catId, cat.name)}
+                              className="text-subtle hover:text-destructive p-1 rounded transition-colors shrink-0"
+                              title={`Delete ${cat.name}`}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </Field>
 
