@@ -104,6 +104,7 @@ function HomepageBuilder() {
     foot: SiteFooterSettings,
     cont: SiteContactSettings,
     slots: { featured: string[]; latest: string[]; trending: string[] },
+    hero?: string | number | null,
   ) => {
     return JSON.stringify({
       announcement: ann,
@@ -111,6 +112,7 @@ function HomepageBuilder() {
       footer: foot,
       contact: cont,
       storySlots: slots,
+      heroStoryId: hero ?? heroStoryId,
     });
   };
 
@@ -198,10 +200,13 @@ function HomepageBuilder() {
   ], [heroStoryId, allStories.length, featuredWriters.featuredSlugs.length, storySlots.featured.length, storySlots.trending.length]);
 
   useEffect(() => {
+    if (isLoading) return;
+
     let resolvedAnn = announcement;
     let resolvedFw = featuredWriters;
     let resolvedFoot = footer;
     let resolvedCont = contact;
+    let resolvedHero = heroStoryId;
 
     if (serverConfig) {
       if (serverConfig.announcement && Object.keys(serverConfig.announcement).length > 0) {
@@ -221,7 +226,8 @@ function HomepageBuilder() {
         setContact(resolvedCont);
       }
       if (serverConfig.hero_story_id) {
-        setHeroStoryId(serverConfig.hero_story_id);
+        resolvedHero = serverConfig.hero_story_id;
+        setHeroStoryId(resolvedHero);
       }
     }
 
@@ -253,23 +259,23 @@ function HomepageBuilder() {
       setStorySlots(resolvedSlots);
     }
 
-    if (!hasInitializedRef.current) {
-      savedSnapshotRef.current = serializeState(
-        resolvedAnn,
-        resolvedFw,
-        resolvedFoot,
-        resolvedCont,
-        resolvedSlots,
-      );
-      hasInitializedRef.current = true;
-    }
-  }, [allStories?.length, serverConfig]);
+    // Set baseline snapshot only after server data resolves
+    savedSnapshotRef.current = serializeState(
+      resolvedAnn,
+      resolvedFw,
+      resolvedFoot,
+      resolvedCont,
+      resolvedSlots,
+      resolvedHero,
+    );
+    hasInitializedRef.current = true;
+  }, [isLoading, allStories?.length, serverConfig]);
 
   const isDirty = useMemo(() => {
     if (!hasInitializedRef.current || !savedSnapshotRef.current) return false;
-    const current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+    const current = serializeState(announcement, featuredWriters, footer, contact, storySlots, heroStoryId);
     return current !== savedSnapshotRef.current;
-  }, [announcement, featuredWriters, footer, contact, storySlots]);
+  }, [announcement, featuredWriters, footer, contact, storySlots, heroStoryId]);
 
   const blocker = useBlocker({
     shouldBlockFn: ({ current, next }) => {
@@ -350,12 +356,12 @@ function HomepageBuilder() {
           trending_story_ids: storySlots.trending,
         },
       });
-      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots, heroStoryId);
       queryClient.invalidateQueries({ queryKey: ["admin-homepage-builder-config"] });
       queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
       toast.success("Homepage & Site Builder changes published live!");
     } catch {
-      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots, heroStoryId);
       toast.success("Homepage & Site Builder settings updated!");
     } finally {
       setIsSaving(false);
@@ -376,13 +382,13 @@ function HomepageBuilder() {
           trending_story_ids: storySlots.trending,
         },
       });
-      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots, heroStoryId);
       queryClient.invalidateQueries({ queryKey: ["admin-homepage-builder-config"] });
       queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
       toast.success("Homepage & Site Builder changes published live!");
       blocker.proceed?.();
     } catch {
-      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+      savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots, heroStoryId);
       toast.success("Homepage & Site Builder settings updated!");
       blocker.proceed?.();
     } finally {
@@ -399,7 +405,7 @@ function HomepageBuilder() {
   };
 
   const handleDiscardAndLeave = () => {
-    savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots);
+    savedSnapshotRef.current = serializeState(announcement, featuredWriters, footer, contact, storySlots, heroStoryId);
     blocker.proceed?.();
   };
 

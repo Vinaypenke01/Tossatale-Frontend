@@ -228,7 +228,7 @@ export function Panel({
       className={cn(
         "rounded-2xl border border-border bg-surface shadow-paper",
         hover &&
-          "transition-all duration-500 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lift",
+        "transition-all duration-500 hover:-translate-y-1 hover:border-primary/25 hover:shadow-lift",
         className,
       )}
     >

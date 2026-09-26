@@ -9,6 +9,7 @@ import heroArt from "@/assets/Hero_section_pic.jpeg";
 import coverBoat from "@/assets/cover-boat.jpg";
 import coverLane from "@/assets/cover-lane.jpg";
 import kittenPic from "@/assets/Kitten Pic for Website.png";
+import { covers, defaultCover, resolveCoverImage } from "@/lib/data";
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { UnderConstruction } from "@/components/tossa/UnderConstruction";
 import { Reveal } from "@/components/tossa/Reveal";
@@ -127,7 +128,7 @@ function HandpickedTales({ stories, isLoading }: { stories?: any[]; isLoading?: 
           <div className="mt-8 sm:mt-10 grid gap-6 sm:gap-8 md:grid-cols-2">
             {displayList.map((story, i) => (
               <Reveal key={story.slug || i} delay={i * 70}>
-                <div className="group flex flex-col justify-between h-full rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-7 lg:p-9">
+                <div className="group flex flex-col justify-between h-full rounded-lg bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-7 lg:p-9">
                   <div>
                     <div className="flex items-center gap-2.5">
                       <CategoryPill>{story.category?.name || story.category || "Featured"}</CategoryPill>
@@ -190,7 +191,7 @@ function HandpickedTales({ stories, isLoading }: { stories?: any[]; isLoading?: 
                           <span className="font-bold text-black dark:text-white text-[0.75rem] sm:text-[0.8125rem]">{story.views_count ?? story.views ?? 0}</span>
                         </span>
                       </div>
-                      <span className="text-subtle text-[0.6875rem] sm:text-[0.75rem] shrink-0">Must Read</span>
+                      <span className="text-subtle text-[0.6875rem] sm:text-[0.75rem] shrink-0">Must read</span>
                     </div>
                   </div>
                 </div>
@@ -279,7 +280,7 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
           <div className="mt-8 sm:mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {stories.slice(0, 6).map((story, i) => (
               <Reveal key={story.slug || i} delay={i * 50} className="h-full">
-                <div className="group flex items-start gap-4 sm:gap-5 rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 h-full">
+                <div className="group flex items-start gap-4 sm:gap-5 rounded-lg bg-slate-100/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 h-full">
                   {/* Big Number */}
                   <span className="font-sans text-[2.1rem] sm:text-[2.25rem] font-black leading-none text-slate-300 dark:text-zinc-700 shrink-0 select-none w-10 group-hover:text-primary transition-colors">
                     {String(i + 1).padStart(2, "0")}
@@ -379,16 +380,31 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
               const formattedDate = formatDate(b.published_at, "Recent");
               const readingTime = b.reading_time || b.estimated_reading_time || 4;
 
+              // Generate two full informative lines of description
+              const excerptText =
+                b.excerpt ||
+                b.subtitle ||
+                b.seo_description ||
+                (b.plain_text_content
+                  ? b.plain_text_content.replace(/<[^>]+>/g, " ").replace(/[#*`_~[\]()]/g, " ").replace(/\s+/g, " ").trim().slice(0, 150)
+                  : "") ||
+                "A captivating editorial exploration of storytelling craft, cultural reflections, and contemporary literature.";
+
+              const coverSrc = resolveCoverImage(b.cover_image, covers.terrace);
+
               return (
                 <Reveal key={b.slug || i} delay={i * 70}>
-                  <div className="group flex h-full flex-col sm:flex-row items-stretch gap-5 p-5 rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
-                    <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block overflow-hidden rounded-xl shrink-0 w-full sm:w-44 h-40 sm:h-auto">
+                  <div className="group flex h-full flex-col sm:flex-row items-stretch gap-5 p-5 rounded-lg bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
+                    <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block overflow-hidden rounded-md shrink-0 w-full sm:w-44 h-40 sm:h-auto bg-slate-200 dark:bg-zinc-800">
                       <img
-                        src={b.cover_image || "/assets/cover-terrace.jpg"}
+                        src={coverSrc}
                         alt={b.title || ""}
                         loading="lazy"
                         width={1200}
                         height={800}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = covers.terrace || defaultCover;
+                        }}
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     </Link>
@@ -400,7 +416,7 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
                           </h3>
                         </Link>
                         <p className="mt-2 line-clamp-2 text-[0.875rem] text-body leading-relaxed">
-                          {b.excerpt || b.seo_description || "Blog article."}
+                          {excerptText}
                         </p>
                       </div>
 
@@ -475,7 +491,7 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
             {videos.slice(0, 2).map((v, i) => (
               <Reveal key={v.slug || v.id || i} delay={i * 70}>
                 <div className="group block h-full">
-                  <div className="flex flex-col h-full rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex flex-col h-full rounded-lg bg-slate-100/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
                     <div className="relative overflow-hidden rounded-xl aspect-video w-full">
                       <img
                         src={v.thumbnail_url || coverBoat}
@@ -506,7 +522,7 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
                       <h3 className="text-[1.25rem] leading-snug font-display font-bold text-heading">
                         {v.title}
                       </h3>
-                      <div className="mt-3">
+                      {/* <div className="mt-3">
                         <Link
                           to="/videos/$slug"
                           params={{ slug: v.slug || "video" }}
@@ -514,7 +530,7 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
                         >
                           Watch film →
                         </Link>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </div>
@@ -638,9 +654,11 @@ function CatSignoff() {
           className="w-36 sm:w-44 h-auto object-contain drop-shadow-xs"
         />
       </div>
-      <p className="mt-2 font-serif italic text-sm sm:text-base text-subtle tracking-wide">
-        That’s all for now!
-      </p>
+      <div className="mt-3">
+        <span className="inline-flex items-center justify-center font-serif italic text-sm sm:text-base text-slate-700 dark:text-zinc-300 tracking-wide px-4.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 shadow-[0_2px_10px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.3)] backdrop-blur-xs">
+          That’s all for now!
+        </span>
+      </div>
     </div>
   );
 }

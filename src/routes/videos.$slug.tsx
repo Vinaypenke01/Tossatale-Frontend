@@ -1,7 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Clock, Eye, Film, Heart, Link2, Play, Share2 } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Clock,
+  Copy,
+  Eye,
+  Facebook,
+  Film,
+  Heart,
+  Linkedin,
+  Link2,
+  Mail,
+  MessageCircle,
+  Play,
+  Send,
+  Share2,
+  X,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { Reveal, useScrollProgress } from "@/components/tossa/Reveal";
@@ -66,33 +84,241 @@ function VideoNotFound() {
   );
 }
 
-function FloatingShare() {
+function ShareModal({
+  isOpen,
+  onClose,
+  title,
+  url,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  url?: string;
+}) {
   const [copied, setCopied] = useState(false);
+
+  const getShareUrl = () => {
+    if (url) return url;
+    if (typeof window !== "undefined") return window.location.href;
+    return "";
+  };
+
+  const currentUrl = getShareUrl();
+  const shareTitle = title || "Short Film on tossatale";
+
+  const handleCopyLink = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentUrl);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = currentUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      toast.success("Link copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const shareLinks = [
+    {
+      name: "WhatsApp",
+      color: "bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border-[#25D366]/30",
+      href: `https://api.whatsapp.com/send?text=${encodeURIComponent(shareTitle + " — " + currentUrl)}`,
+      icon: MessageCircle,
+    },
+    {
+      name: "LinkedIn",
+      color: "bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2]/20 border-[#0A66C2]/30",
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`,
+      icon: Linkedin,
+    },
+    {
+      name: "Facebook",
+      color: "bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border-[#1877F2]/30",
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`,
+      icon: Facebook,
+    },
+    {
+      name: "Telegram",
+      color: "bg-[#229ED9]/10 text-[#229ED9] hover:bg-[#229ED9]/20 border-[#229ED9]/30",
+      href: `https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(shareTitle)}`,
+      icon: Send,
+    },
+    {
+      name: "Email",
+      color: "bg-surface-alt text-subtle hover:text-heading border-border",
+      href: `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent("Watch this short film on tossatale:\n" + currentUrl)}`,
+      icon: Mail,
+    },
+  ];
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="flex w-full max-w-md flex-col rounded-3xl border border-border bg-surface shadow-2xl overflow-hidden animate-scale-in">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-surface-alt/40">
+          <div className="flex items-center gap-2">
+            <Share2 className="size-4 text-primary" />
+            <h3 className="font-display text-base font-bold text-heading">Share this video</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface hover:text-heading transition-colors cursor-pointer"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="p-6 space-y-6">
+          <div>
+            <p className="text-xs text-subtle">Video Title</p>
+            <h4 className="mt-0.5 font-display text-sm font-bold text-heading line-clamp-2">
+              {shareTitle}
+            </h4>
+          </div>
+
+          {/* Copy Link Field with dedicated copy button */}
+          <div>
+            <label className="text-xs font-bold text-subtle block mb-1.5">
+              Video Link
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={currentUrl}
+                className="h-10 flex-1 rounded-xl border border-border bg-surface-alt px-3.5 text-xs text-body font-mono select-all focus:outline-hidden"
+              >
+              </input>
+              <Button
+                type="button"
+                variant={copied ? "primary" : "soft"}
+                size="sm"
+                onClick={handleCopyLink}
+                className="h-10 px-4 text-xs font-bold gap-1.5 shrink-0 cursor-pointer"
+              >
+                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Social Channels */}
+          <div>
+            <label className="text-xs font-bold text-subtle block mb-2.5">
+              Share via
+            </label>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {shareLinks.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition-all hover:scale-[1.02]",
+                    item.color
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  <span>{item.name}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="border-t border-border px-6 py-3.5 bg-surface-alt/30 flex justify-end">
+          <Button variant="ghostOutline" size="sm" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FloatingShare({
+  title,
+  onShareClick,
+}: {
+  title?: string;
+  onShareClick: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    try {
+      const url = typeof window !== "undefined" ? window.location.href : "";
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = url;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      toast.success("Video link copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const handleNativeOrModalShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    if (navigator?.share) {
+      try {
+        await navigator.share({
+          title: title || "Watch short film on tossatale",
+          url,
+        });
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+    onShareClick();
+  };
+
   return (
     <div className="flex items-center gap-2">
       <span className="mr-2 text-[0.75rem] font-bold text-subtle uppercase">Share</span>
-      {[
-        { icon: Share2, label: "Share" },
-        {
-          icon: Link2,
-          label: "Copy link",
-          onClick: () => {
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1600);
-          },
-        },
-      ].map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          aria-label={item.label}
-          onClick={item.onClick}
-          className="grid size-9 place-items-center rounded-full border border-border bg-surface text-subtle shadow-xs transition-all hover:border-primary hover:text-primary"
-        >
-          <item.icon className="size-4" />
-        </button>
-      ))}
-      {copied && <span className="text-[0.75rem] font-medium text-primary">Link copied!</span>}
+      <button
+        type="button"
+        aria-label="Share video"
+        title="Share video"
+        onClick={handleNativeOrModalShare}
+        className="grid size-9 place-items-center rounded-full border border-border bg-surface text-subtle shadow-xs transition-all hover:border-primary hover:text-primary cursor-pointer active:scale-95"
+      >
+        <Share2 className="size-4" />
+      </button>
+      <button
+        type="button"
+        aria-label="Copy link"
+        title="Copy video link"
+        onClick={handleCopyLink}
+        className="grid size-9 place-items-center rounded-full border border-border bg-surface text-subtle shadow-xs transition-all hover:border-primary hover:text-primary cursor-pointer active:scale-95"
+      >
+        {copied ? <Check className="size-4 text-emerald-500" /> : <Link2 className="size-4" />}
+      </button>
+      {copied && <span className="text-[0.75rem] font-medium text-emerald-600 dark:text-emerald-400">Link copied!</span>}
     </div>
   );
 }
@@ -101,6 +327,7 @@ function VideoDetail() {
   const loaderData = Route.useLoaderData();
   const video = loaderData?.video;
   const progress = useScrollProgress();
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const videoKey = video?.slug || video?.id || "";
   const [liked, setLiked] = useState(() => {
@@ -161,6 +388,12 @@ function VideoDetail() {
 
   return (
     <SiteLayout>
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={video.title}
+        url={typeof window !== "undefined" ? window.location.href : undefined}
+      />
       <div className="fixed top-0 left-0 z-[60] h-0.5 w-full bg-transparent">
         <div
           className="h-full bg-primary transition-[width] duration-150"
@@ -229,7 +462,7 @@ function VideoDetail() {
                 size="sm"
                 onClick={handleLikeToggle}
                 className={cn(
-                  "gap-1.5 transition-all",
+                  "gap-1.5 transition-all cursor-pointer",
                   liked && "bg-destructive text-white hover:bg-destructive/90 border-destructive shadow-xs"
                 )}
               >
@@ -237,7 +470,10 @@ function VideoDetail() {
                 {liked ? "Liked" : "Like Video"}
               </Button>
             </div>
-            <FloatingShare />
+            <FloatingShare
+              title={video.title}
+              onShareClick={() => setShowShareModal(true)}
+            />
           </div>
 
           {noteOrDescription && (

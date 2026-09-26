@@ -9,7 +9,7 @@ import { Reveal } from "@/components/tossa/Reveal";
 import { Button, CategoryPill, Input, Panel } from "@/components/tossa/kit";
 import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { api } from "@/lib/api";
-import { covers } from "@/lib/data";
+import { covers, resolveCoverImage } from "@/lib/data";
 
 export const Route = createFileRoute("/upcoming-projects")({
   head: () => ({
@@ -102,7 +102,7 @@ function UpcomingProjectsPage() {
                 <Panel hover className="flex flex-col h-full overflow-hidden">
                   <div className="relative aspect-video w-full overflow-hidden">
                     <img
-                      src={project.cover_image || project.thumbnail_url || covers.boat}
+                      src={resolveCoverImage(project.cover_image || project.thumbnail_url, covers.boat)}
                       alt={project.title}
                       loading="lazy"
                       width={1200}

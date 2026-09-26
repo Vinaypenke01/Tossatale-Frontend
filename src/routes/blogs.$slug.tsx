@@ -29,7 +29,7 @@ import {
 } from "@/components/tossa/kit";
 import { cn, formatDate } from "@/lib/utils";
 import { api } from "@/lib/api";
-import { covers, defaultCover } from "@/lib/data";
+import { covers, defaultCover, resolveCoverImage, sanitizeSafeUrl } from "@/lib/data";
 
 export const Route = createFileRoute("/blogs/$slug")({
   loader: async ({ params }) => {
@@ -259,13 +259,20 @@ function renderBlogContent(rawContent: string) {
   // 1. Process Markdown links [text](url)
   formatted = formatted.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline font-medium hover:opacity-80">$1</a>'
+    (_match, text, url) => {
+      const safeHref = sanitizeSafeUrl(url);
+      return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="text-primary underline font-medium hover:opacity-80">${text}</a>`;
+    }
   );
 
   // 2. Process Markdown images ![alt](url)
   formatted = formatted.replace(
     /!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<figure class="my-6"><img src="$2" alt="$1" class="rounded-xl w-full max-h-[500px] object-cover" /><figcaption class="mt-2 text-center text-xs text-subtle italic">$1</figcaption></figure>'
+    (_match, alt, url) => {
+      const safeSrc = sanitizeSafeUrl(url);
+      if (safeSrc === "#") return "";
+      return `<figure class="my-6"><img src="${safeSrc}" alt="${alt}" class="rounded-xl w-full max-h-[500px] object-cover" /><figcaption class="mt-2 text-center text-xs text-subtle italic">${alt}</figcaption></figure>`;
+    }
   );
 
   // 3. Process Headings (### and ##)
@@ -337,7 +344,7 @@ function BlogDetail() {
           {/* Background Cover Image with Rich Gradient Overlay */}
           <div className="absolute inset-0 z-0">
             <img
-              src={blog.cover_image || covers.terrace || defaultCover}
+              src={resolveCoverImage(blog.cover_image, covers.terrace)}
               alt=""
               className="h-full w-full object-cover opacity-40 dark:opacity-30 scale-105 transition-transform duration-700"
             />
@@ -488,7 +495,7 @@ function BlogDetail() {
                         {b.cover_image && (
                           <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block overflow-hidden">
                             <img
-                              src={b.cover_image}
+                              src={resolveCoverImage(b.cover_image, covers.terrace)}
                               alt={b.title || ""}
                               loading="lazy"
                               className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105"

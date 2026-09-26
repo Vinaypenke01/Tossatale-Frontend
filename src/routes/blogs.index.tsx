@@ -10,7 +10,7 @@ import { BlogsGridSkeleton } from "@/components/tossa/Skeletons";
 import { Pagination } from "@/components/tossa/Pagination";
 import { Avatar, CategoryPill, Panel } from "@/components/tossa/kit";
 import { api } from "@/lib/api";
-import { covers } from "@/lib/data";
+import { covers, resolveCoverImage } from "@/lib/data";
 import { formatDate } from "@/lib/utils";
 
 export const Route = createFileRoute("/blogs/")({
@@ -54,7 +54,7 @@ function BlogsPage() {
         authorPhoto: b.author?.profile_photo || b.author?.avatar || "",
         date: formatDate(b.published_at, "Recent"),
         readingTime: b.estimated_reading_time || b.reading_time || 4,
-        cover: b.cover_image || covers.terrace,
+        cover: resolveCoverImage(b.cover_image, covers.terrace),
       }))
     : [];
 

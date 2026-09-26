@@ -32,6 +32,7 @@ import { UnsavedChangesModal } from "@/components/tossa/UnsavedChangesModal";
 import { pageHead } from "@/lib/head";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { sanitizeSafeUrl } from "@/lib/data";
 
 function serializeBlogState(
   title: string,
@@ -58,7 +59,10 @@ function renderBlogPreview(rawContent: string) {
   // Process Markdown links [text](url)
   formatted = formatted.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline font-medium hover:opacity-80">$1</a>'
+    (_match, text, url) => {
+      const safeHref = sanitizeSafeUrl(url);
+      return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="text-primary underline font-medium hover:opacity-80">${text}</a>`;
+    }
   );
 
   // Process Headings

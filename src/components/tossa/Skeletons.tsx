@@ -32,7 +32,7 @@ export function FeaturedStoriesSkeletonCards() {
       {[1, 2].map((idx) => (
         <div
           key={idx}
-          className="flex flex-col justify-between h-full rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] p-7 lg:p-9 border border-border/40"
+          className="flex flex-col justify-between h-full rounded-lg bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] p-7 lg:p-9 border border-border/40"
         >
           <div>
             {/* Category Pill */}
@@ -121,7 +121,7 @@ export function LatestStoriesSkeleton() {
  */
 export function StoryCardSkeleton() {
   return (
-    <div className="flex flex-col h-full rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] overflow-hidden border border-border/30">
+    <div className="flex flex-col h-full rounded-lg bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] overflow-hidden border border-border/30">
       {/* Cover Image Placeholder */}
       <Skeleton className="w-full aspect-[16/10] rounded-none" />
 
@@ -168,7 +168,7 @@ export function TrendingStoriesSkeletonRows() {
       {[1, 2, 3, 4, 5, 6].map((num) => (
         <div
           key={num}
-          className="flex items-start gap-4 sm:gap-5 rounded-2xl bg-surface p-5 sm:p-6 border border-border/80 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] h-full"
+          className="flex items-start gap-4 sm:gap-5 rounded-lg bg-surface p-5 sm:p-6 border border-border/80 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] h-full"
         >
           {/* Rank Number */}
           <span className="font-sans text-[2.1rem] sm:text-[2.25rem] font-black leading-none text-slate-200 dark:text-zinc-800 shrink-0 select-none w-10">
@@ -227,10 +227,10 @@ export function LatestBlogsSkeletonCards() {
       {[1, 2, 3, 4].map((idx) => (
         <div
           key={idx}
-          className="flex flex-col sm:flex-row items-center gap-5 p-5 rounded-2xl bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] border border-border/30"
+          className="flex flex-col sm:flex-row items-center gap-5 p-5 rounded-lg bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] border border-border/30"
         >
           {/* Blog Image */}
-          <Skeleton className="w-full sm:w-[190px] h-[130px] rounded-xl shrink-0" />
+          <Skeleton className="w-full sm:w-[190px] h-[130px] rounded-md shrink-0" />
 
           <div className="flex-1 w-full space-y-2">
             <Skeleton className="h-5 w-4/5" />

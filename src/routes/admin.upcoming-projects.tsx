@@ -19,7 +19,7 @@ import { Button, Field, Input, Panel, Textarea } from "@/components/tossa/kit";
 import { pageHead } from "@/lib/head";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { covers } from "@/lib/data";
+import { covers, resolveCoverImage } from "@/lib/data";
 
 export const Route = createFileRoute("/admin/upcoming-projects")({
   head: () =>
@@ -346,7 +346,7 @@ function AdminUpcomingProjects() {
                   <div>
                     <div className="relative aspect-video w-full overflow-hidden bg-black">
                       <img
-                        src={project.cover_image || project.thumbnail_url || covers.terrace}
+                        src={resolveCoverImage(project.cover_image || project.thumbnail_url, covers.terrace)}
                         alt={project.title}
                         className="size-full object-cover"
                       />

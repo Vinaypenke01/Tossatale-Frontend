@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { SiteLayout } from "@/components/tossa/SiteLayout";
 import { StoryCard } from "@/components/tossa/StoryCard";
+import { Pagination } from "@/components/tossa/Pagination";
 import {
   Avatar,
   Badge,
@@ -22,11 +23,12 @@ import { api } from "@/lib/api";
 import coverLane from "@/assets/cover-lane.jpg";
 
 export const Route = createFileRoute("/search")({
-  validateSearch: (search: Record<string, unknown>): { q?: string; tab?: string; sort?: string } => {
+  validateSearch: (search: Record<string, unknown>): { q?: string; tab?: string; sort?: string; page?: number } => {
     return {
       q: typeof search["q"] === "string" ? (search["q"] as string) : "",
       tab: typeof search["tab"] === "string" ? (search["tab"] as string) : "Stories",
       sort: typeof search["sort"] === "string" ? (search["sort"] as string) : "relevance",
+      page: Number(search["page"]) > 0 ? Number(search["page"]) : 1,
     };
   },
   head: () => ({
@@ -66,8 +68,9 @@ function SearchPage() {
     (tabs.includes(searchParams.tab as any) ? searchParams.tab : "Stories") as (typeof tabs)[number]
   );
   const [sort, setSort] = useState(searchParams.sort || "relevance");
+  const [page, setPage] = useState(searchParams.page || 1);
 
-  // Sync debounced query
+  // Sync debounced query and URL search params
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedQuery(query.trim());
@@ -77,19 +80,59 @@ function SearchPage() {
           q: query.trim(),
           tab,
           sort,
+          page: 1,
         }),
         replace: true,
       });
+      setPage(1);
     }, 280);
     return () => clearTimeout(handler);
-  }, [query, tab, sort, navigate]);
+  }, [query, navigate]);
+
+  const handleTabChange = (newTab: (typeof tabs)[number]) => {
+    setTab(newTab);
+    setPage(1);
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        tab: newTab,
+        page: 1,
+      }),
+      replace: true,
+    });
+  };
+
+  const handleSortChange = (newSort: string) => {
+    setSort(newSort);
+    setPage(1);
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        sort: newSort,
+        page: 1,
+      }),
+      replace: true,
+    });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        page: newPage,
+      }),
+    });
+    window.scrollTo({ top: 320, behavior: "smooth" });
+  };
 
   const { data: searchData, isLoading } = useQuery({
-    queryKey: ["public-search", debouncedQuery, sort],
+    queryKey: ["public-search", debouncedQuery, tab, sort, page],
     queryFn: async () => {
       const qParam = debouncedQuery ? `q=${encodeURIComponent(debouncedQuery)}&` : "";
+      const typeParam = tab.toLowerCase();
       const res = await api.get(
-        `/public/search/?${qParam}sort=${sort}`
+        `/public/search/?${qParam}type=${typeParam}&sort=${sort}&page=${page}&page_size=9`
       );
       return res.data?.results || res.data || {};
     },
@@ -156,11 +199,14 @@ function SearchPage() {
     : [];
 
   const counts = {
-    Stories: displayStories.length,
-    Writers: displayWriters.length,
-    Categories: displayCategories.length,
-    Blogs: displayBlogs.length,
+    Stories: searchData?.counts?.stories ?? displayStories.length,
+    Writers: searchData?.counts?.writers ?? displayWriters.length,
+    Categories: searchData?.counts?.categories ?? displayCategories.length,
+    Blogs: searchData?.counts?.blogs ?? displayBlogs.length,
   };
+
+  const activeTotalCount = counts[tab] || 0;
+  const totalPages = searchData?.pagination?.total_pages ?? Math.max(1, Math.ceil(activeTotalCount / 9));
 
   return (
     <SiteLayout>
@@ -191,7 +237,7 @@ function SearchPage() {
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label="Clear search"
-                className="absolute top-1/2 right-4 -translate-y-1/2 text-subtle hover:text-heading"
+                className="absolute top-1/2 right-4 -translate-y-1/2 text-subtle hover:text-heading cursor-pointer"
               >
                 <X className="size-5" />
               </button>
@@ -208,7 +254,7 @@ function SearchPage() {
                 key={s}
                 type="button"
                 onClick={() => setQuery(s)}
-                className="rounded-full border border-border/80 bg-surface/80 px-2.5 py-1 text-body font-medium transition-colors hover:border-primary hover:text-primary"
+                className="rounded-full border border-border/80 bg-surface/80 px-2.5 py-1 text-body font-medium transition-colors hover:border-primary hover:text-primary cursor-pointer"
               >
                 {s}
               </button>
@@ -222,24 +268,22 @@ function SearchPage() {
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setTab(t)}
+                  onClick={() => handleTabChange(t)}
                   aria-pressed={tab === t}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-[0.875rem] font-bold transition-all",
+                    "flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-[0.875rem] font-bold transition-all cursor-pointer",
                     tab === t
                       ? "bg-primary text-white shadow-xs"
                       : "border border-border bg-surface text-body hover:border-primary hover:text-primary",
                   )}
                 >
                   <span>{t}</span>
-                  {debouncedQuery && (
-                    <span className={cn(
-                      "rounded-full px-1.5 py-0.2 text-[0.6875rem]",
-                      tab === t ? "bg-white/20 text-white" : "bg-surface-alt text-subtle"
-                    )}>
-                      {counts[t]}
-                    </span>
-                  )}
+                  <span className={cn(
+                    "rounded-full px-1.5 py-0.2 text-[0.6875rem]",
+                    tab === t ? "bg-white/20 text-white" : "bg-surface-alt text-subtle"
+                  )}>
+                    {counts[t]}
+                  </span>
                 </button>
               ))}
             </div>
@@ -249,7 +293,7 @@ function SearchPage() {
               <span className="text-[0.8125rem] text-subtle font-medium">Sort:</span>
               <select
                 value={sort}
-                onChange={(e) => setSort(e.target.value)}
+                onChange={(e) => handleSortChange(e.target.value)}
                 className="h-9 rounded-lg border border-border bg-surface px-3 font-sans text-[0.8125rem] font-semibold text-heading shadow-xs focus:border-primary focus:outline-hidden"
               >
                 <option value="relevance">Most Relevant</option>
@@ -265,7 +309,7 @@ function SearchPage() {
       <main className="mx-auto max-w-[1240px] px-5 py-12 lg:px-8">
         {isLoading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <Panel key={i} className="p-5">
                 <Skeleton className="aspect-[16/9] w-full rounded-xl" />
                 <Skeleton className="mt-4 h-5 w-3/4" />
@@ -319,101 +363,113 @@ function SearchPage() {
                 ))}
               </div>
             ) : tab === "Writers" ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {displayWriters.map((w: any) => (
-              <Panel key={w.slug} hover className="flex flex-col justify-between p-6">
-                <div>
-                  <div className="flex items-center gap-4">
-                    <Avatar initials={w.initials} size="lg" gender={w.gender} src={w.photo} />
-                    <div className="min-w-0 flex-1">
-                      <h2 className="flex items-center gap-1.5 text-[1.1rem] font-display font-bold text-heading truncate">
-                        {w.name}
-                        {w.verified && <VerifiedBadge />}
-                      </h2>
-                      <p className="text-[0.75rem] text-subtle">Storyteller & Author</p>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {displayWriters.map((w: any) => (
+                  <Panel key={w.slug} hover className="flex flex-col justify-between p-6 rounded-lg">
+                    <div>
+                      <div className="flex items-center gap-4">
+                        <Avatar initials={w.initials} size="lg" gender={w.gender} src={w.photo} />
+                        <div className="min-w-0 flex-1">
+                          <h2 className="flex items-center gap-1.5 text-[1.1rem] font-display font-bold text-heading truncate">
+                            {w.name}
+                            {w.verified && <VerifiedBadge />}
+                          </h2>
+                          <p className="text-[0.75rem] text-subtle">Storyteller & Author</p>
+                        </div>
+                      </div>
+                      <p className="mt-4 line-clamp-3 text-[0.875rem] leading-relaxed text-body">
+                        {w.bio}
+                      </p>
                     </div>
-                  </div>
-                  <p className="mt-4 line-clamp-3 text-[0.875rem] leading-relaxed text-body">
-                    {w.bio}
-                  </p>
-                </div>
 
-                <div className="mt-6 flex items-center justify-between border-t border-divider pt-4 text-[0.8125rem]">
-                  <span className="text-subtle font-medium">
-                    {w.totalStories} {w.totalStories === 1 ? "story" : "stories"} · {w.totalReads} reads
-                  </span>
-                  <ButtonLink
-                    to="/writers/$slug"
-                    params={{ slug: w.slug }}
-                    size="sm"
-                    variant="quiet"
+                    <div className="mt-6 flex items-center justify-between border-t border-divider pt-4 text-[0.8125rem]">
+                      <span className="text-subtle font-medium">
+                        {w.totalStories} {w.totalStories === 1 ? "story" : "stories"} · {w.totalReads} reads
+                      </span>
+                      <ButtonLink
+                        to="/writers/$slug"
+                        params={{ slug: w.slug }}
+                        size="sm"
+                        variant="quiet"
+                      >
+                        View Profile →
+                      </ButtonLink>
+                    </div>
+                  </Panel>
+                ))}
+              </div>
+            ) : tab === "Categories" ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {displayCategories.map((c: any) => (
+                  <Link
+                    key={c.slug}
+                    to="/stories"
+                    search={{ category: c.slug }}
+                    className="group block"
                   >
-                    View Profile →
-                  </ButtonLink>
-                </div>
-              </Panel>
-            ))}
-          </div>
-        ) : tab === "Categories" ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {displayCategories.map((c: any) => (
-              <Link
-                key={c.slug}
-                to="/stories"
-                search={{ category: c.slug }}
-                className="group block"
-              >
-                <Panel hover className="p-6 transition-all group-hover:border-primary/40">
-                  <div className="flex items-center justify-between">
-                    <span className="font-sans text-[0.6875rem] font-black tracking-[0.16em] text-primary uppercase">
-                      Category
-                    </span>
-                    <Badge tone="neutral">{c.count} stories</Badge>
-                  </div>
-                  <h3 className="mt-3 font-display text-[1.25rem] font-bold text-heading group-hover:text-primary">
-                    {c.name}
-                  </h3>
-                  <p className="mt-2 line-clamp-2 text-[0.875rem] text-subtle leading-relaxed">
-                    {c.description}
-                  </p>
-                  <div className="mt-5 text-[0.8125rem] font-bold text-primary flex items-center gap-1">
-                    Explore collection →
-                  </div>
-                </Panel>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {displayBlogs.map((b: any) => (
-              <Link
-                key={b.slug}
-                to="/blogs/$slug"
-                params={{ slug: b.slug }}
-                className="group block"
-              >
-                <Panel hover className="p-6">
-                  <div className="flex items-center justify-between text-xs text-subtle font-sans">
-                    <CategoryPill>{b.category}</CategoryPill>
-                    <span>{b.readingTime} min read</span>
-                  </div>
-                  <h3 className="mt-3 font-display text-[1.1875rem] font-bold text-heading group-hover:text-primary">
-                    {b.title}
-                  </h3>
-                  <p className="mt-2 line-clamp-2 text-sm text-body">
-                    {b.subtitle}
-                  </p>
-                  <p className="mt-4 text-[0.75rem] text-subtle border-t border-divider pt-3">
-                    Published {b.date}
-                  </p>
-                </Panel>
-              </Link>
-            ))}
-          </div>
-        )}
+                    <Panel hover className="p-6 rounded-lg transition-all group-hover:border-primary/40">
+                      <div className="flex items-center justify-between">
+                        <span className="font-sans text-[0.6875rem] font-black tracking-[0.16em] text-primary uppercase">
+                          Category
+                        </span>
+                        <Badge tone="neutral">{c.count} stories</Badge>
+                      </div>
+                      <h3 className="mt-3 font-display text-[1.25rem] font-bold text-heading group-hover:text-primary">
+                        {c.name}
+                      </h3>
+                      <p className="mt-2 line-clamp-2 text-[0.875rem] text-subtle leading-relaxed">
+                        {c.description}
+                      </p>
+                      <div className="mt-5 text-[0.8125rem] font-bold text-primary flex items-center gap-1">
+                        Explore collection →
+                      </div>
+                    </Panel>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {displayBlogs.map((b: any) => (
+                  <Link
+                    key={b.slug}
+                    to="/blogs/$slug"
+                    params={{ slug: b.slug }}
+                    className="group block"
+                  >
+                    <Panel hover className="p-6 rounded-lg">
+                      <div className="flex items-center justify-between text-xs text-subtle font-sans">
+                        <CategoryPill>{b.category}</CategoryPill>
+                        <span>{b.readingTime} min read</span>
+                      </div>
+                      <h3 className="mt-3 font-display text-[1.1875rem] font-bold text-heading group-hover:text-primary">
+                        {b.title}
+                      </h3>
+                      <p className="mt-2 line-clamp-2 text-sm text-body">
+                        {b.subtitle}
+                      </p>
+                      <p className="mt-4 text-[0.75rem] text-subtle border-t border-divider pt-3">
+                        Published {b.date}
+                      </p>
+                    </Panel>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {activeTotalCount > 9 && (
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                totalCount={activeTotalCount}
+                pageSize={9}
+                onPageChange={handlePageChange}
+              />
+            )}
           </div>
         )}
       </main>
     </SiteLayout>
   );
 }
+

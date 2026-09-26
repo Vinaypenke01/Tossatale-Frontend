@@ -16,6 +16,37 @@ export const covers = {
 
 export const defaultCover = coverLane;
 
+export function resolveCoverImage(src?: string | null, fallback?: string): string {
+  const defaultFallback = fallback || coverTerrace || coverLane;
+  if (!src || typeof src !== "string" || !src.trim()) {
+    return defaultFallback;
+  }
+  const clean = src.trim().toLowerCase();
+  if (clean.includes("terrace")) return coverTerrace;
+  if (clean.includes("lane")) return coverLane;
+  if (clean.includes("boat")) return coverBoat;
+  if (clean.includes("bookshop")) return coverBookshop;
+  if (clean.includes("desk")) return coverDesk;
+  if (clean.includes("platform")) return coverPlatform;
+
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("blob:")) {
+    return src;
+  }
+
+  return defaultFallback;
+}
+
+export function sanitizeSafeUrl(rawUrl?: string | null): string {
+  if (!rawUrl || typeof rawUrl !== "string") return "#";
+  const trimmed = rawUrl.trim();
+  // Allow safe absolute web protocols (http, https, mailto, tel) or safe relative paths (/ or #)
+  if (/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(trimmed)) {
+    return trimmed;
+  }
+  // Neutralize dangerous schemes (javascript:, data:, vbscript:, etc.)
+  return "#";
+}
+
 export type Writer = {
   slug: string;
   name: string;

@@ -22,7 +22,7 @@ import { EmptySectionFallback } from "@/components/tossa/EmptySectionFallback";
 import { pageHead } from "@/lib/head";
 import { api, formatApiErrorMessage } from "@/lib/api";
 
-export const Route = createFileRoute("/admin/categories" as any)({
+export const Route = createFileRoute("/admin/categories")({
   head: () =>
     pageHead(
       "Categories & Tags Manager · tossatale admin",
