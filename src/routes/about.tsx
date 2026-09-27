@@ -53,7 +53,7 @@ const aboutStats = [
 
 const teamMembers = [
   {
-    name: "Vinay Penke",
+    name: "Sagar kamalam",
     role: "Founder & Writer",
   },
 ];
@@ -123,6 +123,7 @@ function AboutPage() {
         </div>
       </section>
 
+      {/* Stats section — temporarily hidden
       <section className="mx-auto max-w-[1240px] px-5 py-20 lg:px-8">
         <dl className="grid gap-8 sm:grid-cols-4">
           {aboutStats.map((s) => (
@@ -134,7 +135,7 @@ function AboutPage() {
             </div>
           ))}
         </dl>
-      </section>
+      </section> */}
 
       {/* Centered Actions */}
       <section className="mx-auto max-w-[1240px] px-5 pb-24 lg:px-8">
