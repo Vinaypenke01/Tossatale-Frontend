@@ -92,8 +92,8 @@ function ShareModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
-  url?: string;
+  title?: string | undefined;
+  url?: string | undefined;
 }) {
   const [copied, setCopied] = useState(false);
 

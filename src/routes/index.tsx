@@ -128,7 +128,7 @@ function HandpickedTales({ stories, isLoading }: { stories?: any[]; isLoading?: 
           <div className="mt-8 sm:mt-10 grid gap-6 sm:gap-8 md:grid-cols-2">
             {displayList.map((story, i) => (
               <Reveal key={story.slug || i} delay={i * 70}>
-                <div className="group flex flex-col justify-between h-full rounded-lg bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-7 lg:p-9">
+                <div className="group flex flex-col justify-between h-full rounded-lg bg-slate-200/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 p-5 sm:p-7 lg:p-9">
                   <div>
                     <div className="flex items-center gap-2.5">
                       <CategoryPill>{story.category?.name || story.category || "Featured"}</CategoryPill>
@@ -280,7 +280,7 @@ function Trending({ stories, isLoading }: { stories?: any[]; isLoading?: boolean
           <div className="mt-8 sm:mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {stories.slice(0, 6).map((story, i) => (
               <Reveal key={story.slug || i} delay={i * 50} className="h-full">
-                <div className="group flex items-start gap-4 sm:gap-5 rounded-lg bg-slate-100/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 h-full">
+                <div className="group flex items-start gap-4 sm:gap-5 rounded-lg bg-slate-200/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 h-full">
                   {/* Big Number */}
                   <span className="font-sans text-[2.1rem] sm:text-[2.25rem] font-black leading-none text-slate-300 dark:text-zinc-700 shrink-0 select-none w-10 group-hover:text-primary transition-colors">
                     {String(i + 1).padStart(2, "0")}
@@ -394,7 +394,7 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
 
               return (
                 <Reveal key={b.slug || i} delay={i * 70}>
-                  <div className="group flex h-full flex-col sm:flex-row items-stretch gap-5 p-5 rounded-lg bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
+                  <div className="group flex h-full flex-col sm:flex-row items-stretch gap-5 p-5 rounded-lg bg-slate-200/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
                     <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block overflow-hidden rounded-md shrink-0 w-full sm:w-44 h-40 sm:h-auto bg-slate-200 dark:bg-zinc-800">
                       <img
                         src={coverSrc}
@@ -491,7 +491,7 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
             {videos.slice(0, 2).map((v, i) => (
               <Reveal key={v.slug || v.id || i} delay={i * 70}>
                 <div className="group block h-full">
-                  <div className="flex flex-col h-full rounded-lg bg-slate-100/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex flex-col h-full rounded-lg bg-slate-200/90 dark:bg-zinc-900/90 p-5 sm:p-6 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
                     <div className="relative overflow-hidden rounded-xl aspect-video w-full">
                       <img
                         src={v.thumbnail_url || coverBoat}
@@ -548,16 +548,21 @@ function Newsletter() {
     <section id="newsletter" className="relative overflow-hidden bg-slate-50 dark:bg-black pt-12 sm:pt-16 pb-4 sm:pb-6">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <div className="relative overflow-hidden rounded-3xl border border-border/80 dark:border-zinc-800/80 bg-surface/90 dark:bg-zinc-900/90 p-6 sm:p-12 md:p-14 shadow-lg backdrop-blur-md text-center">
-            {/* Ambient atmospheric brand glows */}
-            <div className="pointer-events-none absolute -top-24 -right-24 size-64 rounded-full bg-primary/15 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-24 -left-24 size-64 rounded-full bg-[#FF6B35]/15 blur-3xl" />
+          <div className="relative overflow-hidden rounded-3xl border border-[#3D7EAA]/25 dark:border-[#3D7EAA]/20 bg-gradient-to-br from-[#F0F6FB] via-surface/95 to-[#E4EFF7] dark:from-zinc-900/95 dark:via-zinc-900/90 dark:to-[#101820] p-6 sm:p-12 md:p-14 shadow-[0_8px_40px_rgba(61,126,170,0.08)] dark:shadow-[0_8px_40px_rgba(61,126,170,0.12)] backdrop-blur-md text-center">
+            {/* Logo-blue gradient top accent bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#3D7EAA] via-[#5A9BC5] to-[#3D7EAA] rounded-t-3xl" />
+
+            {/* Ambient atmospheric logo-blue glows */}
+            <div className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-[#3D7EAA]/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-24 -left-24 size-72 rounded-full bg-[#3D7EAA]/15 blur-3xl" />
+            <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 rounded-full bg-[#3D7EAA]/5 blur-3xl" />
 
             <div className="relative z-10 max-w-xl mx-auto">
-              {/* <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary mb-4">
-                <Sparkles className="size-3.5 text-primary" />
+              {/* Weekly Dispatch badge — logo blue */}
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-[#3D7EAA]/25 bg-[#3D7EAA]/10 dark:bg-[#3D7EAA]/15 px-3.5 py-1 text-xs font-semibold text-[#3D7EAA] dark:text-[#5A9BC5] mb-4">
+                <Sparkles className="size-3.5" />
                 <span>Weekly Dispatch</span>
-              </div> */}
+              </div>
 
               <h2 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-heading leading-tight">
                 Keep reading. Keep watching.
@@ -570,10 +575,10 @@ function Newsletter() {
                 <NewsletterForm />
               </div>
 
-              {/* <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 text-xs text-subtle">
+              <div className="mt-4 sm:mt-5 flex items-center justify-center gap-2 text-xs text-subtle">
                 <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
                 <span>No spam, zero clutter. Unsubscribe anytime in one click.</span>
-              </div> */}
+              </div>
             </div>
           </div>
         </Reveal>
@@ -647,7 +652,7 @@ function NewsletterForm() {
 function CatSignoff() {
   return (
     <div className="bg-slate-50 dark:bg-black pt-2 pb-8 sm:pb-10 flex flex-col items-center justify-center text-center select-none">
-      <div className="relative group transition-transform duration-300 hover:scale-105">
+      {/* <div className="relative group transition-transform duration-300 hover:scale-105">
         <img
           src={kittenPic}
           alt="Playful Kitten"
@@ -658,7 +663,7 @@ function CatSignoff() {
         <span className="inline-flex items-center justify-center font-serif italic text-sm sm:text-base text-slate-700 dark:text-zinc-300 tracking-wide px-4.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 shadow-[0_2px_10px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.3)] backdrop-blur-xs">
           That’s all for now!
         </span>
-      </div>
+      </div> */}
     </div>
   );
 }

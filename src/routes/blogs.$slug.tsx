@@ -89,8 +89,8 @@ function ShareModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
-  url?: string;
+  title?: string | undefined;
+  url?: string | undefined;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -490,7 +490,7 @@ function BlogDetail() {
 
                 return (
                   <Reveal key={b.slug || b.id || i} delay={i * 70} className="h-full">
-                    <article className="group flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-slate-100/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
+                    <article className="group flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-slate-200/90 dark:bg-zinc-900/90 border border-slate-200/90 dark:border-zinc-800 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1">
                       <div>
                         {b.cover_image && (
                           <Link to="/blogs/$slug" params={{ slug: b.slug }} className="block overflow-hidden">

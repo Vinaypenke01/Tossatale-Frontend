@@ -1,0 +1,21 @@
+{
+  "name": "tossatale — Digital Storytelling & Publishing Platform",
+  "short_name": "tossatale",
+  "description": "Discover stories, meet the writers behind them, and explore a world of storytelling through short stories, blogs, and films.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0d0e",
+  "theme_color": "#FF6B35",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
