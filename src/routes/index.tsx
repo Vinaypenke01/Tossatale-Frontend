@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
-import heroArt from "@/assets/Hero_section_pic.jpeg";
+import heroArt from "@/assets/Hero_section_pic.webp";
 import coverBoat from "@/assets/cover-boat.jpg";
 import coverLane from "@/assets/cover-lane.jpg";
 import kittenPic from "@/assets/Kitten Pic for Website.png";
@@ -49,6 +49,14 @@ export const Route = createFileRoute("/")({
           "Discover stories, meet the writers behind them, and explore a world of storytelling through short stories, blogs, and films.",
       },
     ],
+    links: [
+      {
+        rel: "preload",
+        as: "image",
+        type: "image/webp",
+        href: heroArt,
+      },
+    ],
   }),
   component: Home,
 });
@@ -63,6 +71,9 @@ function Hero() {
           alt="Illustrated river ghats at dusk with temples, boats and figures on the steps"
           width={1920}
           height={1080}
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-auto block object-contain"
         />
         <div className="absolute inset-0 bg-black/45" />
@@ -400,6 +411,7 @@ function LatestBlogs({ blogs, isLoading }: { blogs?: any[]; isLoading?: boolean 
                         src={coverSrc}
                         alt={b.title || ""}
                         loading="lazy"
+                        decoding="async"
                         width={1200}
                         height={800}
                         onError={(e) => {
@@ -497,6 +509,7 @@ function VideoLibrary({ videos, isLoading }: { videos?: any[]; isLoading?: boole
                         src={v.thumbnail_url || coverBoat}
                         alt={v.title}
                         loading="lazy"
+                        decoding="async"
                         width={1200}
                         height={800}
                         className="w-full h-full object-cover"

@@ -19,7 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import authArt from "@/assets/cover-desk.jpg";
-import logo from "@/assets/official_tossatale_logo.png";
+import logo from "@/assets/official_tossatale_logo.webp";
 import { Button, Field, Input } from "@/components/tossa/kit";
 import { api, ApiError, setAuthTokens } from "@/lib/api";
 import { cn } from "@/lib/utils";

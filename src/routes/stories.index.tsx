@@ -134,6 +134,8 @@ function StoriesIndex() {
             src={storiesHeaderBg}
             alt=""
             aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover object-bottom opacity-90 dark:opacity-40"
           />
           {/* Subtle atmospheric gradient scrim to preserve high text contrast */}

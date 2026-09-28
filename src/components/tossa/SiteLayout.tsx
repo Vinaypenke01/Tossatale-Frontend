@@ -31,8 +31,8 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Avatar, Button, ButtonLink, XIcon } from "@/components/tossa/kit";
-import logo from "@/assets/official_tossatale_logo.png";
-import faviconLogo from "@/assets/favicon-96x96.png";
+import logo from "@/assets/official_tossatale_logo.webp";
+import faviconLogo from "@/assets/favicon-96x96.webp";
 import { api } from "@/lib/api";
 import { categories, defaultAnnouncementSettings, defaultFooterSettings, type AnnouncementSettings, type SiteFooterSettings } from "@/lib/data";
 import { CookieConsentBanner } from "@/components/tossa/CookieConsentBanner";
@@ -261,12 +261,20 @@ function Wordmark() {
       <img
         src={faviconLogo}
         alt="tossatale"
+        width={40}
+        height={40}
+        loading="eager"
+        decoding="async"
         className="size-9 sm:size-10 object-contain lg:hidden transition-opacity hover:opacity-90 shadow-xs"
       />
       {/* Desktop Full Logo */}
       <img
         src={logo}
         alt="tossatale"
+        width={190}
+        height={48}
+        loading="eager"
+        decoding="async"
         className="hidden lg:block h-11 sm:h-12 w-auto max-w-[190px] object-contain transition-opacity hover:opacity-90"
       />
     </Link>

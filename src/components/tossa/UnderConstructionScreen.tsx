@@ -1,7 +1,7 @@
 import { Instagram, Youtube, Linkedin, Facebook } from "lucide-react";
 
-import heroArt from "@/assets/Hero_section_pic.jpeg";
-import officialLogo from "@/assets/official_tossatale_logo.png";
+import heroArt from "@/assets/Hero_section_pic.webp";
+import officialLogo from "@/assets/official_tossatale_logo.webp";
 import { XIcon } from "@/components/tossa/kit";
 
 export function UnderConstructionScreen({ message }: { message?: string }) {

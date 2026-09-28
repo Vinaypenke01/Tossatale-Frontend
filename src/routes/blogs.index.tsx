@@ -66,6 +66,8 @@ function BlogsPage() {
           <img
             src={blogHeaderArt}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover opacity-45 dark:opacity-35 scale-105 transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/35" />

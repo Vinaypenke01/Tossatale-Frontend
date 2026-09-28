@@ -188,6 +188,8 @@ export function Avatar({
       <img
         src={src}
         alt="Avatar"
+        loading="lazy"
+        decoding="async"
         suppressHydrationWarning={suppressHydrationWarning}
         className={cn(
           "shrink-0 rounded-full object-cover shadow-xs border border-border/50",

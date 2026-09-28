@@ -27,7 +27,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Avatar } from "@/components/tossa/kit";
-import fullLogo from "@/assets/official_tossatale_logo.png";
+import fullLogo from "@/assets/official_tossatale_logo.webp";
 import { NotificationDropdown } from "@/components/tossa/NotificationDropdown";
 import { useAuth } from "@/components/auth/AuthContext";
 import { cn } from "@/lib/utils";

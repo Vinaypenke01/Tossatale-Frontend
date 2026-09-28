@@ -10,7 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import favicon96 from "@/assets/favicon-96x96.png?url";
+import favicon96 from "@/assets/favicon-96x96.webp?url";
 import { reportTossataleError } from "../lib/error-reporting";
 
 function NotFoundComponent() {
@@ -99,8 +99,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", type: "image/png", href: favicon96 },
-      { rel: "shortcut icon", type: "image/png", href: favicon96 },
+      { rel: "icon", type: "image/webp", href: favicon96 },
+      { rel: "shortcut icon", type: "image/webp", href: favicon96 },
       { rel: "apple-touch-icon", href: favicon96 },
       { rel: "manifest", href: "/site.webmanifest" },
     ],
@@ -109,6 +109,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         src: "https://accounts.google.com/gsi/client",
         async: true,
         defer: true,
+      },
+      {
+        src: "https://www.googletagmanager.com/gtag/js?id=G-CCS6BGLGJF",
+        async: true,
       },
     ],
   }),
@@ -124,6 +128,17 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        {/* Google Analytics (gtag.js) — inline config */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-CCS6BGLGJF');
+            `,
+          }}
+        />
       </head>
       <body>
         {children}
