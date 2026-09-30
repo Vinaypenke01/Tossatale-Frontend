@@ -241,12 +241,17 @@ function AuthPage() {
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
-    if (!email.trim()) {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
       setErrors({ email: "Email address is required to reset password" });
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setErrors({ email: "Please enter a valid email address" });
+      return;
+    }
+    if (!trimmedEmail.endsWith("@gmail.com")) {
+      setErrors({ email: "Only @gmail.com email addresses are allowed" });
       return;
     }
 
@@ -399,11 +404,14 @@ function AuthPage() {
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
+    const trimmedEmail = email.trim().toLowerCase();
 
-    if (!email.trim()) {
+    if (!trimmedEmail) {
       newErrors.email = "Email address is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       newErrors.email = "Please enter a valid email address";
+    } else if (isSignup && !trimmedEmail.endsWith("@gmail.com")) {
+      newErrors.email = "Only @gmail.com email addresses are allowed";
     }
 
     if (!password) {
@@ -577,8 +585,11 @@ function AuthPage() {
     }
 
     if (!isAuthenticated) {
-      if (!email.trim()) {
+      const trimmedEmail = email.trim().toLowerCase();
+      if (!trimmedEmail) {
         newErrors.email = "Your reader email is required";
+      } else if (!trimmedEmail.endsWith("@gmail.com")) {
+        newErrors.email = "Only @gmail.com email addresses are allowed";
       }
       if (!currentReaderPassword) {
         newErrors.otp = "Current reader password is required";
