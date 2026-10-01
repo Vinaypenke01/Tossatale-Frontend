@@ -1,6 +1,23 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AlertCircle, BookOpen, Check, ChevronDown, ChevronUp, Clock, Eye, History, Layers, MessageSquare, X } from "lucide-react";
-import { useState } from "react";
+import { createFileRoute } from '@tanstack/react-router'
+import {
+  AlertCircle,
+  ArrowRight,
+  BookOpen,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Eye,
+  FileText,
+  GitCompare,
+  History,
+  Layers,
+  MessageSquare,
+  RefreshCw,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -10,6 +27,7 @@ import { Pagination } from "@/components/tossa/Pagination";
 import { pageHead } from "@/lib/head";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { computeWordDiff, normalizeProse } from "@/lib/diff";
 
 export const Route = createFileRoute("/admin/review-queue")({
   head: () =>
@@ -24,6 +42,7 @@ function ReviewQueue() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [readingStory, setReadingStory] = useState<any | null>(null);
+  const [modalTab, setModalTab] = useState<"story" | "diff">("story");
   const [activeModalChapterIdx, setActiveModalChapterIdx] = useState<number>(0);
   const [rejectingStory, setRejectingStory] = useState<any | null>(null);
   const [rejectingChapter, setRejectingChapter] = useState<{ storyId: string; chapter: any } | null>(null);
@@ -59,6 +78,13 @@ function ReviewQueue() {
     },
     enabled: Boolean(readingStory?.id && readingStory.isMultiChapter),
   });
+
+  const diffChunks = useMemo(() => {
+    if (!readingStory || !readingStory.previousRevision) return [];
+    const prevContent = readingStory.previousRevision.content || "";
+    const currContent = readingStory.content || "";
+    return computeWordDiff(prevContent, currContent);
+  }, [readingStory]);
 
   const apiQueue = apiResponse?.results || (Array.isArray(apiResponse?.data?.results) ? apiResponse.data.results : (Array.isArray(apiResponse?.data) ? apiResponse.data : (Array.isArray(apiResponse) ? apiResponse : [])));
   const totalReviewsCount = apiResponse?.count ?? apiResponse?.data?.count ?? (Array.isArray(apiQueue) ? apiQueue.length : 0);
@@ -177,6 +203,19 @@ function ReviewQueue() {
         const chaptersList = Array.isArray(s.chapters) ? s.chapters : [];
         const pendingChapters = chaptersList.filter((c: any) => c.status === "PENDING_REVIEW");
 
+        const revisionsList = Array.isArray(s.revisions) ? s.revisions : [];
+        const isRevision = Boolean(
+          s.is_revision ||
+          revisionsList.length > 1 ||
+          (s.revision_count && s.revision_count > 1) ||
+          s.published_at
+        );
+        const revisionCount = s.revision_count || revisionsList.length || 1;
+        const latestRevision = s.latest_revision || revisionsList[0] || null;
+        const previousRevision = s.previous_revision || (revisionsList.length > 1 ? revisionsList[1] : null);
+        const revisionDiff = s.revision_diff || null;
+        const authorChangeSummary = latestRevision?.change_summary || s.change_summary || "";
+
         return {
           id: s.id,
           title: s.title,
@@ -200,6 +239,13 @@ function ReviewQueue() {
           rejectionCount: Number(rejectionCount),
           reviews: reviewsList,
           rejectionReviews: rejectionReviews,
+          revisions: revisionsList,
+          isRevision,
+          revisionCount,
+          latestRevision,
+          previousRevision,
+          revisionDiff,
+          authorChangeSummary,
           status: s.status === "PUBLISHED" ? "Published" : s.status === "PENDING_REVIEW" ? "In review" : s.status === "REJECTED" ? "Rejected" : s.status === "DRAFT" ? "Draft" : "In review",
         };
       }).filter((r: any) => r.title.toLowerCase().includes(query.toLowerCase()))
@@ -301,6 +347,14 @@ function ReviewQueue() {
                         {story.rawStatus === "REJECTED" ? "Rejected" : story.status}
                       </Badge>
 
+                      {/* Revision of Published Story Badge */}
+                      {story.isRevision && (
+                        <Badge tone="info" className="font-bold gap-1 bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30">
+                          <RefreshCw className="size-3" />
+                          <span>Revision v{story.revisionCount}</span>
+                        </Badge>
+                      )}
+
                       {/* Rejection Count Badge */}
                       {story.rejectionCount > 0 && (
                         <Badge tone="error" className="font-bold gap-1 bg-destructive/15 text-destructive border-destructive/30">
@@ -336,6 +390,65 @@ function ReviewQueue() {
                       {story.title}
                     </h2>
                     <p className="mt-1 line-clamp-2 text-[0.875rem] text-body">{story.dek}</p>
+
+                    {/* Revision Changelog & What Changed Callout Box */}
+                    {story.isRevision && story.revisionDiff && (
+                      <div
+                        className="mt-3 rounded-2xl border border-violet-500/30 bg-violet-500/5 p-3.5 text-xs text-body max-w-2xl space-y-2 cursor-default shadow-2xs"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 font-bold text-violet-700 dark:text-violet-300">
+                            <Sparkles className="size-3.5 shrink-0" />
+                            <span>Revision Changelog (v{story.revisionCount})</span>
+                          </div>
+                          {story.previousRevision && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveModalChapterIdx(0);
+                                setModalTab("diff");
+                                setReadingStory(story);
+                              }}
+                              className="text-primary font-bold hover:underline inline-flex items-center gap-1 text-[0.75rem] cursor-pointer"
+                            >
+                              <GitCompare className="size-3" /> View Diff / Compare
+                            </button>
+                          )}
+                        </div>
+
+                        {story.authorChangeSummary && (
+                          <p className="text-body font-normal leading-relaxed text-xs">
+                            <strong className="text-heading font-semibold">Author Note: </strong>
+                            "{story.authorChangeSummary}"
+                          </p>
+                        )}
+
+                        {/* What Changed Summary Chips */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          {story.revisionDiff.title_changed && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/15 px-2 py-0.5 text-[0.6875rem] font-bold text-violet-700 dark:text-violet-300">
+                              Title Modified
+                            </span>
+                          )}
+                          {story.revisionDiff.category_changed && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/15 px-2 py-0.5 text-[0.6875rem] font-bold text-violet-700 dark:text-violet-300">
+                              Category: {story.revisionDiff.old_category} ➔ {story.revisionDiff.new_category}
+                            </span>
+                          )}
+                          {story.revisionDiff.word_count_diff !== 0 && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[0.6875rem] font-bold text-emerald-700 dark:text-emerald-300">
+                              Prose: {story.revisionDiff.word_count_diff > 0 ? `+${story.revisionDiff.word_count_diff}` : story.revisionDiff.word_count_diff} words
+                            </span>
+                          )}
+                          {story.revisionDiff.subtitle_changed && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/15 px-2 py-0.5 text-[0.6875rem] font-bold text-violet-700 dark:text-violet-300">
+                              Standfirst / Premise Updated
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Rejection Reasons & History Accordion in Row */}
                     {rejections.length > 0 && (
@@ -398,9 +511,10 @@ function ReviewQueue() {
                       size="sm"
                       onClick={() => {
                         setActiveModalChapterIdx(0);
+                        setModalTab("story");
                         setReadingStory(story);
                       }}
-                      className="gap-1.5"
+                      className="gap-1.5 cursor-pointer"
                     >
                       <Eye className="size-4" /> Read
                     </Button>
@@ -473,48 +587,294 @@ function ReviewQueue() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface/95 px-6 py-4 backdrop-blur-md">
-              <div className="flex items-center gap-2">
-                <Badge
-                  tone={
-                    readingStory.rawStatus === "PUBLISHED"
-                      ? "success"
-                      : readingStory.rawStatus === "REJECTED"
-                      ? "error"
-                      : "info"
-                  }
+            <div className="sticky top-0 z-10 flex flex-col border-b border-border bg-surface/95 px-6 py-4 backdrop-blur-md gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    tone={
+                      readingStory.rawStatus === "PUBLISHED"
+                        ? "success"
+                        : readingStory.rawStatus === "REJECTED"
+                        ? "error"
+                        : "info"
+                    }
+                  >
+                    {readingStory.rawStatus === "REJECTED" ? "Rejected" : readingStory.status}
+                  </Badge>
+
+                  {readingStory.isRevision && (
+                    <Badge tone="info" className="font-bold gap-1 bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30">
+                      <RefreshCw className="size-3" />
+                      <span>Revision v{readingStory.revisionCount}</span>
+                    </Badge>
+                  )}
+
+                  {readingStory.rejectionCount > 0 && (
+                    <Badge tone="error" className="font-bold gap-1 bg-destructive/15 text-destructive border-destructive/30">
+                      <History className="size-3" />
+                      <span>Rejected {readingStory.rejectionCount}x</span>
+                    </Badge>
+                  )}
+
+                  {readingStory.isMultiChapter && (
+                    <Badge tone="info" className="font-bold gap-1">
+                      <BookOpen className="size-3" />
+                      <span>Multi-Chapter Series</span>
+                    </Badge>
+                  )}
+
+                  <span className="text-xs font-bold text-subtle font-sans">{readingStory.category}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReadingStory(null)}
+                  aria-label="Close story preview"
+                  className="grid size-9 place-items-center rounded-full text-subtle hover:bg-surface-hover hover:text-heading transition-colors"
                 >
-                  {readingStory.rawStatus === "REJECTED" ? "Rejected" : readingStory.status}
-                </Badge>
-
-                {readingStory.rejectionCount > 0 && (
-                  <Badge tone="error" className="font-bold gap-1 bg-destructive/15 text-destructive border-destructive/30">
-                    <History className="size-3" />
-                    <span>Rejected {readingStory.rejectionCount}x</span>
-                  </Badge>
-                )}
-
-                {readingStory.isMultiChapter && (
-                  <Badge tone="info" className="font-bold gap-1">
-                    <BookOpen className="size-3" />
-                    <span>Multi-Chapter Series</span>
-                  </Badge>
-                )}
-
-                <span className="text-xs font-bold text-subtle font-sans">{readingStory.category}</span>
+                  <X className="size-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setReadingStory(null)}
-                aria-label="Close story preview"
-                className="grid size-9 place-items-center rounded-full text-subtle hover:bg-surface-hover hover:text-heading transition-colors"
-              >
-                <X className="size-5" />
-              </button>
+
+              {/* Revision Tab Switcher (Story View vs Diff Inspector) */}
+              {readingStory.previousRevision && (
+                <div className="flex items-center gap-2 pt-1 border-t border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => setModalTab("story")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer",
+                      modalTab === "story"
+                        ? "bg-primary text-white shadow-2xs"
+                        : "bg-surface-alt/70 text-subtle hover:text-heading hover:bg-surface-hover"
+                    )}
+                  >
+                    <BookOpen className="size-3.5" />
+                    <span>Story Preview</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModalTab("diff")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer",
+                      modalTab === "diff"
+                        ? "bg-violet-600 text-white shadow-2xs"
+                        : "bg-violet-500/10 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20"
+                    )}
+                  >
+                    <GitCompare className="size-3.5" />
+                    <span>Compare Changes (Diff View)</span>
+                    <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[0.625rem]">
+                      v{readingStory.previousRevision.version_number} ➔ v{readingStory.revisionCount}
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Modal Body (Scrollable Full Story Content) */}
+            {/* Modal Body (Scrollable Content) */}
             <div className="overflow-y-auto p-6 sm:p-8 space-y-6">
+              {modalTab === "diff" && readingStory.previousRevision ? (
+                /* Revision Diff View */
+                <div className="space-y-6">
+                  {/* Author Note Header */}
+                  <div className="rounded-2xl border border-violet-500/30 bg-violet-500/5 p-5 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-violet-500/20 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="size-4 text-violet-600 dark:text-violet-400" />
+                        <h3 className="font-display font-bold text-sm text-heading">
+                          Author Revision Submission Note
+                        </h3>
+                      </div>
+                      <span className="text-xs text-subtle font-medium">
+                        Submitted by {readingStory.writerName}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-body font-sans leading-relaxed">
+                      {readingStory.authorChangeSummary ? (
+                        <span>"{readingStory.authorChangeSummary}"</span>
+                      ) : (
+                        <span className="italic text-subtle">No author note was provided with this revision.</span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Metadata Comparison Cards */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-subtle font-sans">
+                      Metadata & Story Attributes Comparison
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {/* Title Diff */}
+                      <div className={cn(
+                        "rounded-2xl border p-4 text-xs space-y-1.5",
+                        readingStory.revisionDiff?.title_changed
+                          ? "border-violet-500/40 bg-violet-500/5"
+                          : "border-border bg-surface-alt/40"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-heading">Story Title</span>
+                          {readingStory.revisionDiff?.title_changed ? (
+                            <Badge tone="info" className="text-[0.625rem]">Modified</Badge>
+                          ) : (
+                            <span className="text-subtle text-[0.6875rem]">Unchanged</span>
+                          )}
+                        </div>
+                        {readingStory.revisionDiff?.title_changed ? (
+                          <div className="space-y-1 pt-1">
+                            <div className="text-rose-700 dark:text-rose-400 line-through opacity-80">
+                              {readingStory.previousRevision.title}
+                            </div>
+                            <div className="text-emerald-700 dark:text-emerald-400 font-bold">
+                              {readingStory.title}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-body font-medium">{readingStory.title}</p>
+                        )}
+                      </div>
+
+                      {/* Category Diff */}
+                      <div className={cn(
+                        "rounded-2xl border p-4 text-xs space-y-1.5",
+                        readingStory.revisionDiff?.category_changed
+                          ? "border-violet-500/40 bg-violet-500/5"
+                          : "border-border bg-surface-alt/40"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-heading">Category</span>
+                          {readingStory.revisionDiff?.category_changed ? (
+                            <Badge tone="info" className="text-[0.625rem]">Modified</Badge>
+                          ) : (
+                            <span className="text-subtle text-[0.6875rem]">Unchanged</span>
+                          )}
+                        </div>
+                        {readingStory.revisionDiff?.category_changed ? (
+                          <div className="space-y-1 pt-1">
+                            <div className="text-rose-700 dark:text-rose-400 line-through opacity-80">
+                              {readingStory.previousRevision.category_name || readingStory.previousRevision.category_slug || "Previous"}
+                            </div>
+                            <div className="text-emerald-700 dark:text-emerald-400 font-bold">
+                              {readingStory.category}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-body font-medium">{readingStory.category}</p>
+                        )}
+                      </div>
+
+                      {/* Subtitle / Dek Diff */}
+                      <div className={cn(
+                        "rounded-2xl border p-4 text-xs space-y-1.5 sm:col-span-2",
+                        readingStory.revisionDiff?.subtitle_changed
+                          ? "border-violet-500/40 bg-violet-500/5"
+                          : "border-border bg-surface-alt/40"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-heading">Standfirst / Synopsis</span>
+                          {readingStory.revisionDiff?.subtitle_changed ? (
+                            <Badge tone="info" className="text-[0.625rem]">Modified</Badge>
+                          ) : (
+                            <span className="text-subtle text-[0.6875rem]">Unchanged</span>
+                          )}
+                        </div>
+                        {readingStory.revisionDiff?.subtitle_changed ? (
+                          <div className="space-y-1 pt-1">
+                            <div className="text-rose-700 dark:text-rose-400 line-through opacity-80">
+                              {readingStory.previousRevision.subtitle || "(Empty)"}
+                            </div>
+                            <div className="text-emerald-700 dark:text-emerald-400 font-bold">
+                              {readingStory.subtitle || readingStory.dek || "(Empty)"}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-body font-medium">{readingStory.subtitle || readingStory.dek || "None"}</p>
+                        )}
+                      </div>
+
+                      {/* Word Count Diff */}
+                      <div className="rounded-2xl border border-border bg-surface-alt/40 p-4 text-xs space-y-1.5 sm:col-span-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-heading">Word Count</span>
+                          <span className={cn(
+                            "font-bold text-xs",
+                            (readingStory.revisionDiff?.word_count_diff ?? 0) > 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : (readingStory.revisionDiff?.word_count_diff ?? 0) < 0
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-subtle"
+                          )}>
+                            {(readingStory.revisionDiff?.word_count_diff ?? 0) > 0
+                              ? `+${readingStory.revisionDiff?.word_count_diff} words`
+                              : (readingStory.revisionDiff?.word_count_diff ?? 0) < 0
+                              ? `${readingStory.revisionDiff?.word_count_diff} words`
+                              : "0 net words"}
+                          </span>
+                        </div>
+                        <p className="text-subtle">
+                          Previous: {readingStory.previousRevision.word_count || 0} words ➔ Current: {readingStory.wordCount} words
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Prose Visual Diff */}
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-subtle font-sans flex items-center gap-1.5">
+                        <GitCompare className="size-3.5" /> Prose Content Diff
+                      </h4>
+                      <div className="flex items-center gap-3 text-[0.6875rem] font-bold">
+                        <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-300">
+                          <span className="size-2 rounded-full bg-emerald-500 inline-block" /> Added
+                        </span>
+                        <span className="flex items-center gap-1 text-rose-700 dark:text-rose-300">
+                          <span className="size-2 rounded-full bg-rose-500 inline-block" /> Removed
+                        </span>
+                        <span className="flex items-center gap-1 text-subtle">
+                          <span className="size-2 rounded-full bg-border inline-block" /> Unchanged
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-border bg-surface-alt/30 p-5 sm:p-6 font-serif text-[1.0625rem] leading-relaxed select-text space-y-4 min-w-0 break-words [overflow-wrap:anywhere]">
+                      {diffChunks.length > 0 ? (
+                        <div className="whitespace-pre-wrap leading-relaxed font-serif break-words [overflow-wrap:anywhere]">
+                          {diffChunks.map((chunk, idx) => {
+                            if (chunk.type === "added" || chunk.added) {
+                              return (
+                                <mark
+                                  key={idx}
+                                  className="bg-emerald-500/25 text-emerald-900 dark:text-emerald-100 px-1 py-0.5 rounded font-semibold no-underline decoration-transparent"
+                                >
+                                  {chunk.value}
+                                </mark>
+                              );
+                            }
+                            if (chunk.type === "removed" || chunk.removed) {
+                              return (
+                                <del
+                                  key={idx}
+                                  className="bg-rose-500/25 text-rose-900 dark:text-rose-200 line-through px-1 py-0.5 rounded font-medium opacity-85 decoration-rose-600 decoration-2"
+                                >
+                                  {chunk.value}
+                                </del>
+                              );
+                            }
+                            return <span key={idx}>{chunk.value}</span>;
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-subtle italic text-sm font-sans">
+                          No text content changes detected between revision snapshots.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Standard Story View */
+                <>
               {/* Full Rejection Breakdown in Modal */}
               {readingStory.rejectionCount > 0 && (
                 <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-destructive space-y-3">
@@ -785,6 +1145,8 @@ function ReviewQueue() {
                     <p className="text-subtle italic">No story content available.</p>
                   )}
                 </div>
+              )}
+                </>
               )}
             </div>
 

@@ -448,34 +448,6 @@ function AdminWriters() {
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-[0.8125rem] font-bold text-heading mb-2">
-                    Gender Selection <span className="text-subtle font-normal">(Determines storyteller avatar)</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { id: "MALE", label: "Male", icon: "👨" },
-                      { id: "FEMALE", label: "Female", icon: "👩" },
-                      { id: "OTHER", label: "Other", icon: "🧑" },
-                    ].map((g) => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => handleFormChange("gender", g.id)}
-                        className={cn(
-                          "flex items-center justify-center gap-2 rounded-2xl border p-3 text-[0.875rem] font-bold transition-all",
-                          formData.gender === g.id
-                            ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
-                            : "border-border bg-surface text-body hover:bg-surface-hover hover:text-heading"
-                        )}
-                      >
-                        <span className="text-base">{g.icon}</span>
-                        {g.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               {/* Bio & Details */}

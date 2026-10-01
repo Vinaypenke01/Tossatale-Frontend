@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   BookOpen,
@@ -60,6 +61,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
   const [seriesStatus, setSeriesStatus] = useState<"ONGOING" | "COMPLETED">("ONGOING");
   const [isChangingSeriesStatus, setIsChangingSeriesStatus] = useState(false);
   const [isSavingSeriesMeta, setIsSavingSeriesMeta] = useState(false);
+  const [showOngoingConflictModal, setShowOngoingConflictModal] = useState<any | null>(null);
 
   // Chapters State
   const [chapters, setChapters] = useState<any[]>([]);
@@ -269,8 +271,17 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
     return seriesList.reduce((acc: number, s: any) => acc + (s.chapter_count || s.chapters?.length || 0), 0);
   }, [seriesList]);
 
-  // Handler: Start New Series
+  // Handler: Start New Series with Ongoing Series Guard
   const handleOpenNewSeriesModal = () => {
+    // If writer already has an ongoing series, show the friendly conflict dialog
+    if (!isAdmin && activeOngoingSeriesData && (activeOngoingSeriesData.id || activeOngoingSeriesData.slug)) {
+      setShowOngoingConflictModal(activeOngoingSeriesData);
+      return;
+    }
+    proceedWithNewSeries();
+  };
+
+  const proceedWithNewSeries = () => {
     setActiveSeries(null);
     setSeriesTitle("");
     setSeriesDek("");
@@ -280,8 +291,27 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
     setChapters([]);
     setIsCreatingNewSeries(true);
     setIsEditingSeriesMeta(true);
+    setShowOngoingConflictModal(null);
     setViewMode("hub");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCompleteCurrentAndStartNew = async () => {
+    if (!showOngoingConflictModal) return;
+    const targetSlug = showOngoingConflictModal.slug || showOngoingConflictModal.id;
+    setIsChangingSeriesStatus(true);
+    try {
+      await api.post(`${endpointPrefix}/${targetSlug}/series-status/`, {
+        series_status: "COMPLETED",
+      });
+      toast.success(`"${showOngoingConflictModal.title}" marked as Completed! Starting your new series.`);
+      await Promise.all([refetchAllSeries(), refetchActiveOngoingSeries()]);
+      proceedWithNewSeries();
+    } catch (err: any) {
+      toast.error("Could not finalize previous series", { description: formatApiErrorMessage(err) });
+    } finally {
+      setIsChangingSeriesStatus(false);
+    }
   };
 
   // Handler: Select Chapter to Edit
@@ -830,6 +860,17 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
             {/* Series Meta Edit Form */}
             {isEditingSeriesMeta ? (
               <form onSubmit={handleSaveSeriesMeta} className="space-y-4 pt-2">
+                {isCreatingNewSeries && (
+                  <div className="rounded-2xl border border-primary/25 bg-primary-light/40 p-4 text-xs text-body flex items-start gap-3">
+                    <Sparkles className="size-4 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-heading text-xs">One Active Ongoing Series Rule</p>
+                      <p className="text-subtle leading-relaxed">
+                        Authors can maintain 1 active ongoing serial at a time so readers know which storyline is actively releasing new chapters. You can mark series as Completed and reopen them anytime.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field
                     label="Series Title *"
@@ -1331,6 +1372,92 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
           </div>
         )}
       </div>
+
+      {/* Ongoing Series Conflict / Guidance Modal */}
+      {showOngoingConflictModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setShowOngoingConflictModal(null)}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-lg rounded-3xl border border-amber-500/30 bg-surface shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 p-6 sm:p-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4">
+              <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <AlertTriangle className="size-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-lg sm:text-xl font-bold text-heading">
+                    Active Ongoing Series in Progress
+                  </h3>
+                  <Badge tone="warning" className="text-[0.6875rem]">1 Active Allowed</Badge>
+                </div>
+                <p className="mt-1 text-sm text-body font-medium truncate" title={showOngoingConflictModal.title}>
+                  "{showOngoingConflictModal.title}"
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOngoingConflictModal(null)}
+                aria-label="Close"
+                className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface-hover hover:text-heading transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Explanation box */}
+            <div className="mt-5 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 text-xs text-body space-y-2">
+              <p className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 text-xs">
+                <AlertCircle className="size-4 shrink-0" />
+                Why can authors only have 1 active ongoing serial?
+              </p>
+              <p className="leading-relaxed text-subtle font-normal">
+                Tossatale showcases active serialized stories with episodic updates. To keep serialized writing focused and ensure readers receive regular chapter drops, authors maintain <strong>one active ongoing series</strong> at a time.
+              </p>
+              <p className="leading-relaxed text-subtle font-normal">
+                You can mark <strong>"{showOngoingConflictModal.title}"</strong> as <em>Completed</em> to start your new series immediately. You can reopen any completed series to "Ongoing" at any time.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2">
+              <Button
+                type="button"
+                variant="ghostOutline"
+                size="md"
+                onClick={() => setShowOngoingConflictModal(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="soft"
+                size="md"
+                onClick={() => {
+                  selectSeries(showOngoingConflictModal, "hub");
+                  setShowOngoingConflictModal(null);
+                }}
+                className="gap-1.5 font-bold"
+              >
+                <BookOpen className="size-4" /> Continue Writing Current
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={isChangingSeriesStatus}
+                onClick={handleCompleteCurrentAndStartNew}
+                className="gap-1.5 font-bold"
+              >
+                <CheckCircle2 className="size-4" /> Mark as Completed & Start New
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

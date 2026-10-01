@@ -184,11 +184,20 @@ function WriterProfile() {
                 )}
               </h1>
               <p className="mt-1 text-[0.875rem] text-white/75">
-                @{writer.slug} · {writer.tagline || "Storyteller"}
+                @{writer.slug}
+                {writer.tagline?.trim() ? <span> · {writer.tagline.trim()}</span> : null}
               </p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-[0.8125rem] text-white/65">
-                <MapPin className="size-3.5" /> {writer.location || "India"} · {writer.author_title || "tossatale author"}
-              </p>
+              {(writer.location?.trim() || writer.author_title?.trim()) && (
+                <p className="mt-0.5 flex items-center gap-1.5 text-[0.8125rem] text-white/65">
+                  {writer.location?.trim() && (
+                    <>
+                      <MapPin className="size-3.5" /> <span>{writer.location.trim()}</span>
+                    </>
+                  )}
+                  {writer.location?.trim() && writer.author_title?.trim() && <span>·</span>}
+                  {writer.author_title?.trim() && <span>{writer.author_title.trim()}</span>}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <Button

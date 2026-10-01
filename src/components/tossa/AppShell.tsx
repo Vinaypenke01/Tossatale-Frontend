@@ -54,6 +54,7 @@ const navs: Record<Role, NavItem[]> = {
     { label: "Profile", to: "/admin/profile", icon: User },
   ],
   writer: [
+    { label: "Home", to: "/", icon: Home },
     { label: "Studio", to: "/writer", icon: LayoutDashboard },
     { label: "New story", to: "/writer/editor", icon: PenLine },
     { label: "My stories", to: "/writer/stories", icon: Library },
@@ -62,6 +63,7 @@ const navs: Record<Role, NavItem[]> = {
     { label: "My profile", to: "/writer/profile", icon: User },
   ],
   reader: [
+    { label: "Home", to: "/", icon: Home },
     { label: "Dashboard", to: "/reader", icon: LayoutDashboard },
     { label: "Bookmarks", to: "/reader/bookmarks", icon: Bookmark },
     { label: "History", to: "/reader/history", icon: Clock },

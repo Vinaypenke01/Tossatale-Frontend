@@ -55,13 +55,11 @@ function WriterProfileScreen() {
 
   const [name, setName] = useState(user?.full_name || "Writer");
   const [handle, setHandle] = useState("@writer");
-  const [tagline, setTagline] = useState("Storyteller");
-  const [authorTitle, setAuthorTitle] = useState("tossatale author");
-  const [location, setLocation] = useState("India");
+  const [tagline, setTagline] = useState("");
+  const [authorTitle, setAuthorTitle] = useState("");
+  const [location, setLocation] = useState("");
   const [email, setEmail] = useState(user?.email || "");
-  const [gender, setGender] = useState("OTHER");
   const [bio, setBio] = useState("");
-  const [profilePhoto, setProfilePhoto] = useState("");
 
   const [website, setWebsite] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -90,11 +88,9 @@ function WriterProfileScreen() {
     if (profileData) {
       setName(profileData.name || profileData.user?.full_name || user?.full_name || "Writer");
       setBio(profileData.bio || "");
-      setGender(profileData.gender || "OTHER");
-      setProfilePhoto(profileData.profile_photo || "");
-      setLocation(profileData.location || "India");
-      setAuthorTitle(profileData.author_title || "tossatale author");
-      setTagline(profileData.tagline || "Storyteller");
+      setLocation(profileData.location || "");
+      setAuthorTitle(profileData.author_title || "");
+      setTagline(profileData.tagline || "");
       setWebsite(profileData.website_url || "");
       setInstagram(profileData.instagram_url || "");
       setTwitter(profileData.x_url || "");
@@ -183,12 +179,10 @@ function WriterProfileScreen() {
     e.preventDefault();
     updateMutation.mutate({
       name,
-      gender,
       bio,
       location,
       author_title: authorTitle,
       tagline,
-      profile_photo: profilePhoto,
       website_url: website,
       instagram_url: instagram,
       x_url: twitter,
@@ -236,8 +230,6 @@ function WriterProfileScreen() {
             <div className="flex flex-col items-center text-center">
               <Avatar
                 initials={(name || "W").substring(0, 2).toUpperCase()}
-                gender={gender}
-                src={profilePhoto}
                 size="xl"
                 className="shadow-md"
               />
@@ -245,15 +237,23 @@ function WriterProfileScreen() {
                 {name}
                 {profileData?.is_verified && <VerifiedBadge />}
               </h2>
-              <p className="text-[0.8125rem] text-subtle flex items-center justify-center gap-1 mt-0.5">
-                <MapPin className="size-3.5 text-primary shrink-0" />
-                <span>{location || "India"}</span>
-                <span>·</span>
-                <span className="font-semibold text-heading">{authorTitle || "tossatale author"}</span>
-              </p>
-              <p className="mt-1.5 inline-flex items-center rounded-full bg-primary/10 px-3 py-0.5 text-[0.75rem] font-bold text-primary">
-                {tagline || "Storyteller"}
-              </p>
+              {(location || authorTitle) && (
+                <p className="text-[0.8125rem] text-subtle flex items-center justify-center gap-1 mt-0.5">
+                  {location && (
+                    <>
+                      <MapPin className="size-3.5 text-primary shrink-0" />
+                      <span>{location}</span>
+                    </>
+                  )}
+                  {location && authorTitle && <span>·</span>}
+                  {authorTitle && <span className="font-semibold text-heading">{authorTitle}</span>}
+                </p>
+              )}
+              {tagline.trim() && (
+                <p className="mt-1.5 inline-flex items-center rounded-full bg-primary/10 px-3 py-0.5 text-[0.75rem] font-bold text-primary">
+                  {tagline}
+                </p>
+              )}
 
               {bio && (
                 <p className="mt-3 text-[0.875rem] text-body line-clamp-3 italic">
@@ -295,7 +295,7 @@ function WriterProfileScreen() {
               <div>
                 <h4 className="text-[0.875rem] font-bold text-heading">Author Verification</h4>
                 <p className="mt-1 text-[0.8125rem] text-subtle leading-relaxed">
-                  Verified badges are granted by Tossatale editors upon reviewing published story quality.
+                  Verified badges are granted by tossatale after stories have been reviewed, approved, and successfully published.
                 </p>
               </div>
             </div>
@@ -322,13 +322,13 @@ function WriterProfileScreen() {
 
                 <div className="mt-3.5 grid gap-3.5 sm:grid-cols-3">
                   <Field label="Location (e.g. India, Bangalore)">
-                    <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="India" />
+                    <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Bangalore, India" />
                   </Field>
-                  <Field label="Author Title (e.g. tossatale author)">
-                    <Input value={authorTitle} onChange={(e) => setAuthorTitle(e.target.value)} placeholder="tossatale author" />
+                  <Field label="Author Title (Optional)" hint="Leave empty if not applicable">
+                    <Input value={authorTitle} onChange={(e) => setAuthorTitle(e.target.value)} placeholder="e.g. Historical Fiction Author" />
                   </Field>
-                  <Field label="Tagline / Beat (e.g. Storyteller)">
-                    <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Storyteller" />
+                  <Field label="Tagline / Beat (Optional)" hint="Leave empty if not applicable">
+                    <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="e.g. Storyteller" />
                   </Field>
                 </div>
 
@@ -345,41 +345,12 @@ function WriterProfileScreen() {
                     </div>
                   </Field>
                 </div>
-
-                {/* Gender Selector */}
-                <div className="mt-3.5">
-                  <label className="block text-[0.8125rem] font-bold text-heading mb-1.5">
-                    Gender Selection <span className="text-subtle font-normal">(Used for default storyteller avatar)</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {[
-                      { id: "MALE", label: "Male", icon: "👨" },
-                      { id: "FEMALE", label: "Female", icon: "👩" },
-                      { id: "OTHER", label: "Other", icon: "🧑" },
-                    ].map((g) => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => setGender(g.id)}
-                        className={cn(
-                          "flex items-center justify-center gap-1.5 rounded-xl border py-2 text-[0.8125rem] font-bold transition-all",
-                          gender === g.id
-                            ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary"
-                            : "border-border bg-surface text-body hover:bg-surface-hover hover:text-heading"
-                        )}
-                      >
-                        <span>{g.icon}</span>
-                        {g.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
-              {/* Section 2: Biography & Photo URL */}
+              {/* Section 2: Biography */}
               <div className="border-t border-border pt-4">
                 <h3 className="font-sans text-[0.75rem] font-black tracking-wider text-primary uppercase mb-3">
-                  2. Biography & Avatar
+                  2. Author Biography
                 </h3>
                 <Field label="Author Biography" hint="Displayed on your public profile and story bylines">
                   <Textarea
@@ -389,16 +360,6 @@ function WriterProfileScreen() {
                     placeholder="Write a short author bio..."
                   />
                 </Field>
-
-                <div className="mt-3.5">
-                  <Field label="Profile Photo URL" hint="Leave empty to use automatic gender avatar">
-                    <Input
-                      value={profilePhoto}
-                      onChange={(e) => setProfilePhoto(e.target.value)}
-                      placeholder="https://images.unsplash.com/... or Cloudinary URL"
-                    />
-                  </Field>
-                </div>
               </div>
 
               {/* Section 3: Social & Portfolio Channels */}

@@ -26,6 +26,7 @@ import {
   Share2,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -80,6 +81,8 @@ export function StoryEditor({
   const [preview, setPreview] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(story?.categorySlug ?? (story as any)?.category?.id ?? (story as any)?.category?.slug ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitModalOpen, setSubmitModalOpen] = useState(false);
+  const [revisionNoteInput, setRevisionNoteInput] = useState("");
   const [activeEditingSlug, setActiveEditingSlug] = useState<string | null>(story?.slug ?? (story as any)?.id ?? null);
   const [rejectionFeedback, setRejectionFeedback] = useState<string>((story as any)?.rejection_feedback || (story as any)?.feedback || "");
   const initialRejectionReviews = (story as any)?.reviews ? (story as any).reviews.filter((r: any) => r.decision === "REJECTED") : [];
@@ -105,14 +108,18 @@ export function StoryEditor({
     cat: string,
     tags: string,
     mc: boolean,
+    chTitle: string = "",
+    chContent: string = ""
   ) => {
     return JSON.stringify({
-      title: t.trim(),
-      dek: d.trim(),
-      body: b.trim(),
-      category: cat,
-      tags: tags.trim(),
-      is_multi_chapter: mc,
+      title: (t || "").trim(),
+      dek: (d || "").trim(),
+      body: (b || "").trim(),
+      category: (cat || "").trim(),
+      tags: (tags || "").trim(),
+      is_multi_chapter: Boolean(mc),
+      chapterTitle: (chTitle || "").trim(),
+      chapterContent: (chContent || "").trim(),
     });
   };
 
@@ -127,11 +134,15 @@ export function StoryEditor({
       setSeriesStatus((story as any).series_status || "ONGOING");
       const initialChs = (story as any).chapters || [];
       setChapters(initialChs);
+      let initialChTitle = "";
+      let initialChContent = "";
       if (initialChs.length > 0) {
-        setChapterTitleInput(initialChs[0]?.title || "");
-        setChapterContentInput(initialChs[0]?.content || "");
+        initialChTitle = initialChs[0]?.title || "";
+        initialChContent = initialChs[0]?.content || "";
+        setChapterTitleInput(initialChTitle);
+        setChapterContentInput(initialChContent);
       }
-      const catVal = story.categorySlug || (story as any).category?.id || (story as any).category?.slug || "";
+      const catVal = story.categorySlug || (story as any).category?.slug || (story as any).category?.id || "";
       setSelectedCategory(catVal);
       setActiveEditingSlug(story.slug || (story as any).id || null);
       setRejectionFeedback((story as any).rejection_feedback || (story as any).feedback || "");
@@ -156,22 +167,54 @@ export function StoryEditor({
         catVal,
         initialTagsVal,
         isMulti,
+        initialChTitle,
+        initialChContent
       );
       hasInitializedRef.current = true;
     } else if (!hasInitializedRef.current) {
-      savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false);
+      savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false, "", "");
       hasInitializedRef.current = true;
     }
   }, [story]);
 
   const isDirty = useMemo(() => {
     if (activeTab !== "editor") return false;
-    if (!hasInitializedRef.current || !savedSnapshotRef.current) {
-      return Boolean(title.trim() || body.trim() || chapterTitleInput.trim() || chapterContentInput.trim());
+    // For a brand new unpersisted story (no active editing slug), do not block if user hasn't typed any content/title
+    if (!activeEditingSlug && !title.trim() && !dek.trim() && !body.trim() && !chapterTitleInput.trim() && !chapterContentInput.trim()) {
+      return false;
     }
-    const current = serializeStoryState(title, dek, body, selectedCategory, tagsInput, isMultiChapter);
+    if (!hasInitializedRef.current || !savedSnapshotRef.current) {
+      return Boolean(
+        title.trim() ||
+        dek.trim() ||
+        body.trim() ||
+        chapterTitleInput.trim() ||
+        chapterContentInput.trim()
+      );
+    }
+    const current = serializeStoryState(
+      title,
+      dek,
+      body,
+      selectedCategory,
+      tagsInput,
+      isMultiChapter,
+      chapterTitleInput,
+      chapterContentInput
+    );
     return current !== savedSnapshotRef.current;
-  }, [activeTab, title, dek, body, selectedCategory, tagsInput, isMultiChapter, chapterTitleInput, chapterContentInput]);
+  }, [
+    activeTab,
+    activeEditingSlug,
+    title,
+    dek,
+    body,
+    selectedCategory,
+    tagsInput,
+    isMultiChapter,
+    chapterTitleInput,
+    chapterContentInput,
+  ]);
 
   const blocker = useBlocker({
     shouldBlockFn: ({ current, next }) => {
@@ -404,6 +447,18 @@ export function StoryEditor({
         toast.success(`Chapter "${chapterTitleInput}" saved as draft.`);
       }
 
+      const effectiveCategory = selectedCategory || categoriesList[0]?.slug || categoriesList[0]?.id || "";
+      savedSnapshotRef.current = serializeStoryState(
+        title,
+        dek,
+        body,
+        effectiveCategory,
+        tagsInput,
+        isMultiChapter,
+        chapterTitleInput,
+        chapterContentInput
+      );
+
       await refetchChapters();
       queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] });
       queryClient.invalidateQueries({ queryKey: ["writer-stories"] });
@@ -544,6 +599,10 @@ export function StoryEditor({
       toast.success("Story deleted successfully!");
       queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-review-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["writer-stories"] });
+      queryClient.invalidateQueries({ queryKey: ["writer-recent-stories"] });
+      queryClient.invalidateQueries({ queryKey: ["writer-all-series"] });
+      queryClient.invalidateQueries({ queryKey: ["writer-active-ongoing-series"] });
     },
     onError: (err: any) => {
       toast.error("Failed to delete story", { description: formatApiErrorMessage(err) });
@@ -639,7 +698,10 @@ export function StoryEditor({
     }
   };
 
-  const handleSave = async (status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED"): Promise<{ success: boolean; slug?: string | undefined }> => {
+  const handleSave = async (
+    status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED",
+    changeSummary?: string
+  ): Promise<{ success: boolean; slug?: string | undefined }> => {
     if (!title.trim() || title.trim().length < 2) {
       toast.error(isMultiChapter ? "Series Title is mandatory (at least 2 characters)." : "Please provide a story title (at least 2 characters).");
       return { success: false };
@@ -668,7 +730,10 @@ export function StoryEditor({
     setIsSubmitting(true);
     try {
       const endpoint = isAdmin ? "/admin/stories/" : "/writer/stories/";
-      const effectiveCategory = selectedCategory || categoriesList[0]?.id || categoriesList[0]?.slug;
+      const effectiveCategory = selectedCategory || categoriesList[0]?.slug || categoriesList[0]?.id || "";
+      if (effectiveCategory && effectiveCategory !== selectedCategory) {
+        setSelectedCategory(effectiveCategory);
+      }
       const payload = {
         title: title.trim(),
         subtitle: dek.trim(),
@@ -736,7 +801,9 @@ export function StoryEditor({
 
       // If submitting for review as writer, call the explicit submit endpoint to transition status
       if (status === "PENDING_REVIEW" && resolvedSlug && !isAdmin) {
-        await api.post(`/writer/stories/${resolvedSlug}/submit/`);
+        await api.post(`/writer/stories/${resolvedSlug}/submit/`, {
+          change_summary: changeSummary || "",
+        });
       }
 
       toast.success(
@@ -766,10 +833,21 @@ export function StoryEditor({
         setChapters([]);
         setTagsInput("");
         setReadingTimeInput("5");
-        savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false);
+        setChapterTitleInput("");
+        setChapterContentInput("");
+        savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false, "", "");
       } else {
-        // Saved as draft: update baseline snapshot so form is clean
-        savedSnapshotRef.current = serializeStoryState(title, dek, body, selectedCategory, tagsInput, isMultiChapter);
+        // Saved as draft: update baseline snapshot so form is clean and unblocked
+        savedSnapshotRef.current = serializeStoryState(
+          title,
+          dek,
+          body,
+          effectiveCategory,
+          tagsInput,
+          isMultiChapter,
+          chapterTitleInput,
+          chapterContentInput
+        );
       }
 
       queryClient.invalidateQueries({ queryKey: ["published-stories-editor-list"] });
@@ -804,11 +882,15 @@ export function StoryEditor({
     setBody(initialContent);
     setIsMultiChapter(isMulti);
     setSeriesStatus(st.series_status || "ONGOING");
+    let initialChTitle = "";
+    let initialChContent = "";
     if (st.chapters && Array.isArray(st.chapters) && st.chapters.length > 0) {
       setChapters(st.chapters);
       setActiveChapterIndex(0);
-      setChapterTitleInput(st.chapters[0]?.title || "");
-      setChapterContentInput(st.chapters[0]?.content || "");
+      initialChTitle = st.chapters[0]?.title || "";
+      initialChContent = st.chapters[0]?.content || "";
+      setChapterTitleInput(initialChTitle);
+      setChapterContentInput(initialChContent);
     }
     setReadingTimeInput(String(st.estimated_reading_time || st.reading_time || 5));
     setRejectionFeedback(st.rejection_feedback || st.feedback || "");
@@ -827,6 +909,8 @@ export function StoryEditor({
       catVal,
       tagsVal,
       isMulti,
+      initialChTitle,
+      initialChContent
     );
     setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -882,6 +966,8 @@ export function StoryEditor({
             resolvedCat,
             resolvedTags,
             resolvedMulti,
+            loadedChapters[0]?.title || initialChTitle,
+            loadedChapters[0]?.content || initialChContent
           );
         }
       }
@@ -900,7 +986,14 @@ export function StoryEditor({
 
   const handleDeleteStory = (st: any) => {
     if (window.confirm(`Are you sure you want to delete "${st.title}"?`)) {
-      deleteStoryMutation.mutate(st.slug || st.id);
+      const targetSlug = st.slug || st.id;
+      deleteStoryMutation.mutate(targetSlug, {
+        onSuccess: () => {
+          if (activeEditingSlug === targetSlug || activeEditingSlug === st.id || activeEditingSlug === st.slug) {
+            handleClearEditor();
+          }
+        },
+      });
     }
   };
 
@@ -919,7 +1012,7 @@ export function StoryEditor({
     setReadingTimeInput("5");
     setRejectionFeedback("");
     setRejectionReviews([]);
-    savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false);
+    savedSnapshotRef.current = serializeStoryState("", "", "", "", "", false, "", "");
     toast.info("Cleared editor canvas to write new story.");
   };
 
@@ -939,7 +1032,16 @@ export function StoryEditor({
   };
 
   const handleDiscardAndLeave = () => {
-    savedSnapshotRef.current = serializeStoryState(title, dek, body, selectedCategory, tagsInput, isMultiChapter);
+    savedSnapshotRef.current = serializeStoryState(
+      title,
+      dek,
+      body,
+      selectedCategory,
+      tagsInput,
+      isMultiChapter,
+      chapterTitleInput,
+      chapterContentInput
+    );
     blocker.proceed?.();
   };
 
@@ -1188,7 +1290,14 @@ export function StoryEditor({
               variant="primary"
               size="sm"
               disabled={isSubmitting || isSavingChapter}
-              onClick={() => handleSave(isAdmin ? "PUBLISHED" : "PENDING_REVIEW")}
+              onClick={() => {
+                if (!isAdmin && (activeEditingSlug || (story as any)?.status === "PUBLISHED" || (story as any)?.status === "REJECTED")) {
+                  setRevisionNoteInput("");
+                  setSubmitModalOpen(true);
+                } else {
+                  handleSave(isAdmin ? "PUBLISHED" : "PENDING_REVIEW");
+                }
+              }}
               className="gap-1.5"
             >
               <Send className="size-4" /> {isAdmin ? "Publish story" : "Submit for review"}
@@ -1752,6 +1861,85 @@ export function StoryEditor({
                 className="gap-1.5"
               >
                 <Layers className="size-3.5" /> Open Ongoing Series
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Writer Revision Note Modal on Submit */}
+      {submitModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => {
+            if (!isSubmitting) setSubmitModalOpen(false);
+          }}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-lg rounded-3xl border border-violet-500/30 bg-surface p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <div className="grid size-9 place-items-center rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                  <Sparkles className="size-4" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-heading">
+                    Submit Story Revision
+                  </h3>
+                  <p className="text-xs text-subtle truncate max-w-xs">
+                    "{title || "Untitled story"}"
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setSubmitModalOpen(false)}
+                className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface-hover hover:text-heading"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-body leading-relaxed">
+              Describe what changed or was improved in this revision. This note will appear directly in the Editorial Review Queue diff inspector.
+            </p>
+
+            <Field label="Revision Changelog / Author Note" hint="Optional but helpful for fast editorial review">
+              <Textarea
+                rows={3}
+                value={revisionNoteInput}
+                onChange={(e) => setRevisionNoteInput(e.target.value)}
+                placeholder="e.g. Fixed typos in conclusion, refined dialogue in opening paragraph."
+                className="text-sm"
+              />
+            </Field>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                variant="ghostOutline"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={() => setSubmitModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={async () => {
+                  const res = await handleSave("PENDING_REVIEW", revisionNoteInput.trim());
+                  if (res?.success) {
+                    setSubmitModalOpen(false);
+                    setRevisionNoteInput("");
+                  }
+                }}
+                className="gap-1.5 font-bold"
+              >
+                <Send className="size-4" /> {isSubmitting ? "Submitting..." : "Submit Revision"}
               </Button>
             </div>
           </div>

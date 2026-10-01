@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, Check, ChevronDown, ChevronUp, Eye, Heart, History, PenLine, Send, Trash2, X, AlertCircle } from "lucide-react";
+import { BookOpen, Check, ChevronDown, ChevronUp, Eye, Heart, History, PenLine, Send, Trash2, X, AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ function MyStories() {
   const [tab, setTab] = useState<string>("All");
   const [page, setPage] = useState(1);
   const [viewingStory, setViewingStory] = useState<any | null>(null);
+  const [storyToDelete, setStoryToDelete] = useState<any | null>(null);
   const [expandedHistories, setExpandedHistories] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
 
@@ -70,22 +71,19 @@ function MyStories() {
       return await api.delete(`/writer/stories/${storyId}/`);
     },
     onSuccess: () => {
-      toast.success("Draft deleted successfully");
+      toast.success("Story deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["writer-stories"] });
+      queryClient.invalidateQueries({ queryKey: ["public-stories"] });
+      queryClient.invalidateQueries({ queryKey: ["public-homepage"] });
+      setStoryToDelete(null);
       setViewingStory(null);
     },
     onError: (err: any) => {
-      toast.error("Failed to delete draft", {
+      toast.error("Failed to delete story", {
         description: err.response?.data?.message || err.message || "Could not delete story.",
       });
     },
   });
-
-  const handleDeleteStory = (story: any) => {
-    if (window.confirm(`Are you sure you want to delete "${story.title}"?`)) {
-      deleteStoryMutation.mutate(story.slug || story.id);
-    }
-  };
 
   const rows = (apiStories && Array.isArray(apiStories))
     ? apiStories.map((s: any) => {
@@ -288,18 +286,24 @@ function MyStories() {
                         <Send className="size-3.5" /> {story.rawStatus === "REJECTED" ? "Resubmit" : "Submit"}
                       </Button>
                     )}
-                    {story.rawStatus === "DRAFT" && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        disabled={deleteStoryMutation.isPending}
-                        onClick={() => handleDeleteStory(story)}
-                        className="h-8 px-2 text-xs"
-                        title="Delete Draft"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      disabled={deleteStoryMutation.isPending}
+                      onClick={() => setStoryToDelete(story)}
+                      className="h-8 px-2 text-xs"
+                      title={
+                        story.rawStatus === "PUBLISHED"
+                          ? "Delete Published Story"
+                          : story.rawStatus === "PENDING_REVIEW"
+                          ? "Delete In-Review Story"
+                          : story.rawStatus === "REJECTED"
+                          ? "Delete Rejected Story"
+                          : "Delete Draft"
+                      }
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
                     {story.isMultiChapter ? (
                       <Link
                         to="/writer/series"
@@ -451,17 +455,15 @@ function MyStories() {
                 Close
               </Button>
               <div className="flex items-center gap-2">
-                {viewingStory.rawStatus === "DRAFT" && (
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    disabled={deleteStoryMutation.isPending}
-                    onClick={() => handleDeleteStory(viewingStory)}
-                    className="gap-1.5"
-                  >
-                    <Trash2 className="size-4" /> Delete Draft
-                  </Button>
-                )}
+                <Button
+                  variant="danger"
+                  size="sm"
+                  disabled={deleteStoryMutation.isPending}
+                  onClick={() => setStoryToDelete(viewingStory)}
+                  className="gap-1.5"
+                >
+                  <Trash2 className="size-4" /> Delete Story
+                </Button>
                 <ButtonLink
                   to="/writer/editor/$storyId"
                   params={{ storyId: viewingStory.slug }}
@@ -483,6 +485,115 @@ function MyStories() {
                   </Button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Story Warning Confirmation Modal */}
+      {storyToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => {
+            if (!deleteStoryMutation.isPending) setStoryToDelete(null);
+          }}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-lg rounded-3xl border border-destructive/30 bg-surface shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 p-6 sm:p-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4">
+              <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-destructive/10 text-destructive border border-destructive/20">
+                <AlertTriangle className="size-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-lg sm:text-xl font-bold text-heading">
+                    Delete Story?
+                  </h3>
+                  <Badge tone={storyToDelete.rawStatus === "PUBLISHED" ? "error" : storyToDelete.rawStatus === "PENDING_REVIEW" ? "info" : storyToDelete.rawStatus === "REJECTED" ? "error" : "warning"}>
+                    {storyToDelete.status}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-body font-medium truncate" title={storyToDelete.title}>
+                  "{storyToDelete.title}"
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={deleteStoryMutation.isPending}
+                onClick={() => setStoryToDelete(null)}
+                aria-label="Close"
+                className="grid size-8 place-items-center rounded-full text-subtle hover:bg-surface-hover hover:text-heading transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Status-specific warning explanation */}
+            <div className="mt-5 rounded-2xl border border-destructive/25 bg-destructive/5 p-4 text-xs text-destructive space-y-2">
+              {storyToDelete.rawStatus === "PUBLISHED" ? (
+                <>
+                  <p className="font-bold flex items-center gap-1.5 text-sm">
+                    <AlertCircle className="size-4 shrink-0" />
+                    Permanent Published Story Deletion
+                  </p>
+                  <p className="text-body leading-relaxed font-normal">
+                    This story is currently <strong>Live and Published</strong> on tossatale. Deleting it will permanently unpublish and remove it from public view, reader bookmarks, and search results.
+                  </p>
+                </>
+              ) : storyToDelete.rawStatus === "PENDING_REVIEW" ? (
+                <>
+                  <p className="font-bold flex items-center gap-1.5 text-sm">
+                    <AlertCircle className="size-4 shrink-0" />
+                    Withdraw & Erase Submission
+                  </p>
+                  <p className="text-body leading-relaxed font-normal">
+                    This story is currently <strong>in the Editorial Review Queue</strong>. Deleting it will cancel the review process and permanently erase all drafted content.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold flex items-center gap-1.5 text-sm">
+                    <AlertCircle className="size-4 shrink-0" />
+                    Permanent Draft Deletion
+                  </p>
+                  <p className="text-body leading-relaxed font-normal">
+                    This will permanently delete this story, along with its revision history and editorial notes. This action cannot be undone.
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-6 flex items-center justify-end gap-3 pt-2">
+              <Button
+                variant="ghostOutline"
+                size="md"
+                disabled={deleteStoryMutation.isPending}
+                onClick={() => setStoryToDelete(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                disabled={deleteStoryMutation.isPending}
+                onClick={() => deleteStoryMutation.mutate(storyToDelete.slug || storyToDelete.id)}
+                className="gap-2 font-bold min-w-[140px]"
+              >
+                {deleteStoryMutation.isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin text-white" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4" />
+                    <span>{storyToDelete.rawStatus === "PUBLISHED" ? "Delete Published Story" : "Delete Story"}</span>
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>

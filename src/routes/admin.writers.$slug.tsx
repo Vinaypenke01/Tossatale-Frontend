@@ -213,9 +213,9 @@ function AdminWriterDetail() {
 
   // Edit Writer Profile States & Mutation
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editLocation, setEditLocation] = useState(writer?.location || "India");
-  const [editAuthorTitle, setEditAuthorTitle] = useState(writer?.author_title || "tossatale author");
-  const [editTagline, setEditTagline] = useState(writer?.tagline || "Storyteller");
+  const [editLocation, setEditLocation] = useState(writer?.location || "");
+  const [editAuthorTitle, setEditAuthorTitle] = useState(writer?.author_title || "");
+  const [editTagline, setEditTagline] = useState(writer?.tagline || "");
   const [editBio, setEditBio] = useState(writer?.bio || "");
 
   const updateWriterMutation = useMutation({
@@ -367,12 +367,20 @@ function AdminWriterDetail() {
                 <span>@{writer.slug}</span>
                 <span>·</span>
                 <span className="font-sans text-body">{email}</span>
-                <span>·</span>
-                <span className="inline-flex items-center gap-1 font-sans text-primary">
-                  <MapPin className="size-3" /> {writer.location || "India"}
-                </span>
-                <span>·</span>
-                <span className="font-sans font-semibold text-heading">{writer.author_title || "tossatale author"}</span>
+                {writer.location?.trim() && (
+                  <>
+                    <span>·</span>
+                    <span className="inline-flex items-center gap-1 font-sans text-primary">
+                      <MapPin className="size-3" /> {writer.location.trim()}
+                    </span>
+                  </>
+                )}
+                {writer.author_title?.trim() && (
+                  <>
+                    <span>·</span>
+                    <span className="font-sans font-semibold text-heading">{writer.author_title.trim()}</span>
+                  </>
+                )}
               </p>
 
               <p className="mt-3.5 max-w-2xl text-[0.9375rem] text-body leading-relaxed">
@@ -414,9 +422,9 @@ function AdminWriterDetail() {
               variant="primary"
               size="sm"
               onClick={() => {
-                setEditLocation(writer.location || "India");
-                setEditAuthorTitle(writer.author_title || "tossatale author");
-                setEditTagline(writer.tagline || "Storyteller");
+                setEditLocation(writer.location || "");
+                setEditAuthorTitle(writer.author_title || "");
+                setEditTagline(writer.tagline || "");
                 setEditBio(writer.bio || "");
                 setIsEditModalOpen(true);
               }}
@@ -789,24 +797,24 @@ function AdminWriterDetail() {
             {/* Modal Body */}
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Location" hint="e.g. India, United Kingdom, Tokyo">
+                <Field label="Location" hint="e.g. Bangalore, India">
                   <Input
                     value={editLocation}
                     onChange={(e) => setEditLocation(e.target.value)}
-                    placeholder="e.g. India"
+                    placeholder="e.g. Bangalore, India"
                   />
                 </Field>
 
-                <Field label="Author Title / Designation" hint="e.g. tossatale author, Staff Writer">
+                <Field label="Author Title (Optional)" hint="Leave empty if not applicable">
                   <Input
                     value={editAuthorTitle}
                     onChange={(e) => setEditAuthorTitle(e.target.value)}
-                    placeholder="e.g. tossatale author"
+                    placeholder="e.g. Historical Fiction Author"
                   />
                 </Field>
               </div>
 
-              <Field label="Tagline / Short Role" hint="e.g. Storyteller, Fantasy Novelist">
+              <Field label="Tagline / Beat (Optional)" hint="Leave empty if not applicable">
                 <Input
                   value={editTagline}
                   onChange={(e) => setEditTagline(e.target.value)}
