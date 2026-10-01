@@ -1532,8 +1532,19 @@ function AuthPage() {
       </div>
 
       {/* Centered Footer Copyright */}
-      <div className="w-full text-center text-[0.8125rem] text-subtle shrink-0 pt-4">
-        © {new Date().getFullYear()} tossatale. All rights reserved.
+      <div className="w-full text-center text-[0.8125rem] text-subtle shrink-0 pt-4 space-y-1">
+        <p>© {new Date().getFullYear()} tossatale. All rights reserved.</p>
+        <p className="text-xs text-subtle">
+          Developed by{" "}
+          <a
+            href="https://digitalcore.co.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-heading hover:text-primary transition-colors underline decoration-border hover:decoration-primary"
+          >
+            Digital Core Services
+          </a>
+        </p>
       </div>
 
       {/* Writer Google Blocked Modal */}

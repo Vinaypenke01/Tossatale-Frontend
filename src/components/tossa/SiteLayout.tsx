@@ -804,6 +804,21 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
             )}
           </div>
         </div>
+
+        {/* Developed by Digital Core Services */}
+        <div className="mt-8 border-t border-white/10 pt-5 text-center">
+          <p className="text-[0.8125rem] text-zinc-400">
+            Developed by{" "}
+            <a
+              href="https://digitalcore.co.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-white transition-colors hover:text-[#FF6B35] underline decoration-zinc-600 underline-offset-4 hover:decoration-[#FF6B35]"
+            >
+              Digital Core Services
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
