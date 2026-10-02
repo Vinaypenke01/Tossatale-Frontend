@@ -651,8 +651,11 @@ export function StoryEditor({
     }
   }, [minutes, totalSeriesMinutes, isMultiChapter, isReadingTimeCustom]);
 
-  const handleCreateCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateCategory = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
+    if (e && "preventDefault" in e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!newCategoryName.trim()) {
       toast.error("Category name is required");
       return;
@@ -1126,13 +1129,21 @@ export function StoryEditor({
             {showAddCategoryModal && (
               <div className="mt-2.5 space-y-3.5 rounded-xl border border-primary/20 bg-primary-light/40 p-3.5">
                 {/* Create New Category Form */}
-                <form onSubmit={handleCreateCategory} className="space-y-2.5">
+                <div
+                  className="space-y-2.5"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleCreateCategory(e);
+                    }
+                  }}
+                >
                   <p className="font-sans text-[0.8125rem] font-bold text-heading">Add New Category</p>
                   <Input
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="Category name (e.g. Mythology)"
-                    required
                     className="h-9 text-[0.8125rem]"
                   />
                   <Textarea
@@ -1152,15 +1163,16 @@ export function StoryEditor({
                       Cancel
                     </Button>
                     <Button
-                      type="submit"
+                      type="button"
                       variant="primary"
                       size="sm"
+                      onClick={handleCreateCategory}
                       disabled={isCreatingCategory}
                     >
                       {isCreatingCategory ? "Saving..." : "Save Category"}
                     </Button>
                   </div>
-                </form>
+                </div>
 
                 {/* Existing Categories List with Delete Option */}
                 {categoriesList.length > 0 && (

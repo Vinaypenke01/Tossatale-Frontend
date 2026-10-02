@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
   AlertCircle,
   AlertTriangle,
@@ -42,16 +42,61 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
   const queryClient = useQueryClient();
   const endpointPrefix = isAdmin ? "/admin/stories" : "/writer/stories";
 
+  const location = useLocation();
+  const searchObj: any = location?.search || {};
+  const searchStr: string = location?.searchStr || (typeof window !== "undefined" ? window.location.search : "");
+
+  // Initialize state synchronously from router location (SSR + Client identical)
+  const initialUrl = useMemo(() => {
+    let isNew = false;
+    let seriesSlug: string | null = null;
+    let viewParam: string | null = null;
+    let chapterParam: string | null = null;
+
+    if (searchObj && typeof searchObj === "object") {
+      isNew = searchObj.new === "true" || searchObj.new === true;
+      seriesSlug = (searchObj.series || searchObj.storyId || searchObj.id || null) as string | null;
+      viewParam = (searchObj.view || null) as string | null;
+      chapterParam = (searchObj.chapter || null) as string | null;
+    }
+
+    if (!seriesSlug && !isNew && searchStr) {
+      try {
+        const sp = new URLSearchParams(searchStr);
+        isNew = sp.get("new") === "true";
+        seriesSlug = sp.get("series") || sp.get("storyId") || sp.get("id");
+        viewParam = sp.get("view");
+        chapterParam = sp.get("chapter");
+      } catch {
+        // Ignore
+      }
+    }
+
+    const parsedChapterIdx = chapterParam && !isNaN(Number(chapterParam)) ? Math.max(0, parseInt(chapterParam, 10) - 1) : 0;
+
+    let targetView: "list" | "hub" | "canvas" = "list";
+    if (seriesSlug || isNew) {
+      targetView = viewParam === "canvas" ? "canvas" : "hub";
+    }
+
+    return {
+      viewMode: targetView,
+      initialSlug: seriesSlug,
+      isNew,
+      initialChapterIdx: parsedChapterIdx,
+    };
+  }, [searchObj, searchStr]);
+
   // 3-Tier Views:
   // "list"   = All Series Portfolio (Default view displaying all serialized story cards)
   // "hub"    = Selected Series Chapter Roadmap & Management
   // "canvas" = Distraction-Free Chapter Prose Writing Space
-  const [viewMode, setViewMode] = useState<"list" | "hub" | "canvas">("list");
+  const [viewMode, setViewMode] = useState<"list" | "hub" | "canvas">(initialUrl.viewMode);
 
   // Active Series state
   const [activeSeries, setActiveSeries] = useState<any | null>(null);
-  const [isEditingSeriesMeta, setIsEditingSeriesMeta] = useState(false);
-  const [isCreatingNewSeries, setIsCreatingNewSeries] = useState(false);
+  const [isEditingSeriesMeta, setIsEditingSeriesMeta] = useState(initialUrl.isNew);
+  const [isCreatingNewSeries, setIsCreatingNewSeries] = useState(initialUrl.isNew);
 
   // Series Form State
   const [seriesTitle, setSeriesTitle] = useState("");
@@ -65,7 +110,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
 
   // Chapters State
   const [chapters, setChapters] = useState<any[]>([]);
-  const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
+  const [activeChapterIndex, setActiveChapterIndex] = useState<number>(initialUrl.initialChapterIdx);
   const [chapterTitleInput, setChapterTitleInput] = useState("");
   const [chapterContentInput, setChapterContentInput] = useState("");
   const [isSavingChapter, setIsSavingChapter] = useState(false);
@@ -91,8 +136,11 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
   const [newCategoryDesc, setNewCategoryDesc] = useState("");
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
-  const handleCreateCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateCategory = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
+    if (e && "preventDefault" in e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!newCategoryName.trim()) {
       toast.error("Category name is required");
       return;
@@ -169,7 +217,49 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
     },
   });
 
-  const selectSeries = (s: any, targetView: "hub" | "canvas" = "hub") => {
+  const syncUrlState = (
+    targetView: "list" | "hub" | "canvas",
+    seriesSlugOrId?: string | null,
+    chapterIdx?: number | null,
+    isNew?: boolean
+  ) => {
+    if (typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.href);
+      if (targetView === "list") {
+        url.searchParams.delete("series");
+        url.searchParams.delete("storyId");
+        url.searchParams.delete("id");
+        url.searchParams.delete("view");
+        url.searchParams.delete("chapter");
+        url.searchParams.delete("new");
+      } else if (targetView === "hub") {
+        if (seriesSlugOrId) {
+          url.searchParams.set("series", seriesSlugOrId);
+          url.searchParams.delete("new");
+        } else if (isNew) {
+          url.searchParams.set("new", "true");
+          url.searchParams.delete("series");
+        }
+        url.searchParams.delete("view");
+        url.searchParams.delete("chapter");
+      } else if (targetView === "canvas") {
+        if (seriesSlugOrId) {
+          url.searchParams.set("series", seriesSlugOrId);
+        }
+        url.searchParams.set("view", "canvas");
+        if (chapterIdx !== undefined && chapterIdx !== null) {
+          url.searchParams.set("chapter", String(chapterIdx + 1));
+        }
+        url.searchParams.delete("new");
+      }
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    } catch {
+      // Ignore if URL parse fails
+    }
+  };
+
+  const selectSeries = (s: any, targetView: "hub" | "canvas" = "hub", targetChapterIdx?: number) => {
     setActiveSeries(s);
     setSeriesTitle(s.title || "");
     setSeriesDek(s.dek || s.subtitle || "");
@@ -180,28 +270,90 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
     setIsEditingSeriesMeta(false);
     setIsCreatingNewSeries(false);
     setViewMode(targetView);
+    const resolvedChapterIdx = targetChapterIdx !== undefined ? targetChapterIdx : activeChapterIndex;
+    if (targetChapterIdx !== undefined) {
+      setActiveChapterIndex(targetChapterIdx);
+    }
+    syncUrlState(targetView, s.slug || s.id, resolvedChapterIdx);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Auto-select series if ?series=... or ?storyId=... is in URL
+  const restoredFromUrlRef = useRef(false);
+
+  // Auto-restore series state from URL params on refresh / deep link
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      const isNew = params.get("new") === "true";
       const targetSlug = params.get("series") || params.get("storyId") || params.get("id");
+      const urlView = (params.get("view") === "canvas" ? "canvas" : "hub") as "hub" | "canvas";
+      const urlChapter = params.get("chapter");
+      const targetChapterIdx = urlChapter && !isNaN(Number(urlChapter)) ? Math.max(0, parseInt(urlChapter, 10) - 1) : 0;
+
+      if (isNew && !restoredFromUrlRef.current) {
+        restoredFromUrlRef.current = true;
+        proceedWithNewSeries();
+        return;
+      }
+
       if (targetSlug && (!activeSeries || (activeSeries.slug !== targetSlug && activeSeries.id !== targetSlug))) {
         const found = seriesList.find((s: any) => s.slug === targetSlug || s.id === targetSlug);
         if (found) {
-          selectSeries(found, "hub");
+          restoredFromUrlRef.current = true;
+          selectSeries(found, urlView, targetChapterIdx);
+        } else if (!restoredFromUrlRef.current) {
+          api.get(`${endpointPrefix}/${targetSlug}/`).then((res: any) => {
+            const data = res?.data?.data || res?.data || res;
+            if (data && (data.id || data.slug)) {
+              restoredFromUrlRef.current = true;
+              selectSeries(data, urlView, targetChapterIdx);
+            } else {
+              setViewMode("list");
+              syncUrlState("list");
+            }
+          }).catch(() => {
+            setViewMode("list");
+            syncUrlState("list");
+          });
+        }
+      }
+    }
+  }, [seriesList]);
+
+  // Handle browser Back / Forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      const targetSlug = params.get("series") || params.get("storyId") || params.get("id");
+      const isNew = params.get("new") === "true";
+      const urlView = (params.get("view") === "canvas" ? "canvas" : "hub") as "hub" | "canvas";
+      const urlChapter = params.get("chapter");
+      const targetChapterIdx = urlChapter && !isNaN(Number(urlChapter)) ? Math.max(0, parseInt(urlChapter, 10) - 1) : 0;
+
+      if (!targetSlug && !isNew) {
+        setViewMode("list");
+        setActiveSeries(null);
+        setIsCreatingNewSeries(false);
+      } else if (isNew) {
+        proceedWithNewSeries();
+      } else if (targetSlug) {
+        const found = seriesList.find((s: any) => s.slug === targetSlug || s.id === targetSlug);
+        if (found) {
+          selectSeries(found, urlView, targetChapterIdx);
         } else {
           api.get(`${endpointPrefix}/${targetSlug}/`).then((res: any) => {
             const data = res?.data?.data || res?.data || res;
             if (data && (data.id || data.slug)) {
-              selectSeries(data, "hub");
+              selectSeries(data, urlView, targetChapterIdx);
             }
           }).catch(() => {});
         }
       }
-    }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, [seriesList]);
 
   // Query Chapters for Active Series
@@ -225,7 +377,21 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
   useEffect(() => {
     if (chaptersData && Array.isArray(chaptersData)) {
       setChapters(chaptersData);
-      const safeIdx = activeChapterIndex < chaptersData.length ? activeChapterIndex : 0;
+      
+      let targetIdx = activeChapterIndex;
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const urlChapter = params.get("chapter");
+        if (urlChapter && !isNaN(Number(urlChapter))) {
+          const parsed = Math.max(0, parseInt(urlChapter, 10) - 1);
+          if (parsed < chaptersData.length) {
+            targetIdx = parsed;
+          }
+        }
+      }
+      
+      const safeIdx = targetIdx < chaptersData.length ? targetIdx : 0;
+      setActiveChapterIndex(safeIdx);
       if (chaptersData[safeIdx]) {
         setChapterTitleInput(chaptersData[safeIdx].title || "");
         setChapterContentInput(chaptersData[safeIdx].content || "");
@@ -293,6 +459,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
     setIsEditingSeriesMeta(true);
     setShowOngoingConflictModal(null);
     setViewMode("hub");
+    syncUrlState("hub", null, null, true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -333,6 +500,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
     setChapterContentInput(target?.content || "");
     setHasUnsavedChapterChanges(false);
     setViewMode("canvas");
+    syncUrlState("canvas", activeSeriesSlug, idx);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -512,12 +680,14 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
       status: "DRAFT",
       word_count: 0,
     };
+    const newIdx = chapters.length;
     setChapters((prev) => [...prev, newChapterObj]);
-    setActiveChapterIndex(chapters.length);
+    setActiveChapterIndex(newIdx);
     setChapterTitleInput(`Chapter ${newOrder}`);
     setChapterContentInput("");
     setHasUnsavedChapterChanges(false);
     setViewMode("canvas");
+    syncUrlState("canvas", activeSeriesSlug, newIdx);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -576,6 +746,31 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
   };
 
   // ===========================================================================
+  // STUDIO LOADING STATE (Prevents flash of Series Portfolio list on refresh)
+  // ===========================================================================
+  if (viewMode !== "list" && !activeSeries && !isCreatingNewSeries) {
+    return (
+      <AppShell
+        role={role}
+        title={isAdmin ? "Admin Series Studio" : "Series Studio"}
+        blurb="Loading series workspace…"
+      >
+        <div className="flex flex-col items-center justify-center min-h-[420px] space-y-4 rounded-3xl border border-border bg-surface p-12 text-center shadow-sm">
+          <div className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <RefreshCw className="size-6 animate-spin text-primary" />
+          </div>
+          <p className="font-display font-bold text-lg text-heading">
+            Loading Series Workspace…
+          </p>
+          <p className="text-xs text-subtle max-w-sm">
+            Fetching narrative structure, chapter roadmap, and metadata.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
+
+  // ===========================================================================
   // VIEW 1: CHAPTER PROSE CANVAS (Distraction-Free Writer)
   // ===========================================================================
   if (viewMode === "canvas") {
@@ -598,6 +793,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
                 size="sm"
                 onClick={() => {
                   setViewMode("hub");
+                  syncUrlState("hub", activeSeriesSlug);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 className="gap-1.5 text-xs font-bold cursor-pointer"
@@ -772,6 +968,9 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
               size="sm"
               onClick={() => {
                 setViewMode("list");
+                setActiveSeries(null);
+                setIsCreatingNewSeries(false);
+                syncUrlState("list");
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className="gap-2 text-xs font-bold cursor-pointer"
@@ -859,7 +1058,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
 
             {/* Series Meta Edit Form */}
             {isEditingSeriesMeta ? (
-              <form onSubmit={handleSaveSeriesMeta} className="space-y-4 pt-2">
+              <form onSubmit={handleSaveSeriesMeta} className="space-y-4 pt-2" suppressHydrationWarning>
                 {isCreatingNewSeries && (
                   <div className="rounded-2xl border border-primary/25 bg-primary-light/40 p-4 text-xs text-body flex items-start gap-3">
                     <Sparkles className="size-4 text-primary shrink-0 mt-0.5" />
@@ -907,6 +1106,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
                       <button
                         type="button"
                         onClick={() => setShowAddCategoryModal((v) => !v)}
+                        suppressHydrationWarning
                         className="inline-flex items-center gap-1 font-sans text-[0.75rem] font-bold text-primary hover:underline transition-colors"
                       >
                         <Plus className="size-3" /> {showAddCategoryModal ? "Close Manager" : "Add / Manage Categories"}
@@ -915,13 +1115,21 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
 
                     {showAddCategoryModal && (
                       <div className="mt-2.5 space-y-3 rounded-xl border border-primary/20 bg-primary-light/40 p-3">
-                        <form onSubmit={handleCreateCategory} className="space-y-2">
+                        <div
+                          className="space-y-2"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCreateCategory(e);
+                            }
+                          }}
+                        >
                           <p className="text-xs font-bold text-heading">New Category</p>
                           <Input
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
                             placeholder="e.g. Mystery"
-                            required
                             className="h-8 text-xs"
                           />
                           <div className="flex items-center justify-end gap-2">
@@ -934,15 +1142,16 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
                               Cancel
                             </Button>
                             <Button
-                              type="submit"
+                              type="button"
                               variant="primary"
                               size="sm"
+                              onClick={handleCreateCategory}
                               disabled={isCreatingCategory}
                             >
                               {isCreatingCategory ? "Saving..." : "Save"}
                             </Button>
                           </div>
-                        </form>
+                        </div>
 
                         {categoriesList.length > 0 && (
                           <div className="border-t border-primary/20 pt-2">
@@ -1009,6 +1218,9 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
                     onClick={() => {
                       if (isCreatingNewSeries) {
                         setViewMode("list");
+                        setActiveSeries(null);
+                        setIsCreatingNewSeries(false);
+                        syncUrlState("list");
                       }
                       setIsEditingSeriesMeta(false);
                     }}
