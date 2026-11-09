@@ -329,12 +329,37 @@ function StoriesDropdown() {
   );
 }
 
+let isGlobalAnnouncementDismissed = false;
+
 export function AnnouncementBar({
   announcement: propAnnouncement,
 }: {
   announcement?: AnnouncementSettings | undefined;
 }) {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => isGlobalAnnouncementDismissed);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined" && localStorage.getItem("tossatale_announcement_dismissed") === "true") {
+        isGlobalAnnouncementDismissed = true;
+        setDismissed(true);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
+
+  const handleDismiss = () => {
+    isGlobalAnnouncementDismissed = true;
+    setDismissed(true);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tossatale_announcement_dismissed", "true");
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   const { data: homepageData } = useQuery({
     queryKey: ["public-homepage"],
@@ -397,7 +422,7 @@ export function AnnouncementBar({
       <button
         type="button"
         aria-label="Dismiss announcement"
-        onClick={() => setDismissed(true)}
+        onClick={handleDismiss}
         className="absolute right-3 top-1/2 -translate-y-1/2 z-20 grid size-6 place-items-center rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all cursor-pointer"
       >
         <X className="size-3.5" />
@@ -803,21 +828,6 @@ export function SiteFooter({ footer: propFooter }: { footer?: SiteFooterSettings
               </a>
             )}
           </div>
-        </div>
-
-        {/* Developed by Digital Core Services */}
-        <div className="mt-8 border-t border-white/10 pt-5 text-center">
-          <p className="text-[0.8125rem] text-zinc-400">
-            Developed by{" "}
-            <a
-              href="https://digitalcore.co.in/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-white transition-colors hover:text-[#FF6B35] underline decoration-zinc-600 underline-offset-4 hover:decoration-[#FF6B35]"
-            >
-              Digital Core Services
-            </a>
-          </p>
         </div>
       </div>
     </footer>

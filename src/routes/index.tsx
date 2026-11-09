@@ -718,8 +718,7 @@ function Home() {
       <LatestBlogs blogs={blogsData} isLoading={isLoading} />
       <SectionDivider />
       <VideoLibrary videos={videosData} isLoading={isLoading} />
-      <SectionDivider />
-      <Newsletter />
+      {/* Newsletter section temporarily removed as requested */}
       <CatSignoff />
     </SiteLayout>
   );

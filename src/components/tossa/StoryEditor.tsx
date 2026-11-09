@@ -1401,7 +1401,7 @@ export function StoryEditor({
                 </span>
                 <h1 className="mt-2 text-3xl font-display font-bold text-heading sm:text-4xl break-words [overflow-wrap:anywhere]">{title || "Untitled story"}</h1>
                 {dek && <p className="mt-2 text-lg text-subtle italic break-words [overflow-wrap:anywhere]">{dek}</p>}
-                <div className="mt-6 space-y-4 text-body font-serif leading-relaxed text-[1.0625rem] min-w-0 break-words [overflow-wrap:anywhere]">
+                <div className="mt-6 space-y-4 text-body font-lato leading-relaxed text-[1.0625rem] min-w-0 break-words [overflow-wrap:anywhere]">
                   {paragraphs.length > 0 ? (
                     paragraphs.map((p: string, i: number) => (
                       <p key={i} className="break-words [overflow-wrap:anywhere] whitespace-pre-line">
@@ -1507,7 +1507,7 @@ export function StoryEditor({
                     onChange={(e) => setBody(e.target.value)}
                     rows={16}
                     placeholder="Write the first line…"
-                    className="font-sans text-[1rem] leading-relaxed"
+                    className="font-lato text-[1rem] leading-relaxed"
                   />
                 </Field>
               </Panel>

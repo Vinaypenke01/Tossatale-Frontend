@@ -102,7 +102,7 @@ function AboutPage() {
         </Reveal>
       </div>
 
-      <section className="border-y border-border paper-gradient py-20">
+      <section className="border-t border-border paper-gradient py-20">
         <div className="mx-auto max-w-[1240px] px-5 lg:px-8">
           <Reveal>
             <SectionHeading eyebrow="What Guides Us" title="Four principles" align="center" />
@@ -138,7 +138,7 @@ function AboutPage() {
       </section> */}
 
       {/* Centered Actions */}
-      <section className="mx-auto max-w-[1240px] px-5 pb-24 lg:px-8">
+      <section className="mx-auto max-w-[1240px] px-5 pt-8 sm:pt-12 pb-24 lg:px-8">
         <div className="flex flex-wrap items-center justify-center gap-4">
           <ButtonLink to="/contact" size="md">
             Let's talk

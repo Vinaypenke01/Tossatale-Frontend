@@ -906,7 +906,7 @@ export function SeriesStudio({ role = "writer" }: { role?: "writer" | "admin" })
                   setHasUnsavedChapterChanges(true);
                 }}
                 placeholder="Write the prose content for this chapter. Separate paragraphs with a blank line…"
-                className="w-full flex-1 font-serif text-[1.125rem] leading-relaxed text-body placeholder:text-subtle/40 bg-transparent border-0 focus:outline-none focus:ring-0 resize-none min-h-[440px]"
+                className="w-full flex-1 font-lato text-[1.125rem] leading-relaxed text-body placeholder:text-subtle/40 bg-transparent border-0 focus:outline-none focus:ring-0 resize-none min-h-[440px]"
               />
             </div>
 

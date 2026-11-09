@@ -570,7 +570,7 @@ function StoryDetail() {
                   <h3 className="font-display text-lg font-bold text-heading">
                     Overview & Introduction
                   </h3>
-                  <div className="prose dark:prose-invert max-w-none text-body font-serif leading-relaxed text-[1.0625rem]">
+                  <div className="prose dark:prose-invert max-w-none text-body font-lato leading-relaxed text-[1.0625rem]">
                     {story.content.includes("<p>") || story.content.includes("<br") || story.content.includes("<div") ? (
                       <div dangerouslySetInnerHTML={{ __html: story.content }} className="break-words [overflow-wrap:anywhere]" />
                     ) : (
@@ -579,7 +579,7 @@ function StoryDetail() {
                         .map((paragraph: string) => paragraph.trim())
                         .filter(Boolean)
                         .map((paragraph: string, idx: number) => (
-                          <p key={idx} className="whitespace-pre-line leading-relaxed mb-4 font-serif text-[1.0625rem] text-body break-words [overflow-wrap:anywhere]">
+                          <p key={idx} className="whitespace-pre-line leading-relaxed mb-4 font-lato text-[1.0625rem] text-body break-words [overflow-wrap:anywhere]">
                             {paragraph}
                           </p>
                         ))
@@ -595,7 +595,7 @@ function StoryDetail() {
               />
             </div>
           ) : (
-            <div className="min-w-0 prose prose-lg max-w-none text-body font-serif leading-relaxed text-[1.125rem] space-y-6 break-words [overflow-wrap:anywhere]">
+            <div className="min-w-0 prose prose-lg max-w-none text-body font-lato leading-relaxed text-[1.125rem] space-y-6 break-words [overflow-wrap:anywhere]">
               {story.content ? (
                 story.content.includes("<p>") || story.content.includes("<br") || story.content.includes("<div") ? (
                   <div dangerouslySetInnerHTML={{ __html: story.content }} className="break-words [overflow-wrap:anywhere]" />
@@ -605,13 +605,13 @@ function StoryDetail() {
                     .map((paragraph: string) => paragraph.trim())
                     .filter(Boolean)
                     .map((paragraph: string, idx: number) => (
-                      <p key={idx} className="whitespace-pre-line leading-relaxed mb-6 font-serif text-[1.125rem] text-body break-words [overflow-wrap:anywhere]">
+                      <p key={idx} className="whitespace-pre-line leading-relaxed mb-6 font-lato text-[1.125rem] text-body break-words [overflow-wrap:anywhere]">
                         {paragraph}
                       </p>
                     ))
                 )
               ) : (
-                <p className="text-lg leading-relaxed text-body break-words [overflow-wrap:anywhere]">{story.subtitle || "Full story text content."}</p>
+                <p className="text-lg leading-relaxed text-body break-words [overflow-wrap:anywhere] font-lato">{story.subtitle || "Full story text content."}</p>
               )}
             </div>
           )}

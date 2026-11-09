@@ -363,7 +363,7 @@ function ChapterReader() {
 
         {/* Centered Chapter Prose */}
         <div className="mx-auto max-w-[900px] px-5 py-12 lg:px-8 space-y-12">
-          <div className="min-w-0 prose prose-lg max-w-none text-body font-serif leading-relaxed text-[1.125rem] space-y-6 break-words [overflow-wrap:anywhere]">
+          <div className="min-w-0 prose prose-lg max-w-none text-body font-lato leading-relaxed text-[1.125rem] space-y-6 break-words [overflow-wrap:anywhere]">
             {chapter.content ? (
               chapter.content.includes("<p>") || chapter.content.includes("<br") || chapter.content.includes("<div") ? (
                 <div dangerouslySetInnerHTML={{ __html: chapter.content }} className="break-words [overflow-wrap:anywhere]" />
@@ -373,13 +373,13 @@ function ChapterReader() {
                   .map((paragraph: string) => paragraph.trim())
                   .filter(Boolean)
                   .map((paragraph: string, idx: number) => (
-                    <p key={idx} className="whitespace-pre-line leading-relaxed mb-6 font-serif text-[1.125rem] text-body break-words [overflow-wrap:anywhere]">
+                    <p key={idx} className="whitespace-pre-line leading-relaxed mb-6 font-lato text-[1.125rem] text-body break-words [overflow-wrap:anywhere]">
                       {paragraph}
                     </p>
                   ))
               )
             ) : (
-              <p className="text-lg leading-relaxed text-subtle italic">
+              <p className="text-lg leading-relaxed text-subtle italic font-lato">
                 No chapter content written yet.
               </p>
             )}
