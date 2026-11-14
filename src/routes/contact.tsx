@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Gift, Lightbulb, Mail, PenLine } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import contactHeaderArt from "@/assets/Contact page header - September 18, 2026 at 23.21.40.png";
@@ -37,17 +37,42 @@ function ContactPage() {
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("Pitching a story");
   const [message, setMessage] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Time-trap token recorded on page mount to detect instantaneous bot submissions
+  const formLoadedAt = useRef<number>(Date.now()).current;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side validations
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedMessage = message.trim();
+
+    if (trimmedName.length < 2) {
+      toast.error("Please enter a valid name (at least 2 characters).");
+      return;
+    }
+    if (/\d{2,}/.test(trimmedName)) {
+      toast.error("Name should not contain multiple numbers.");
+      return;
+    }
+    if (trimmedMessage.length < 10) {
+      toast.error("Please provide a message with at least 10 characters.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await api.post("/public/contact/", {
-        name,
-        email,
+        name: trimmedName,
+        email: trimmedEmail,
         subject,
-        message,
+        message: trimmedMessage,
+        website: honeypot,
+        form_loaded_at: formLoadedAt,
       });
       setSent(true);
       toast.success("Message sent successfully!");
@@ -55,7 +80,6 @@ function ContactPage() {
       toast.error("Failed to send message", {
         description: err.message || "Please check your network connection and try again.",
       });
-      setSent(true); // Graceful fallback
     } finally {
       setIsSubmitting(false);
     }
@@ -103,13 +127,39 @@ function ContactPage() {
                   We’ll get back to you as soon as we can.
                 </p>
                 <div className="mt-7">
-                  <Button variant="ghostOutline" onClick={() => setSent(false)}>
+                  <Button
+                    variant="ghostOutline"
+                    onClick={() => {
+                      setName("");
+                      setEmail("");
+                      setMessage("");
+                      setHoneypot("");
+                      setSent(false);
+                    }}
+                  >
                     Send another
                   </Button>
                 </div>
               </div>
             ) : (
               <form className="space-y-5" onSubmit={handleSubmit}>
+                {/* Anti-spam honeypot field - invisible to human visitors */}
+                <div
+                  className="absolute -left-[9999px] top-auto h-0 w-0 overflow-hidden opacity-0"
+                  aria-hidden="true"
+                >
+                  <label htmlFor="hp_website_field">Leave this empty</label>
+                  <input
+                    id="hp_website_field"
+                    type="text"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
+
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Field label="Your name">
                     <Input
